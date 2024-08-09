@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build-and-deploy:
-    uses: Cerebellum-Network/reusable-workflows/.github/workflows/deploy-to-cloudfront.yaml@master
+    uses: cere-io/reusable-workflows/.github/workflows/deploy-to-cloudfront.yaml@master
     with:
       build_container: 'node:18-buster'
       install_packages_command: 'cp .env.prod .env; npm ci'
