@@ -18,6 +18,6 @@ jobs:
       build_command: 'npm run build'
       path_to_static_files_to_upload: 'dist'
       aws_account_id: ${{ vars.PRD_CORE_AWS_ACCOUNT_ID }}
-      s3_bucket_name: 'dev-cere-ddc-telegram-mini-app'
+      s3_bucket_name: 'prd-cere-ddc-telegram-mini-app'
     secrets:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN_READ }}
