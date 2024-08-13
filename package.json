@@ -26,7 +26,7 @@
     "vite": "^5.1.4",
     "vite-bundle-visualizer": "^1.2.1",
     "vite-plugin-generate-file": "^0.2.0",
-    "vite-plugin-mkcert": "^1.16.0",
+    "vite-plugin-ngrok": "^1.0.0",
     "vite-tsconfig-paths": "^4.3.1"
   },
   "workspaces": [

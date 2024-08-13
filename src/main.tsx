@@ -9,7 +9,12 @@ console.log({ TONCONNECT_MANIFEST_URL });
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <UIProvider>
-    <TonConnectUIProvider manifestUrl={TONCONNECT_MANIFEST_URL}>
+    <TonConnectUIProvider
+      manifestUrl={TONCONNECT_MANIFEST_URL}
+      actionsConfiguration={{
+        twaReturnUrl: 'https://t.me/sk_cere_bot/sk_cere_local_app',
+      }}
+    >
       <App />
     </TonConnectUIProvider>
   </UIProvider>,

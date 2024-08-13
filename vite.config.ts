@@ -3,45 +3,38 @@ import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import generate from 'vite-plugin-generate-file';
-import mkcert from 'vite-plugin-mkcert';
+import { ngrok } from 'vite-plugin-ngrok';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd());
 
   const appName = env.VITE_APP_NAME;
-  const appUrl = env.VITE_APP_URL || 'https://localhost:5000';
+  const appUrl = env.VITE_APP_URL;
 
-  const url = new URL(appUrl);
-  const appHost = url.hostname;
-  const devPort = +url.port || 5000;
+  const plugins = [
+    tsconfigPaths(),
+    react(),
+    generate({
+      type: 'json',
+      output: 'tonconnect-manifest.json',
+      data: {
+        appName,
+        url: appUrl,
+        iconUrl: new URL('/icon.png', appUrl).href,
+      },
+    }),
+  ];
+
+  if (env.VITE_NGROK_AUTH_TOKEN) {
+    plugins.push(
+      ngrok({
+        authtoken: env.VITE_NGROK_AUTH_TOKEN,
+        domain: env.VITE_NGROK_DOMAIN || undefined,
+      }),
+    );
+  }
 
   return {
-    plugins: [
-      tsconfigPaths(),
-      react(),
-      generate({
-        type: 'json',
-        output: 'tonconnect-manifest.json',
-        data: {
-          appName,
-          url: appUrl,
-          iconUrl: new URL('/icon.png', appUrl).href,
-        },
-      }),
-
-      mkcert({
-        hosts: [appHost],
-      }),
-    ],
-
-    preview: {
-      port: devPort,
-      host: appHost,
-    },
-
-    server: {
-      port: devPort,
-      host: appHost,
-    },
+    plugins,
   };
 });
