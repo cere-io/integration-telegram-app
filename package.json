@@ -11,17 +11,22 @@
     "analyze": "vite-bundle-visualizer",
     "check-types": "tsc --noEmit"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@tonconnect/ui-react": "^2.0.6"
+  },
   "devDependencies": {
     "@preact/preset-vite": "^2.9.0",
+    "@types/node": "^22.1.0",
     "@types/react": "^18.2.56",
     "@types/react-dom": "^18.2.19",
-    "@vitejs/plugin-react": "^4.2.1",
+    "@vitejs/plugin-react": "^4.3.1",
     "eslint": "^8.56.0",
     "prettier": "^3.2.5",
     "typescript": "^5.2.2",
     "vite": "^5.1.4",
     "vite-bundle-visualizer": "^1.2.1",
+    "vite-plugin-generate-file": "^0.2.0",
+    "vite-plugin-ngrok": "^1.0.0",
     "vite-tsconfig-paths": "^4.3.1"
   },
   "workspaces": [
