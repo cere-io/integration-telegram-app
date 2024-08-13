@@ -3,7 +3,7 @@ import { Provider as UIProvider } from '@tg-app/ui';
 import { TonConnectUIProvider } from '@tonconnect/ui-react';
 
 import { App } from './App';
-import { TONCONNECT_MANIFEST_URL } from './constants';
+import { TELEGRAM_APP_URL, TONCONNECT_MANIFEST_URL } from './constants';
 
 console.log({ TONCONNECT_MANIFEST_URL });
 
@@ -12,7 +12,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <TonConnectUIProvider
       manifestUrl={TONCONNECT_MANIFEST_URL}
       actionsConfiguration={{
-        twaReturnUrl: 'https://t.me/sk_cere_bot/sk_cere_local_app',
+        twaReturnUrl: TELEGRAM_APP_URL,
       }}
     >
       <App />
