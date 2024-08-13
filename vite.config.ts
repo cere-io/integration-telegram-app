@@ -1,33 +1,47 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 // import preact from '@preact/preset-vite'; // TonConnect dosn't work with preact. TODO: Figure out why
 import react from '@vitejs/plugin-react';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import generate from 'vite-plugin-generate-file';
 import mkcert from 'vite-plugin-mkcert';
 
-const tonconnectManifest = () =>
-  generate({
-    type: 'json',
-    output: 'tonconnect-manifest.json',
-    data: {
-      appName: 'TG Mini App',
-      url: 'https://tg-mini-app.local',
-      iconUrl: 'https://tg-mini-app.local/icon.png',
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd());
+
+  const appName = env.VITE_APP_NAME;
+  const appUrl = env.VITE_APP_URL || 'https://localhost:5000';
+
+  const url = new URL(appUrl);
+  const appHost = url.hostname;
+  const devPort = +url.port || 5000;
+
+  return {
+    plugins: [
+      tsconfigPaths(),
+      react(),
+      generate({
+        type: 'json',
+        output: 'tonconnect-manifest.json',
+        data: {
+          appName,
+          url: appUrl,
+          iconUrl: new URL('/icon.png', appUrl).href,
+        },
+      }),
+
+      mkcert({
+        hosts: [appHost],
+      }),
+    ],
+
+    preview: {
+      port: devPort,
+      host: appHost,
     },
-  });
 
-export default defineConfig({
-  plugins: [
-    tsconfigPaths(),
-    react(),
-    tonconnectManifest(),
-    mkcert({
-      hosts: ['tg-mini-app.local'],
-    }),
-  ],
-
-  server: {
-    port: 5000,
-    host: 'tg-mini-app.local',
-  },
+    server: {
+      port: devPort,
+      host: appHost,
+    },
+  };
 });
