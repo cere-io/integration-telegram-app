@@ -1,10 +1,16 @@
 import ReactDOM from 'react-dom/client';
 import { Provider as UIProvider } from '@tg-app/ui';
+import { TonConnectUIProvider } from '@tonconnect/ui-react';
 
 import { App } from './App';
+import { TONCONNECT_MANIFEST_URL } from './constants';
+
+console.log({ TONCONNECT_MANIFEST_URL });
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <UIProvider>
-    <App />
+    <TonConnectUIProvider manifestUrl={TONCONNECT_MANIFEST_URL}>
+      <App />
+    </TonConnectUIProvider>
   </UIProvider>,
 );
