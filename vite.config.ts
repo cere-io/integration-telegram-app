@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => {
       type: 'json',
       output: 'tonconnect-manifest.json',
       data: {
-        appName,
+        name: appName,
         url: appUrl,
         iconUrl: new URL('/icon.png', appUrl).href,
       },
