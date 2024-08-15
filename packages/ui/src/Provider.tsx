@@ -12,9 +12,10 @@ export const Provider = ({ children }: ProviderProps) => {
            * TODO: Properly normalize styles instead of using a hardcoded value
            */
           background: 'var(--tgui--bg_color)',
-          height: '100vh',
           padding: '8px',
+          paddingBottom: '88px',
           boxSizing: 'border-box',
+          overflowY: 'auto',
         }}
       >
         {children}

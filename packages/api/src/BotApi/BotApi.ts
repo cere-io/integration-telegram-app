@@ -1,3 +1,5 @@
+import { Subscription, Video } from './types';
+
 export class BotApi {
   readonly baseUrl: URL;
 
@@ -5,7 +7,7 @@ export class BotApi {
     this.baseUrl = new URL('/api/v1/', baseUrl);
   }
 
-  async getVideos() {
+  async getVideos(): Promise<Video[]> {
     const response = await fetch(new URL('videos', this.baseUrl));
 
     return response.json();
@@ -17,7 +19,7 @@ export class BotApi {
     return response.text();
   }
 
-  async getSubscriptions() {
+  async getSubscriptions(): Promise<Subscription[]> {
     const response = await fetch(new URL('subscriptions', this.baseUrl));
 
     return response.json();

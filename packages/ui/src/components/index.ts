@@ -8,3 +8,5 @@ export {
   Tabbar,
   type TabbarProps,
 } from '@telegram-apps/telegram-ui';
+
+export * from './MediaList';
