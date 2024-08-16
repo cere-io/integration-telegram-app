@@ -11,8 +11,13 @@ export type Video = {
 };
 
 export type Subscription = {
+  id: number;
+  durationInDays: number;
   description: string;
   price: number;
-  token: string;
-  payeeAddress: string;
+};
+
+export type SubscriptionsResponse = {
+  destinationWallet: string;
+  subscriptions: Subscription[];
 };

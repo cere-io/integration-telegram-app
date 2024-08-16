@@ -1,7 +1,5 @@
-import { Card } from '@telegram-apps/telegram-ui';
+import { Card, Image } from '@telegram-apps/telegram-ui';
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
 import defaultThumbnail from './defaultThumbnail.png';
 
 export type MediaListItemProps = {
@@ -13,15 +11,17 @@ export type MediaListItemProps = {
 
 export const MediaListItem = ({ name, description }: MediaListItemProps) => {
   return (
-    <Card style={{ margin: 8 }} type="ambient">
-      <img
+    <Card style={{ margin: 16, display: 'block' }}>
+      <Image
         src={defaultThumbnail}
         style={{
           display: 'block',
           objectFit: 'cover',
           width: '100%',
+          height: '150px',
+          borderRadius: 0,
         }}
-      />
+      ></Image>
       <Card.Cell readOnly subtitle={description}>
         {name}
       </Card.Cell>

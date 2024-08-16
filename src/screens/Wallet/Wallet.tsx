@@ -1,25 +1,33 @@
-import { Title } from '@tg-app/ui';
+import { Section, WalletWidget, Cell, Badge } from '@tg-app/ui';
 
-import { useWallet } from '~/hooks';
+import { useSubscriptions, useWallet, useWalletSubscriptions } from '~/hooks';
 
 export const Wallet = () => {
   const wallet = useWallet();
+  const { data: allSubscriptions } = useSubscriptions();
+  const { data: currentSubscription } = useWalletSubscriptions(wallet.address);
+  const isConnected = !!wallet.address;
 
   return (
     <>
-      <Title>Wallet</Title>
+      <WalletWidget
+        address={wallet.address}
+        onConnect={() => wallet.connect()}
+        onDisconnect={() => wallet.disconnect()}
+      />
 
-      <div style={{ width: 300, textOverflow: 'ellipsis', overflow: 'hidden' }}>Account: {wallet.account?.address}</div>
-      <br />
-      <button onClick={() => wallet.disconnect()}>Disconnect</button>
-      <br />
-      <br />
-      <button onClick={() => wallet.connect()}>Connect</button>
-      <br />
-      <br />
-      <button onClick={() => wallet.transfer({ to: 'UQCrGJMwoMHa26k2zqI4vxxCOyOfrhflTPlWpjaj5yIRbL4X', amount: 0.01 })}>
-        Transfer
-      </button>
+      <Section header="Subscription">
+        {allSubscriptions?.subscriptions.map(({ id, description, durationInDays, price }) => (
+          <Cell
+            key={id}
+            disabled={!isConnected}
+            subtitle={`${durationInDays} days for ${price} TON`}
+            after={currentSubscription?.id === id ? <Badge type="number">Active</Badge> : undefined}
+          >
+            {description}
+          </Cell>
+        ))}
+      </Section>
     </>
   );
 };

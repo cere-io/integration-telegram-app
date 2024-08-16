@@ -7,8 +7,24 @@ import {
   TonProofItemReplySuccess,
   TonProofItemReplyError,
   TonConnectUI,
-  Account,
+  toUserFriendlyAddress,
 } from '@tonconnect/ui-react';
+
+// export const CheckProofRequest = zod.object({
+//   address: zod.string(),
+//   network: zod.enum([CHAIN.MAINNET, CHAIN.TESTNET]),
+//   public_key: zod.string(),
+//   proof: zod.object({
+//     timestamp: zod.number(),
+//     domain: zod.object({
+//       lengthBytes: zod.number(),
+//       value: zod.string(),
+//     }),
+//     payload: zod.string(),
+//     signature: zod.string(),
+//     state_init: zod.string(),
+//   }),
+// });
 
 export type TransferArgs = {
   to: string;
@@ -16,7 +32,7 @@ export type TransferArgs = {
 };
 
 export type Wallet = {
-  account?: Account;
+  address?: string;
   transfer: (args: TransferArgs) => Promise<void>;
   disconnect: () => void;
   connect: () => void;
@@ -41,7 +57,7 @@ const transfer = async (ui: TonConnectUI, { to, amount }: TransferArgs) => {
     ],
   };
 
-  ui.sendTransaction(request);
+  await ui.sendTransaction(request);
 };
 
 export const useWallet = (): Wallet => {
@@ -56,7 +72,7 @@ export const useWallet = (): Wallet => {
   });
 
   return {
-    account,
+    address: account?.address && toUserFriendlyAddress(account?.address),
     tonProof: isSuccessfulProof(connectItems?.tonProof) ? connectItems.tonProof : undefined,
     transfer: transfer.bind(null, ui),
     disconnect: () => ui.disconnect(),

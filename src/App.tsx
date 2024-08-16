@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Tabbar, MediaIcon, WalletIcon, Provider as UIProvider } from '@tg-app/ui';
 import {
-  useLaunchParams,
   bindMiniAppCSSVars,
   useMiniApp,
   useThemeParams,
@@ -21,17 +20,14 @@ const tabs = [
   {
     icon: WalletIcon,
     screen: Wallet,
-    text: 'Wallet',
+    text: 'Subscription',
   },
 ];
 
 export const App = () => {
-  const { platform } = useLaunchParams();
   const miniApp = useMiniApp();
   const themeParams = useThemeParams();
   const viewport = useViewport();
-
-  console.log('App Start', { platform, miniApp, themeParams, viewport });
 
   const [activeTab, setActiveTab] = useState(0);
   const Screen = tabs[activeTab].screen;
