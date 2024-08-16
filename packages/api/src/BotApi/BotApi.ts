@@ -1,4 +1,4 @@
-import { Subscription, SubscriptionsResponse, Video } from './types';
+import { Subscription, SubscriptionsResponse, TokenRequest, Video } from './types';
 
 export class BotApi {
   readonly baseUrl: URL;
@@ -13,8 +13,20 @@ export class BotApi {
     return response.json();
   }
 
-  async getToken() {
-    const response = await fetch(new URL('token', this.baseUrl));
+  async getProofChallenge() {
+    const response = await fetch(new URL(`proofs`, this.baseUrl));
+
+    return response.text();
+  }
+
+  async getToken(request: TokenRequest) {
+    const response = await fetch(new URL(`proofs`, this.baseUrl), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    });
 
     return response.text();
   }
