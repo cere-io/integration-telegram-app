@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Tabbar, MediaIcon, WalletIcon } from '@tg-app/ui';
+import { useLaunchParams } from '@telegram-apps/sdk-react';
+import { Tabbar, MediaIcon, WalletIcon, Provider as UIProvider } from '@tg-app/ui';
 
 import { Media, Wallet } from './screens';
 
@@ -17,11 +18,14 @@ const tabs = [
 ];
 
 export const App = () => {
+  const { platform, themeParams } = useLaunchParams();
+  console.log('App Start', { platform, themeParams });
+
   const [activeTab, setActiveTab] = useState(0);
   const Screen = tabs[activeTab].screen;
 
   return (
-    <>
+    <UIProvider platform={platform === 'ios' ? 'ios' : 'base'}>
       <Screen />
 
       <Tabbar>
@@ -31,6 +35,6 @@ export const App = () => {
           </Tabbar.Item>
         ))}
       </Tabbar>
-    </>
+    </UIProvider>
   );
 };

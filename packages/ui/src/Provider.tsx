@@ -1,11 +1,11 @@
 import '@telegram-apps/telegram-ui/dist/styles.css';
 import { AppRoot, AppRootProps } from '@telegram-apps/telegram-ui';
 
-export type ProviderProps = Pick<AppRootProps, 'children'>;
+export type ProviderProps = AppRootProps;
 
-export const Provider = ({ children }: ProviderProps) => {
+export const Provider = ({ children, ...props }: ProviderProps) => {
   return (
-    <AppRoot>
+    <AppRoot {...props}>
       <div
         style={{
           /**
@@ -14,7 +14,6 @@ export const Provider = ({ children }: ProviderProps) => {
           padding: '8px',
           paddingBottom: '88px',
           boxSizing: 'border-box',
-          overflowY: 'auto',
         }}
       >
         {children}
