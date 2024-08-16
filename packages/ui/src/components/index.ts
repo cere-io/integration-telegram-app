@@ -13,6 +13,8 @@ export {
   type CellProps,
   Badge,
   type BadgeProps,
+  Snackbar,
+  type SnackbarProps,
 } from '@telegram-apps/telegram-ui';
 
 export * from './MediaList';

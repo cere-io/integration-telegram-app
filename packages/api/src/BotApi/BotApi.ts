@@ -28,6 +28,16 @@ export class BotApi {
   async getUserSubscription(address: string): Promise<Subscription | undefined> {
     const response = await fetch(new URL(`subscriptions/${address}`, this.baseUrl));
 
+    if (response.status === 404) {
+      return undefined;
+    }
+
     return response.json();
+  }
+
+  async saveSubscription(address: string) {
+    await fetch(new URL(`subscriptions/${address}`, this.baseUrl), {
+      method: 'POST',
+    });
   }
 }
