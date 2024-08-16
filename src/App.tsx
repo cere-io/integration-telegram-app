@@ -1,5 +1,13 @@
-import { useState } from 'react';
-import { Tabbar, MediaIcon, WalletIcon } from '@tg-app/ui';
+import { useEffect, useState } from 'react';
+import { Tabbar, MediaIcon, WalletIcon, Provider as UIProvider } from '@tg-app/ui';
+import {
+  bindMiniAppCSSVars,
+  useMiniApp,
+  useThemeParams,
+  useViewport,
+  bindThemeParamsCSSVars,
+  bindViewportCSSVars,
+} from '@telegram-apps/sdk-react';
 
 import { Media, Wallet } from './screens';
 
@@ -12,16 +20,29 @@ const tabs = [
   {
     icon: WalletIcon,
     screen: Wallet,
-    text: 'Wallet',
+    text: 'Subscription',
   },
 ];
 
 export const App = () => {
+  const miniApp = useMiniApp();
+  const themeParams = useThemeParams();
+  const viewport = useViewport();
+
   const [activeTab, setActiveTab] = useState(0);
   const Screen = tabs[activeTab].screen;
 
+  useEffect(() => {
+    bindMiniAppCSSVars(miniApp, themeParams);
+    bindThemeParamsCSSVars(themeParams);
+
+    if (viewport) {
+      bindViewportCSSVars(viewport);
+    }
+  }, [miniApp, themeParams, viewport]);
+
   return (
-    <>
+    <UIProvider>
       <Screen />
 
       <Tabbar>
@@ -31,6 +52,6 @@ export const App = () => {
           </Tabbar.Item>
         ))}
       </Tabbar>
-    </>
+    </UIProvider>
   );
 };

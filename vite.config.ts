@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from 'vite';
 // import preact from '@preact/preset-vite'; // TonConnect dosn't work with preact. TODO: Figure out why
 import react from '@vitejs/plugin-react';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import generate from 'vite-plugin-generate-file';
 import { ngrok } from 'vite-plugin-ngrok';
@@ -14,6 +15,10 @@ export default defineConfig(({ mode }) => {
   const plugins = [
     tsconfigPaths(),
     react(),
+    nodePolyfills({
+      include: ['buffer'],
+    }),
+
     generate({
       type: 'json',
       output: 'tonconnect-manifest.json',

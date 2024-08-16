@@ -1,18 +1,27 @@
-import { Title } from '@tg-app/ui';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { MediaList, MediaListItem } from '@tg-app/ui';
+import { Video } from '@tg-app/api';
 
 import { useBot } from '~/hooks';
 
 export const Media = () => {
   const bot = useBot();
+  const [videos, setVideos] = useState<Video[]>([]);
 
   useEffect(() => {
-    console.log('Bot', bot);
-
-    bot.getVideos().then(console.log.bind(console, 'Videos'));
-    bot.getToken().then(console.log.bind(console, 'Token'));
-    bot.getSubscriptions().then(console.log.bind(console, 'Subscriptions'));
+    bot.getVideos().then(setVideos);
   }, [bot]);
 
-  return <Title>Media</Title>;
+  return (
+    <MediaList>
+      {videos.map((video, index) => (
+        <MediaListItem
+          key={index}
+          name={video.name}
+          description={video.description}
+          thumbnailUrl={video.thumbnailUrl}
+        />
+      ))}
+    </MediaList>
+  );
 };
