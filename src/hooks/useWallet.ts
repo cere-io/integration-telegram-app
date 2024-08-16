@@ -1,6 +1,7 @@
+import { useEffect } from 'react';
 import { toNano } from '@ton/core/dist/utils/convert';
-
 import {
+  Account,
   useTonConnectUI,
   useTonWallet,
   SendTransactionRequest,
@@ -9,6 +10,8 @@ import {
   TonConnectUI,
   toUserFriendlyAddress,
 } from '@tonconnect/ui-react';
+
+import { useBot } from './useBot';
 
 // export const CheckProofRequest = zod.object({
 //   address: zod.string(),
@@ -33,6 +36,7 @@ export type TransferArgs = {
 
 export type Wallet = {
   address?: string;
+  account?: Account;
   transfer: (args: TransferArgs) => Promise<void>;
   disconnect: () => void;
   connect: () => void;
@@ -61,17 +65,24 @@ const transfer = async (ui: TonConnectUI, { to, amount }: TransferArgs) => {
 };
 
 export const useWallet = (): Wallet => {
+  const bot = useBot();
   const [ui] = useTonConnectUI();
   const { account, connectItems } = useTonWallet() || {};
 
-  ui.setConnectRequestParameters({
-    state: 'ready',
-    value: {
-      tonProof: '1234', // TODO: Replace with a challage from the bot
-    },
-  });
+  console.log('useWallet', { account, connectItems });
+
+  useEffect(() => {
+    ui.setConnectRequestParameters({ state: 'loading' });
+
+    bot.getProofChallenge().then((tonProof) => {
+      ui.setConnectRequestParameters({ state: 'ready', value: { tonProof } });
+
+      console.log('Proof challange', tonProof);
+    });
+  }, [bot, ui]);
 
   return {
+    account,
     address: account?.address && toUserFriendlyAddress(account?.address),
     tonProof: isSuccessfulProof(connectItems?.tonProof) ? connectItems.tonProof : undefined,
     transfer: transfer.bind(null, ui),

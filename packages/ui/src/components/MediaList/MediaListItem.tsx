@@ -1,17 +1,17 @@
-import { Card, Image } from '@telegram-apps/telegram-ui';
+import { Card, CardProps, Image } from '@telegram-apps/telegram-ui';
 
 import defaultThumbnail from './defaultThumbnail.png';
 
-export type MediaListItemProps = {
+export type MediaListItemProps = Pick<CardProps, 'onClick'> & {
   name: string;
   description: string;
   thumbnailUrl?: string | null;
   locked?: boolean;
 };
 
-export const MediaListItem = ({ name, description }: MediaListItemProps) => {
+export const MediaListItem = ({ name, description, onClick }: MediaListItemProps) => {
   return (
-    <Card style={{ margin: 16, display: 'block' }}>
+    <Card style={{ margin: 16, display: 'block' }} onClick={onClick}>
       <Image
         src={defaultThumbnail}
         style={{

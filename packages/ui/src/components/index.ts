@@ -15,6 +15,8 @@ export {
   type BadgeProps,
   Snackbar,
   type SnackbarProps,
+  Modal,
+  type ModalProps,
 } from '@telegram-apps/telegram-ui';
 
 export * from './MediaList';
