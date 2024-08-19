@@ -6,16 +6,16 @@ import { useWallet } from './useWallet';
 export const useToken = () => {
   const { account, tonProof } = useWallet();
   const bot = useBot();
-  const [token, setToken] = useState<string>();
+  const [token, setToken] = useState<string | null>();
 
   const refetch = useCallback(async () => {
-    console.log('refetch', { account, tonProof, accountPublicKey: account?.publicKey });
-
     if (!account || !tonProof || !account.publicKey) {
-      setToken(undefined);
+      setToken(null);
 
       return;
     }
+
+    setToken(undefined);
 
     const token = await bot.getToken({
       address: account.address,
@@ -27,7 +27,7 @@ export const useToken = () => {
       },
     });
 
-    setToken(token);
+    setToken(token || null);
 
     return token;
   }, [account, bot, tonProof]);
@@ -37,8 +37,8 @@ export const useToken = () => {
   }, [refetch]);
 
   return {
-    token,
     refetch,
+    token: token || undefined,
     loading: token === undefined,
   };
 };
