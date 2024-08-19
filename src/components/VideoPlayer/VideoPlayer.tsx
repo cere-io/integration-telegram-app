@@ -1,6 +1,6 @@
 import { Card, Modal, ModalProps } from '@tg-app/ui';
 import { Video } from '@tg-app/api';
-import { VideoPlayer as CerePlayer } from '@cere/media-sdk-react';
+// import { IosVideoPlayer as CerePlayer } from '@cere/media-sdk-react';
 import { useViewport } from '@telegram-apps/sdk-react';
 
 /**
@@ -35,24 +35,28 @@ export const VideoPlayer = ({ token, video, open = false, onClose }: VideoPlayer
   const { width = 0 } = useViewport() || {};
 
   const url = createUrl(video, token);
+  const height = video?.width && video?.height ? (video.height / video.width) * width : 0;
 
   return (
     <Modal open={open && !!video && !!token} onOpenChange={(open) => !open && onClose?.()}>
       <Modal.Header>{video?.name}</Modal.Header>
 
       <Card style={{ borderRadius: 0 }}>
-        <div style={{ width }}>
-          {url && (
-            <CerePlayer
-              hlsEnabled={false}
-              src={url!}
-              loadingComponent={<div />}
-              videoOverrides={{
-                autoPlay: true,
-              }}
-            />
-          )}
-        </div>
+        {url && (
+          <video autoPlay controls height={height} width={width}>
+            <source src={url!} type={video?.mimeType} />
+          </video>
+          // <CerePlayer
+          //   hlsEnabled={false}
+          //   src={url!}
+          //   type={video?.mimeType}
+          //   loadingComponent={<div />}
+          //   videoOverrides={{
+          //     autoPlay: true,
+          //   }}
+          // />
+        )}
+
         <Card.Cell readOnly subtitle={video?.description} style={{ paddingBottom: 16 }}>
           {video?.name}
         </Card.Cell>
