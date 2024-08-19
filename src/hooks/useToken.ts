@@ -4,18 +4,16 @@ import { useBot } from './useBot';
 import { useWallet } from './useWallet';
 
 export const useToken = () => {
-  const { account, tonProof } = useWallet();
+  const { account, tonProof, loading } = useWallet();
   const bot = useBot();
   const [token, setToken] = useState<string | null>();
 
   const refetch = useCallback(async () => {
-    if (!account || !tonProof || !account.publicKey) {
+    if (!tonProof || !account?.publicKey) {
       setToken(null);
 
-      return;
+      return null;
     }
-
-    setToken(undefined);
 
     const token = await bot.getToken({
       address: account.address,
@@ -33,12 +31,14 @@ export const useToken = () => {
   }, [account, bot, tonProof]);
 
   useEffect(() => {
-    refetch();
-  }, [refetch]);
+    if (!loading) {
+      refetch();
+    }
+  }, [refetch, loading]);
 
   return {
     refetch,
     token: token || undefined,
-    loading: token === undefined,
+    loading: loading || token === undefined,
   };
 };

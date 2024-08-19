@@ -46,6 +46,7 @@ export const VideoPlayer = ({ token, video, open = false, onClose }: VideoPlayer
           <video autoPlay controls height={height} width={width}>
             <source src={url!} type={video?.mimeType} />
           </video>
+
           // <CerePlayer
           //   hlsEnabled={false}
           //   src={url!}

@@ -24,7 +24,7 @@ export const MediaListItem = ({ name, description, locked, loading, onClick }: M
           borderRadius: 0,
         }}
       >
-        {locked && !loading && (
+        {(locked || loading) && (
           <div
             style={{
               display: 'flex',
@@ -38,7 +38,7 @@ export const MediaListItem = ({ name, description, locked, loading, onClick }: M
               color: 'white',
             }}
           >
-            <LockIcon />
+            {!loading && <LockIcon />}
           </div>
         )}
       </Image>
