@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toNano } from '@ton/core/dist/utils/convert';
 import {
   Account,
@@ -13,22 +13,6 @@ import {
 
 import { useBot } from './useBot';
 
-// export const CheckProofRequest = zod.object({
-//   address: zod.string(),
-//   network: zod.enum([CHAIN.MAINNET, CHAIN.TESTNET]),
-//   public_key: zod.string(),
-//   proof: zod.object({
-//     timestamp: zod.number(),
-//     domain: zod.object({
-//       lengthBytes: zod.number(),
-//       value: zod.string(),
-//     }),
-//     payload: zod.string(),
-//     signature: zod.string(),
-//     state_init: zod.string(),
-//   }),
-// });
-
 export type TransferArgs = {
   to: string;
   amount: number;
@@ -37,6 +21,7 @@ export type TransferArgs = {
 export type Wallet = {
   address?: string;
   account?: Account;
+  loading: boolean;
   transfer: (args: TransferArgs) => Promise<void>;
   disconnect: () => void;
   connect: () => void;
@@ -67,24 +52,41 @@ const transfer = async (ui: TonConnectUI, { to, amount }: TransferArgs) => {
 export const useWallet = (): Wallet => {
   const bot = useBot();
   const [ui] = useTonConnectUI();
+  const [loading, setLoading] = useState(true);
   const { account, connectItems } = useTonWallet() || {};
 
-  console.log('useWallet', { account, connectItems });
+  const address = account?.address && toUserFriendlyAddress(account?.address);
+  const storageKey = account?.address && `tonproof:${account.address}`;
+
+  const tonProof = useMemo<TonProofItemReplySuccess>(() => {
+    if (isSuccessfulProof(connectItems?.tonProof)) {
+      return connectItems.tonProof;
+    }
+
+    const tonProofJson = storageKey && localStorage.getItem(storageKey);
+
+    return tonProofJson ? JSON.parse(tonProofJson) : undefined;
+  }, [connectItems, storageKey]);
 
   useEffect(() => {
+    ui.connectionRestored.finally(() => setLoading(false));
     ui.setConnectRequestParameters({ state: 'loading' });
-
     bot.getProofChallenge().then((tonProof) => {
       ui.setConnectRequestParameters({ state: 'ready', value: { tonProof } });
-
-      console.log('Proof challange', tonProof);
     });
   }, [bot, ui]);
 
+  useEffect(() => {
+    if (tonProof && storageKey) {
+      localStorage.setItem(storageKey, JSON.stringify(tonProof));
+    }
+  }, [storageKey, tonProof]);
+
   return {
     account,
-    address: account?.address && toUserFriendlyAddress(account?.address),
-    tonProof: isSuccessfulProof(connectItems?.tonProof) ? connectItems.tonProof : undefined,
+    tonProof,
+    address,
+    loading,
     transfer: transfer.bind(null, ui),
     disconnect: () => ui.disconnect(),
     connect: () => ui.openModal(),

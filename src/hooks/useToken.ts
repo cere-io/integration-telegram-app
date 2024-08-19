@@ -4,17 +4,15 @@ import { useBot } from './useBot';
 import { useWallet } from './useWallet';
 
 export const useToken = () => {
-  const { account, tonProof } = useWallet();
+  const { account, tonProof, loading } = useWallet();
   const bot = useBot();
-  const [token, setToken] = useState<string>();
+  const [token, setToken] = useState<string | null>();
 
   const refetch = useCallback(async () => {
-    console.log('refetch', { account, tonProof, accountPublicKey: account?.publicKey });
+    if (!tonProof || !account?.publicKey) {
+      setToken(null);
 
-    if (!account || !tonProof || !account.publicKey) {
-      setToken(undefined);
-
-      return;
+      return null;
     }
 
     const token = await bot.getToken({
@@ -27,18 +25,20 @@ export const useToken = () => {
       },
     });
 
-    setToken(token);
+    setToken(token || null);
 
     return token;
   }, [account, bot, tonProof]);
 
   useEffect(() => {
-    refetch();
-  }, [refetch]);
+    if (!loading) {
+      refetch();
+    }
+  }, [refetch, loading]);
 
   return {
-    token,
     refetch,
-    loading: token === undefined,
+    token: token || undefined,
+    loading: loading || token === undefined,
   };
 };

@@ -17,6 +17,10 @@ export {
   type SnackbarProps,
   Modal,
   type ModalProps,
+  Card,
+  type CardProps,
+  Skeleton,
+  type SkeletonProps,
 } from '@telegram-apps/telegram-ui';
 
 export * from './MediaList';
