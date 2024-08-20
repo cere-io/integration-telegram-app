@@ -1,0 +1,15 @@
+/**
+* Import the styles for the VideoPlayer component from the media-sdk-react package.
+* This is the CSS file that will be used to style the VideoPlayer component.
+
+* TODO: Properly import by package name - not by file path.
+*/
+@import '../../../node_modules/@cere/media-sdk-react/dist/browser.css';
+
+.VideoPlayer-card {
+  border-radius: 0;
+}
+
+.VideoPlayer-card .loading-container {
+  background-color: transparent;
+}
