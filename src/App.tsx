@@ -43,7 +43,7 @@ export const App = () => {
 
   return (
     <UIProvider appearance={themeParams.isDark ? 'dark' : 'light'}>
-      <Screen />
+      <Screen setActiveTab={setActiveTab} />
 
       <Tabbar>
         {tabs.map(({ icon: Icon, text }, index) => (

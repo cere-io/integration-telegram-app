@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
-import { MediaList, MediaListItem, Banner, MediaLogo } from '@tg-app/ui';
+import { MediaList, MediaListItem, Banner, MediaLogo, Button } from '@tg-app/ui';
 import { Video } from '@tg-app/api';
 
 import { useBot, useToken } from '~/hooks';
 import { VideoPlayer } from '~/components';
 
-export const Media = () => {
+type MediaProps = {
+  setActiveTab: (index: number) => void;
+};
+
+export const Media = ({ setActiveTab }: MediaProps) => {
   const bot = useBot();
   const [videos, setVideos] = useState<Video[]>([]);
   const [currentVideo, setCurrentVideo] = useState<Video>();
@@ -32,6 +36,12 @@ export const Media = () => {
           />
         ))}
       </MediaList>
+
+      {!token && !loading && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16, marginTop: 16 }}>
+          <Button onClick={() => setActiveTab(1)}>Subscribe to Unlock All!</Button>
+        </div>
+      )}
 
       <VideoPlayer
         open={!!currentVideo}

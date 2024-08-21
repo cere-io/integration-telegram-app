@@ -27,6 +27,8 @@ export {
   type SkeletonProps,
   Banner,
   type BannerProps,
+  Button,
+  type ButtonProps,
 } from '@telegram-apps/telegram-ui';
 
 export * from './MediaList';

@@ -4,7 +4,12 @@ import { Section, WalletWidget, Cell, Badge, Snackbar, ConfirmModal, Text, Check
 
 import { useSubscriptions, useWallet, useWalletSubscriptions } from '~/hooks';
 
-export const Wallet = () => {
+type WalletProps = {
+  setActiveTab: (index: number) => void;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const Wallet = (_props: WalletProps) => {
   const wallet = useWallet();
   const [hasToast, setHasToast] = useState(false);
   const [inProgress, setInProgress] = useState(false);
