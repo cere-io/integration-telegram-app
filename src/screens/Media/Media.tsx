@@ -37,7 +37,7 @@ export const Media = ({ setActiveTab }: MediaProps) => {
         ))}
       </MediaList>
 
-      {!token && !loading && (
+      {!token && !loading && !!videos.length && (
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16, marginTop: 16 }}>
           <Button onClick={() => setActiveTab(1)}>Subscribe to Unlock All!</Button>
         </div>
