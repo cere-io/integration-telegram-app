@@ -42,7 +42,7 @@ export const App = () => {
   }, [miniApp, themeParams, viewport]);
 
   return (
-    <UIProvider>
+    <UIProvider appearance={themeParams.isDark ? 'dark' : 'light'}>
       <Screen />
 
       <Tabbar>
