@@ -15,12 +15,12 @@ const tabs = [
   {
     icon: MediaIcon,
     screen: Media,
-    text: 'Media',
+    text: 'Media catalog',
   },
   {
     icon: WalletIcon,
     screen: Wallet,
-    text: 'Subscription',
+    text: 'Subscription info',
   },
 ];
 

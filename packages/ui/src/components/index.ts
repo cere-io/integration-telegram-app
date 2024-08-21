@@ -25,3 +25,4 @@ export {
 
 export * from './MediaList';
 export * from './WalletWidget';
+export * from './ConfirmModal';
