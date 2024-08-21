@@ -5,6 +5,10 @@ export {
   type TextProps,
   Title,
   type TitleProps,
+  Subheadline,
+  type SubheadlineProps,
+  Headline,
+  type HeadlineProps,
   Tabbar,
   type TabbarProps,
   Section,
@@ -21,7 +25,12 @@ export {
   type CardProps,
   Skeleton,
   type SkeletonProps,
+  Banner,
+  type BannerProps,
+  Button,
+  type ButtonProps,
 } from '@telegram-apps/telegram-ui';
 
 export * from './MediaList';
 export * from './WalletWidget';
+export * from './ConfirmModal';

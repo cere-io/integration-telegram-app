@@ -15,12 +15,12 @@ const tabs = [
   {
     icon: MediaIcon,
     screen: Media,
-    text: 'Media',
+    text: 'Media catalog',
   },
   {
     icon: WalletIcon,
     screen: Wallet,
-    text: 'Subscription',
+    text: 'Subscription info',
   },
 ];
 
@@ -42,8 +42,8 @@ export const App = () => {
   }, [miniApp, themeParams, viewport]);
 
   return (
-    <UIProvider>
-      <Screen />
+    <UIProvider appearance={themeParams.isDark ? 'dark' : 'light'}>
+      <Screen setActiveTab={setActiveTab} />
 
       <Tabbar>
         {tabs.map(({ icon: Icon, text }, index) => (

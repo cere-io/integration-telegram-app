@@ -5,6 +5,7 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import generate from 'vite-plugin-generate-file';
 import { ngrok } from 'vite-plugin-ngrok';
+import svgr from 'vite-plugin-svgr';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd());
@@ -15,6 +16,7 @@ export default defineConfig(({ mode }) => {
   const plugins = [
     tsconfigPaths(),
     react(),
+    svgr(),
     nodePolyfills({
       include: ['buffer'],
     }),

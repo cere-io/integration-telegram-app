@@ -11,16 +11,16 @@ export type MediaListItemProps = Pick<CardProps, 'onClick'> & {
   locked?: boolean;
 };
 
-export const MediaListItem = ({ name, description, locked, loading, onClick }: MediaListItemProps) => {
+export const MediaListItem = ({ name, description, thumbnailUrl, locked, loading, onClick }: MediaListItemProps) => {
   return (
     <Card style={{ margin: 16, display: 'block' }} onClick={onClick}>
       <Image
-        src={defaultThumbnail}
+        src={thumbnailUrl || defaultThumbnail}
         style={{
           display: 'block',
           objectFit: 'cover',
           width: '100%',
-          height: '150px',
+          height: '250px',
           borderRadius: 0,
         }}
       >

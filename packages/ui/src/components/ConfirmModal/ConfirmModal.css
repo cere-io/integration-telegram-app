@@ -1,0 +1,15 @@
+.ConfirmModal-root {
+  padding: 0px 16px 24px;
+}
+
+.ConfirmModal-content {
+  padding: 24px 0px;
+}
+
+.ConfirmModal-head {
+  text-align: center;
+}
+
+.ConfirmModal-confirm {
+  width: 100%;
+}
