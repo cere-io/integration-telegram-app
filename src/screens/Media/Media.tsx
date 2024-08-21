@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { MediaList, MediaListItem } from '@tg-app/ui';
+import { MediaList, MediaListItem, Banner } from '@tg-app/ui';
 import { Video } from '@tg-app/api';
 
 import { useBot, useToken } from '~/hooks';
@@ -17,6 +17,8 @@ export const Media = () => {
 
   return (
     <>
+      <Banner header="CereMedia" subheader="Your Gateway to Premium Content" />
+
       <MediaList>
         {videos.map((video, index) => (
           <MediaListItem
