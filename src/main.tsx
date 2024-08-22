@@ -2,9 +2,15 @@ import './mockEnv';
 import ReactDOM from 'react-dom/client';
 import { TonConnectUIProvider } from '@tonconnect/ui-react';
 import { SDKProvider } from '@telegram-apps/sdk-react';
+import Reporting, { ErrorBoundary } from '@tg-app/reporting';
 
 import { App } from './App';
-import { TELEGRAM_APP_URL, TONCONNECT_MANIFEST_URL } from './constants';
+import { APP_ENV, APP_VERSION, TELEGRAM_APP_URL, TONCONNECT_MANIFEST_URL } from './constants';
+
+Reporting.init({
+  appVersion: APP_VERSION,
+  environment: APP_ENV,
+});
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <SDKProvider acceptCustomStyles debug>
@@ -14,7 +20,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         twaReturnUrl: TELEGRAM_APP_URL,
       }}
     >
-      <App />
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
     </TonConnectUIProvider>
   </SDKProvider>,
 );
