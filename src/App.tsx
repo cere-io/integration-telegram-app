@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Tabbar, MediaIcon, WalletIcon, Provider as UIProvider } from '@tg-app/ui';
+import Reporting from '@tg-app/reporting';
 import {
   bindMiniAppCSSVars,
   useMiniApp,
@@ -7,6 +8,7 @@ import {
   useViewport,
   bindThemeParamsCSSVars,
   bindViewportCSSVars,
+  useInitData,
 } from '@telegram-apps/sdk-react';
 
 import { Media, Wallet } from './screens';
@@ -28,6 +30,7 @@ export const App = () => {
   const miniApp = useMiniApp();
   const themeParams = useThemeParams();
   const viewport = useViewport();
+  const { user } = useInitData() || {};
 
   const [activeTab, setActiveTab] = useState(0);
   const Screen = tabs[activeTab].screen;
@@ -40,6 +43,11 @@ export const App = () => {
       bindViewportCSSVars(viewport);
     }
   }, [miniApp, themeParams, viewport]);
+
+  useEffect(
+    () => (!user ? Reporting.clearUser() : Reporting.setUser({ id: user.id.toString(), username: user.username })),
+    [user],
+  );
 
   return (
     <UIProvider appearance={themeParams.isDark ? 'dark' : 'light'}>

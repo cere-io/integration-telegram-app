@@ -27,7 +27,7 @@ export default defineConfig(({ mode }) => {
       data: {
         name: appName,
         url: appUrl,
-        iconUrl: new URL('/icon.png', appUrl).href,
+        iconUrl: new URL('/favicon.png', appUrl).href,
       },
     }),
   ];

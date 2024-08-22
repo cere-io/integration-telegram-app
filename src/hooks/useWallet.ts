@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toNano } from '@ton/core/dist/utils/convert';
+import Reporting from '@tg-app/reporting';
 import {
   Account,
   useTonConnectUI,
@@ -46,7 +47,14 @@ const transfer = async (ui: TonConnectUI, { to, amount }: TransferArgs) => {
     ],
   };
 
-  await ui.sendTransaction(request);
+  const { boc } = await ui.sendTransaction(request);
+
+  console.log('Transfer completed', { boc });
+  Reporting.message(`Transfer of ${amount} TON completed`, {
+    event: 'transferCompleted',
+    transferAmount: amount,
+    walletAddress: ui.account && toUserFriendlyAddress(ui.account.address),
+  });
 };
 
 export const useWallet = (): Wallet => {
@@ -81,6 +89,15 @@ export const useWallet = (): Wallet => {
       localStorage.setItem(storageKey, JSON.stringify(tonProof));
     }
   }, [storageKey, tonProof]);
+
+  useEffect(() => {
+    if (address) {
+      Reporting.message(`Wallet connected: ${address}`, {
+        event: 'walletConnected',
+        walletAddress: address,
+      });
+    }
+  }, [address]);
 
   return {
     account,

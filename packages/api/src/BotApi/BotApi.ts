@@ -48,8 +48,10 @@ export class BotApi {
   }
 
   async saveSubscription(address: string) {
-    await fetch(new URL(`subscriptions/${address}`, this.baseUrl), {
+    const response = await fetch(new URL(`subscriptions/${address}`, this.baseUrl), {
       method: 'POST',
     });
+
+    return response.ok;
   }
 }

@@ -1,0 +1,14 @@
+{
+  "name": "@tg-app/reporting",
+  "version": "0.0.0",
+  "private": true,
+  "sideEffects": false,
+  "types": "./src",
+  "exports": {
+    "import": "./src"
+  },
+  "dependencies": {
+    "@sentry/react": "^8.20.0"
+  },
+  "scripts": {}
+}

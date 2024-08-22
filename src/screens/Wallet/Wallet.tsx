@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Subscription } from '@tg-app/api';
+import Reporting from '@tg-app/reporting';
 import { Section, WalletWidget, Cell, Badge, Snackbar, ConfirmModal, Text, CheckIcon } from '@tg-app/ui';
 
 import { useSubscriptions, useWallet, useWalletSubscriptions } from '~/hooks';
@@ -27,13 +28,23 @@ export const Wallet = (_props: WalletProps) => {
     const to = allSubscriptions!.destinationWallet;
 
     setInProgress(true);
-    await wallet.transfer({ to, amount: price });
-    await syncSubscription();
-    await new Promise((resolve) => setTimeout(resolve, 3000));
-    setInProgress(false);
 
-    setHasToast(true);
-    setPlan(undefined);
+    try {
+      await wallet.transfer({ to, amount: price });
+      await syncSubscription();
+
+      setHasToast(true);
+      setPlan(undefined);
+
+      Reporting.message(`User subscribed to ${price} TON plan`, {
+        event: 'userSubscribed',
+        walletAddress: wallet.address,
+      });
+    } catch (error) {
+      Reporting.error(error);
+    }
+
+    setInProgress(false);
   };
 
   return (
