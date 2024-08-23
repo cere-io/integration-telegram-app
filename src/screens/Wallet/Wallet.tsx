@@ -56,17 +56,23 @@ export const Wallet = (_props: WalletProps) => {
       />
 
       <Section header="Subscription">
-        {allSubscriptions?.subscriptions.map((subscription) => (
-          <Cell
-            key={subscription.id}
-            disabled={!isConnected || inProgress}
-            subtitle={`${subscription.durationInDays} days for ${subscription.price} TON`}
-            after={currentSubscription?.id === subscription.id ? <Badge type="number">Active</Badge> : undefined}
-            onClick={() => setPlan(subscription)}
-          >
-            {subscription.description}
-          </Cell>
-        ))}
+        {allSubscriptions?.subscriptions.map((subscription) => {
+          const isActive = currentSubscription?.id === subscription.id;
+          const isReadOnly = !!currentSubscription;
+
+          return (
+            <Cell
+              key={subscription.id}
+              disabled={!isConnected || inProgress || !isActive}
+              readOnly={isReadOnly}
+              subtitle={`${subscription.durationInDays} days for ${subscription.price} TON`}
+              after={currentSubscription?.id === subscription.id ? <Badge type="number">Active</Badge> : undefined}
+              onClick={isReadOnly ? undefined : () => setPlan(subscription)}
+            >
+              {subscription.description}
+            </Cell>
+          );
+        })}
       </Section>
 
       {hasToast && <Snackbar onClose={() => setHasToast(false)}>Welcome to Premium! 🎉</Snackbar>}
