@@ -65,6 +65,7 @@ export const useWallet = (): Wallet => {
 
   const address = account?.address && toUserFriendlyAddress(account?.address);
   const storageKey = account?.address && `tonproof:${account.address}`;
+  const hasConnectionProof = isSuccessfulProof(connectItems?.tonProof);
 
   const tonProof = useMemo<TonProofItemReplySuccess>(() => {
     if (isSuccessfulProof(connectItems?.tonProof)) {
@@ -91,13 +92,13 @@ export const useWallet = (): Wallet => {
   }, [storageKey, tonProof]);
 
   useEffect(() => {
-    if (address) {
+    if (address && hasConnectionProof) {
       Reporting.message(`Wallet connected: ${address}`, {
         event: 'walletConnected',
         walletAddress: address,
       });
     }
-  }, [address]);
+  }, [address, hasConnectionProof]);
 
   return {
     account,
