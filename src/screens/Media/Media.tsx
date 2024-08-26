@@ -21,7 +21,11 @@ export const Media = ({ setActiveTab }: MediaProps) => {
 
   return (
     <>
-      <Banner before={<MediaLogo />} header="#FREEDUROV" subheader="Join the Decentralization Movement, watch Tucker Carlson’s uncensored, unstoppable interview with Pavel Durov now, streamed from the Cere DDC." />
+      <Banner
+        before={<MediaLogo />}
+        header="#FREEDUROV"
+        subheader="Join the Decentralization Movement, watch Tucker Carlson’s uncensored, unstoppable interview with Pavel Durov now, streamed from the Cere DDC."
+      />
 
       <MediaList>
         {videos.map((video, index) => (
