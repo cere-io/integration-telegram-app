@@ -28,7 +28,7 @@ export class Reporting {
     init({
       ...this.options,
       environment,
-      release: `developer-console-client@${appVersion}`,
+      release: `integration-telegram-app@${appVersion}`,
       initialScope: { tags },
     });
   }
