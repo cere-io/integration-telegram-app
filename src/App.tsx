@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Tabbar, MediaIcon, WalletIcon, Provider as UIProvider } from '@tg-app/ui';
+import { Tabbar, MediaIcon, Provider as UIProvider, SubscriptionIcon } from '@tg-app/ui';
 import Reporting from '@tg-app/reporting';
 import {
   bindMiniAppCSSVars,
@@ -9,7 +9,6 @@ import {
   bindThemeParamsCSSVars,
   bindViewportCSSVars,
   useInitData,
-  useLaunchParams,
 } from '@telegram-apps/sdk-react';
 
 import { Media, Wallet } from './screens';
@@ -21,14 +20,13 @@ const tabs = [
     text: 'Media catalog',
   },
   {
-    icon: WalletIcon,
+    icon: SubscriptionIcon,
     screen: Wallet,
     text: 'Subscription info',
   },
 ];
 
 export const App = () => {
-  const launchParams = useLaunchParams();
   const miniApp = useMiniApp();
   const themeParams = useThemeParams();
   const viewport = useViewport();
@@ -52,16 +50,13 @@ export const App = () => {
   );
 
   return (
-    <UIProvider
-      appearance={miniApp.isDark ? 'dark' : 'light'}
-      platform={['macos', 'ios'].includes(launchParams.platform) ? 'ios' : 'base'}
-    >
+    <UIProvider appearance={miniApp.isDark ? 'dark' : 'light'}>
       <Screen setActiveTab={setActiveTab} />
 
       <Tabbar>
         {tabs.map(({ icon: Icon, text }, index) => (
           <Tabbar.Item key={index} text={text} selected={activeTab === index} onClick={() => setActiveTab(index)}>
-            <Icon size={26} style={{ margin: 2 }} />
+            <Icon style={{ margin: 2, fontSize: 28 }} />
           </Tabbar.Item>
         ))}
       </Tabbar>

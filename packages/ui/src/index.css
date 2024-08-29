@@ -1,3 +1,7 @@
 :root {
   --safe_area_inset_bottom: calc(100vh - var(--tg-viewport-stable-height, 100vh))
 }
+
+body .Provider-root {
+  --tgui--link_color: #9244E0;
+}
