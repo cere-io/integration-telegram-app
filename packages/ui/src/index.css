@@ -3,6 +3,7 @@
 }
 
 body .App-root {
+  --tgui--accent_text_color: #9244E0;
   --tgui--link_color: #9244E0;
   --tgui--button_color: #9244E0;
   --tgui--font_weight--accent2: 500;

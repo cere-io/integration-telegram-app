@@ -1,0 +1,27 @@
+.WalletWidget-root {
+  padding: 16px;
+  border-bottom: 1px solid var(--tgui--divider);
+}
+
+.WalletWidget-title {
+  display: block;
+}
+
+.WalletWidget-caption {
+  color: var(--tgui--hint_color);
+}
+
+.WalletWidget-actions {
+  margin-top: 12px;
+}
+
+.WalletWidget-wallet {
+  display: flex;
+  flex-direction: column;
+}
+
+.WalletWidget-image {
+  height: 220;
+  margin-bottom: 16px;
+  text-align: center;
+}
