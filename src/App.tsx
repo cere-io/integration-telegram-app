@@ -51,8 +51,6 @@ export const App = () => {
     [user],
   );
 
-  console.log('App render', launchParams.platform);
-
   return (
     <UIProvider
       appearance={miniApp.isDark ? 'dark' : 'light'}

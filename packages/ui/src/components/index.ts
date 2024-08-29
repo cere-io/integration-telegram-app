@@ -9,8 +9,6 @@ export {
   type SubheadlineProps,
   Headline,
   type HeadlineProps,
-  Tabbar,
-  type TabbarProps,
   Section,
   type SectionProps,
   Cell,
@@ -34,3 +32,4 @@ export {
 export * from './MediaList';
 export * from './WalletWidget';
 export * from './ConfirmModal';
+export * from './Tabbar';
