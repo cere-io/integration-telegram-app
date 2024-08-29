@@ -25,3 +25,15 @@
   margin-bottom: 16px;
   text-align: center;
 }
+
+.WalletWidget-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 24px;
+  border-radius: 8px;
+  height: 32px;
+  width: 32px;
+  background-color: white;
+  margin-right: -4px;
+}

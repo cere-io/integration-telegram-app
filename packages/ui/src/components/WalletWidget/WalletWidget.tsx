@@ -1,8 +1,9 @@
-import { Title, Button, Text, Divider } from '@telegram-apps/telegram-ui';
+import { Title, Button, Text, Divider, Banner, Caption } from '@telegram-apps/telegram-ui';
 
 import './WalletWidget.css';
 import walletImage from './wallet.png';
 import { Truncate } from '../Truncate';
+import { ToncoinIcon } from '../../icons';
 
 export type WalletWidgetProps = {
   address?: string;
@@ -12,12 +13,6 @@ export type WalletWidgetProps = {
 
 export const WalletWidget = ({ address, onConnect, onDisconnect }: WalletWidgetProps) => {
   return (
-    // <Banner
-    //   header="Wallet"
-    //   subheader={
-    //     address ? <Truncate maxLength={20} variant="address" text={address} /> : 'Connect your wallet to continue'
-    //   }
-    // >
     <>
       <div className="WalletWidget-root">
         <div className="WalletWidget-wallet">
@@ -29,20 +24,28 @@ export const WalletWidget = ({ address, onConnect, onDisconnect }: WalletWidgetP
             Wallet
           </Title>
 
-          {address ? (
-            <Text className="WalletWidget-address">
-              <Truncate maxLength={20} variant="address" text={address} />
-            </Text>
-          ) : (
-            <Text className="WalletWidget-caption">Connect your wallet to continue</Text>
-          )}
+          {!address && <Text className="WalletWidget-caption">Connect your wallet to continue</Text>}
         </div>
 
         <div className="WalletWidget-actions">
           {address ? (
-            <Button mode="bezeled" onClick={onDisconnect}>
-              Disconnect
-            </Button>
+            <Banner
+              onClick={onDisconnect}
+              style={{ margin: 0, padding: '16px 12px' }}
+              type="inline"
+              header="48 TON" // TODO: Replace with actual balance
+              before={
+                <div className="WalletWidget-icon">
+                  <ToncoinIcon />
+                </div>
+              }
+              subheader={
+                <Caption>
+                  {'Toncoin - '}
+                  <Truncate maxLength={8} variant="address" text={address} />
+                </Caption>
+              }
+            />
           ) : (
             <Button mode="bezeled" onClick={onConnect}>
               Connect
