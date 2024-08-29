@@ -1,6 +1,6 @@
+import { lazy, Suspense } from 'react';
 import { Card, Modal, ModalProps } from '@tg-app/ui';
 import { Video } from '@tg-app/api';
-import { VideoPlayer as CerePlayer } from '@cere/media-sdk-react';
 import { useViewport } from '@telegram-apps/sdk-react';
 
 import './VideoPlayer.css';
@@ -25,6 +25,12 @@ const createUrl = (video?: Video, token?: string) => {
   return url.href;
 };
 
+const CerePlayer = lazy(async () => {
+  const { VideoPlayer } = await import('@cere/media-sdk-react');
+
+  return { default: VideoPlayer };
+});
+
 export const VideoPlayer = ({ token, video, open = false, onClose }: VideoPlayerProps) => {
   const { width = 0 } = useViewport() || {};
 
@@ -36,18 +42,20 @@ export const VideoPlayer = ({ token, video, open = false, onClose }: VideoPlayer
       <Modal.Header>{video?.name}</Modal.Header>
 
       <Card className="VideoPlayer-card">
-        {url && (
-          <CerePlayer
-            hlsEnabled={false}
-            src={url!}
-            type={video?.mimeType}
-            loadingComponent={<div />}
-            videoOverrides={{
-              autoPlay: true,
-              style: `width: ${width}px; height: ${height}px;` as any,
-            }}
-          />
-        )}
+        <Suspense fallback={<div style={{ width, height }} />}>
+          {url && (
+            <CerePlayer
+              hlsEnabled={false}
+              src={url!}
+              type={video?.mimeType}
+              loadingComponent={<div />}
+              videoOverrides={{
+                autoPlay: true,
+                style: `width: ${width}px; height: ${height}px;` as any,
+              }}
+            />
+          )}
+        </Suspense>
 
         <Card.Cell readOnly subtitle={video?.description} style={{ paddingBottom: 16 }}>
           {video?.name}
