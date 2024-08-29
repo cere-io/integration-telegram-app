@@ -9,6 +9,7 @@ import {
   bindThemeParamsCSSVars,
   bindViewportCSSVars,
   useInitData,
+  useLaunchParams,
 } from '@telegram-apps/sdk-react';
 
 import { Media, Wallet } from './screens';
@@ -27,6 +28,7 @@ const tabs = [
 ];
 
 export const App = () => {
+  const launchParams = useLaunchParams();
   const miniApp = useMiniApp();
   const themeParams = useThemeParams();
   const viewport = useViewport();
@@ -49,8 +51,13 @@ export const App = () => {
     [user],
   );
 
+  console.log('App render', launchParams.platform);
+
   return (
-    <UIProvider appearance={themeParams.isDark ? 'dark' : 'light'}>
+    <UIProvider
+      appearance={miniApp.isDark ? 'dark' : 'light'}
+      platform={['macos', 'ios'].includes(launchParams.platform) ? 'ios' : 'base'}
+    >
       <Screen setActiveTab={setActiveTab} />
 
       <Tabbar>
