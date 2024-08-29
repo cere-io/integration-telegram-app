@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Subscription } from '@tg-app/api';
 import Reporting from '@tg-app/reporting';
-import { Section, WalletWidget, Cell, Badge, Snackbar, ConfirmModal, Text, CheckIcon } from '@tg-app/ui';
+import { Benefits, WalletWidget, Snackbar, ConfirmModal, Text, CheckIcon, Caption, Headline } from '@tg-app/ui';
 
 import { useSubscriptions, useWallet, useWalletSubscriptions } from '~/hooks';
 
@@ -18,6 +18,9 @@ export const Wallet = (_props: WalletProps) => {
   const { data: allSubscriptions } = useSubscriptions();
   const { data: currentSubscription, sync: syncSubscription } = useWalletSubscriptions(wallet.address);
   const isConnected = !!wallet.address;
+
+  console.log('currentSubscription', currentSubscription);
+  console.log('isConnected', isConnected);
 
   const handleConfirm = async () => {
     if (!plan) {
@@ -55,25 +58,22 @@ export const Wallet = (_props: WalletProps) => {
         onDisconnect={() => wallet.disconnect()}
       />
 
-      <Section header="Subscription">
-        {allSubscriptions?.subscriptions.map((subscription) => {
-          const isActive = currentSubscription?.id === subscription.id;
-          const isReadOnly = !!currentSubscription;
+      <div style={{ textAlign: 'center', marginTop: 16, padding: 16 }}>
+        <Headline weight="2" style={{ marginBottom: 16 }}>
+          Unlock Premium Access
+        </Headline>
 
-          return (
-            <Cell
-              key={subscription.id}
-              disabled={!isConnected || inProgress || !isActive}
-              readOnly={isReadOnly}
-              subtitle={`${subscription.durationInDays} days for ${subscription.price} TON`}
-              after={currentSubscription?.id === subscription.id ? <Badge type="number">Active</Badge> : undefined}
-              onClick={isReadOnly ? undefined : () => setPlan(subscription)}
-            >
-              {subscription.description}
-            </Cell>
-          );
-        })}
-      </Section>
+        <Caption style={{ display: 'block', marginBottom: 16 }}>
+          Experience the best of our service with a premium subscription. Enjoy exclusive features, ad-free browsing,
+          priority support, and much more. Elevate your experience and get the most out of your subscription today!
+        </Caption>
+
+        <Benefits>
+          <Benefits.Item before="✨">Ad-free viewing</Benefits.Item>
+          <Benefits.Item before="💎️">Exclusive series</Benefits.Item>
+          <Benefits.Item before="🤙">Cancel anytime</Benefits.Item>
+        </Benefits>
+      </div>
 
       {hasToast && <Snackbar onClose={() => setHasToast(false)}>Welcome to Premium! 🎉</Snackbar>}
 

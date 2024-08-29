@@ -5,3 +5,4 @@ export { default as MediaIcon } from './MediaIcon.svg?react';
 export { default as SubscriptionIcon } from './SubscriptionIcon.svg?react';
 export { default as LockIcon } from './LockIcon.svg?react';
 export { default as ToncoinIcon } from './ToncoinIcon.svg?react';
+export { default as HeartIcon } from './HeartIcon.svg?react';

@@ -34,6 +34,7 @@
   border-radius: 8px;
   height: 32px;
   width: 32px;
-  background-color: white;
+  background-color: #fff;
+  color: #0A1E24;
   margin-right: -4px;
 }

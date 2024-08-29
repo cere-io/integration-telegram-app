@@ -1,0 +1,34 @@
+.Benefits-root {
+  background-color: var(--tgui--quartenary_bg_color);
+  border-radius: 12px;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.BenefitsItem-root {
+  display: flex;
+  align-items: center;
+}
+
+.BenefitsItem-before {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  
+  margin-right: 12px;
+  background-color: #fff;
+  font-size: 20px;
+  height: 32px;
+  width: 32px;
+  border-radius: 100%;
+}
+
+.BenefitsItem-content {
+  flex: 1;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--tgui--divider);
+}
+
+.BenefitsItem-root:last-child .BenefitsItem-content {
+  border-bottom: none;
+}

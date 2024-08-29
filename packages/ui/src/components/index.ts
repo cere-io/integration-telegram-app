@@ -27,9 +27,14 @@ export {
   type BannerProps,
   Button,
   type ButtonProps,
+  List,
+  type ListProps,
+  Caption,
+  type CaptionProps,
 } from '@telegram-apps/telegram-ui';
 
 export * from './MediaList';
 export * from './WalletWidget';
 export * from './ConfirmModal';
 export * from './Tabbar';
+export * from './Benefits';
