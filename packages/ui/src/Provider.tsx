@@ -5,7 +5,7 @@ export type ProviderProps = AppRootProps;
 
 export const Provider = ({ children, ...props }: ProviderProps) => {
   return (
-    <AppRoot {...props} className="Provider-root" platform="ios">
+    <AppRoot {...props} className="App-root" platform="ios">
       {children}
     </AppRoot>
   );

@@ -2,6 +2,8 @@
   --safe_area_inset_bottom: calc(100vh - var(--tg-viewport-stable-height, 100vh))
 }
 
-body .Provider-root {
+body .App-root {
   --tgui--link_color: #9244E0;
+  --tgui--button_color: #9244E0;
+  --tgui--font_weight--accent2: 500;
 }
