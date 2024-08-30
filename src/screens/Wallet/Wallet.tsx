@@ -64,46 +64,46 @@ export const Wallet = (_props: WalletProps) => {
         onDisconnect={() => wallet.disconnect()}
       />
 
-      {!loading && (
-        <div style={{ marginTop: 16, padding: 16 }}>
-          {!currentSubscription ? (
-            <div style={{ textAlign: 'center' }}>
-              <Headline weight="2" style={{ marginBottom: 12 }}>
-                Unlock Premium Access
-              </Headline>
+      <div style={{ marginTop: 16, padding: 16 }}>
+        {(!loading || !wallet.address) && !currentSubscription && (
+          <div style={{ textAlign: 'center' }}>
+            <Headline weight="2" style={{ marginBottom: 12 }}>
+              Unlock Premium Access
+            </Headline>
 
-              <Caption style={{ display: 'block', marginBottom: 12 }}>
-                Experience the best of our service with a premium subscription. Enjoy exclusive features, ad-free
-                browsing, priority support, and much more. Elevate your experience and get the most out of your
-                subscription today!
-              </Caption>
+            <Caption style={{ display: 'block', marginBottom: 12 }}>
+              Experience the best of our service with a premium subscription. Enjoy exclusive features, ad-free
+              browsing, priority support, and much more. Elevate your experience and get the most out of your
+              subscription today!
+            </Caption>
 
-              <Benefits>
-                <Benefits.Item before="✨">Ad-free viewing</Benefits.Item>
-                <Benefits.Item before="💎️">Exclusive series</Benefits.Item>
-                <Benefits.Item before="🤙">Cancel anytime</Benefits.Item>
-              </Benefits>
-            </div>
-          ) : (
-            <>
-              <Subheadline weight="2" style={{ marginBottom: 12 }}>
-                Active subscription
-              </Subheadline>
+            <Benefits>
+              <Benefits.Item before="✨">Ad-free viewing</Benefits.Item>
+              <Benefits.Item before="💎️">Exclusive series</Benefits.Item>
+              <Benefits.Item before="🤙">Cancel anytime</Benefits.Item>
+            </Benefits>
+          </div>
+        )}
 
-              <IconBanner
-                header="My subscription"
-                icon={<HeartIcon />}
-                description={`${currentSubscription.durationInDays} days for ${currentSubscription.price} TON`}
-              />
+        {!loading && currentSubscription && (
+          <>
+            <Subheadline weight="2" style={{ marginBottom: 12 }}>
+              Active subscription
+            </Subheadline>
 
-              <Caption Component="div" style={{ marginTop: 12, color: 'var(--tgui--hint_color)' }}>
-                This subscription renews automatically. You will be charged at the beginning of each billing cycle
-                unless canceled beforehand.
-              </Caption>
-            </>
-          )}
-        </div>
-      )}
+            <IconBanner
+              header="My subscription"
+              icon={<HeartIcon />}
+              description={`${currentSubscription.durationInDays} days for ${currentSubscription.price} TON`}
+            />
+
+            <Caption Component="div" style={{ marginTop: 12, color: 'var(--tgui--hint_color)' }}>
+              This subscription renews automatically. You will be charged at the beginning of each billing cycle unless
+              canceled beforehand.
+            </Caption>
+          </>
+        )}
+      </div>
 
       {hasToast && <Snackbar onClose={() => setHasToast(false)}>Welcome to Premium! 🎉</Snackbar>}
 

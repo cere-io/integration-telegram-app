@@ -2,11 +2,12 @@ import { Title, Button, Text, Divider } from '@telegram-apps/telegram-ui';
 
 import './WalletWidget.css';
 
-import { ToncoinIcon } from '../../icons';
+import { DisconnectIcon, ToncoinIcon } from '../../icons';
 import walletImage from './wallet.png';
 
 import { Truncate } from '../Truncate';
 import { IconBanner } from '../IconBanner';
+import { Menu } from '../Menu';
 
 export type WalletWidgetProps = {
   address?: string;
@@ -14,7 +15,7 @@ export type WalletWidgetProps = {
   onDisconnect?: () => void;
 };
 
-export const WalletWidget = ({ address, onConnect }: WalletWidgetProps) => {
+export const WalletWidget = ({ address, onConnect, onDisconnect }: WalletWidgetProps) => {
   return (
     <>
       <div className="WalletWidget-root">
@@ -40,6 +41,13 @@ export const WalletWidget = ({ address, onConnect }: WalletWidgetProps) => {
                   {'Toncoin - '}
                   <Truncate maxLength={8} variant="address" text={address} />
                 </>
+              }
+              after={
+                <Menu>
+                  <Menu.Button before={<DisconnectIcon size={18} />} onClick={onDisconnect}>
+                    Disconnect wallet
+                  </Menu.Button>
+                </Menu>
               }
             />
           ) : (

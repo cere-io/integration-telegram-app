@@ -3,6 +3,12 @@ body .IconBanner-root {
   padding: 16px 12px;
 }
 
+.IconBanner-after {
+  position: absolute;
+  top: 22px;
+  right: 10px;
+}
+
 .IconBanner-icon {
   display: flex;
   justify-content: center;
