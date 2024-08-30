@@ -4,15 +4,29 @@ type RequestOprions = RequestInit & {
   allowStatus?: number[];
 };
 
+export type BotOptions = {
+  startParam?: string;
+};
+
 export class BotApi {
   readonly baseUrl: URL;
+  readonly startParam?: string;
 
-  constructor(baseUrl: string) {
+  constructor(baseUrl: string, options: BotOptions = {}) {
     this.baseUrl = new URL('./', baseUrl);
+    this.startParam = options.startParam;
   }
 
   private async request(url: string, { allowStatus = [], ...options }: RequestOprions = {}) {
-    const response = await fetch(new URL(url, this.baseUrl), options);
+    const response = await fetch(new URL(url, this.baseUrl), {
+      ...options,
+      headers: {
+        ...options.headers,
+        ...(this.startParam && {
+          'X-Telegram-Chat': this.startParam,
+        }),
+      },
+    });
 
     if (!response.ok && !allowStatus.includes(response.status)) {
       throw new Error(await response.text());
