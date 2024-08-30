@@ -1,9 +1,12 @@
-import { Title, Button, Text, Divider, Banner, Caption } from '@telegram-apps/telegram-ui';
+import { Title, Button, Text, Divider } from '@telegram-apps/telegram-ui';
 
 import './WalletWidget.css';
-import walletImage from './wallet.png';
-import { Truncate } from '../Truncate';
+
 import { ToncoinIcon } from '../../icons';
+import walletImage from './wallet.png';
+
+import { Truncate } from '../Truncate';
+import { IconBanner } from '../IconBanner';
 
 export type WalletWidgetProps = {
   address?: string;
@@ -11,7 +14,7 @@ export type WalletWidgetProps = {
   onDisconnect?: () => void;
 };
 
-export const WalletWidget = ({ address, onConnect, onDisconnect }: WalletWidgetProps) => {
+export const WalletWidget = ({ address, onConnect }: WalletWidgetProps) => {
   return (
     <>
       <div className="WalletWidget-root">
@@ -29,21 +32,14 @@ export const WalletWidget = ({ address, onConnect, onDisconnect }: WalletWidgetP
 
         <div className="WalletWidget-actions">
           {address ? (
-            <Banner
-              onClick={onDisconnect}
-              style={{ margin: 0, padding: '16px 12px' }}
-              type="inline"
+            <IconBanner
               header="48 TON" // TODO: Replace with actual balance
-              before={
-                <div className="WalletWidget-icon">
-                  <ToncoinIcon />
-                </div>
-              }
-              subheader={
-                <Caption>
+              icon={<ToncoinIcon />}
+              description={
+                <>
                   {'Toncoin - '}
                   <Truncate maxLength={8} variant="address" text={address} />
-                </Caption>
+                </>
               }
             />
           ) : (

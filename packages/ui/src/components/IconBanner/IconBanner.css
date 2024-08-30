@@ -1,0 +1,17 @@
+body .IconBanner-root {
+  margin: 0!important;
+  padding: 16px 12px;
+}
+
+.IconBanner-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 24px;
+  border-radius: 8px;
+  height: 32px;
+  width: 32px;
+  background-color: #fff;
+  color: #0A1E24;
+  margin-right: -4px;
+}

@@ -38,3 +38,4 @@ export * from './WalletWidget';
 export * from './ConfirmModal';
 export * from './Tabbar';
 export * from './Benefits';
+export * from './IconBanner';
