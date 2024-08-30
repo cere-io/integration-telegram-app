@@ -6,7 +6,7 @@ import { useBot } from './useBot';
 
 export const useWalletSubscriptions = (address?: string) => {
   const bot = useBot();
-  const [data, setData] = useState<Subscription>();
+  const [data, setData] = useState<Subscription | null>();
 
   const sync = useCallback(async () => {
     if (!address) {
