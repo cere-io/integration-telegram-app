@@ -1,16 +1,15 @@
 import { useState } from 'react';
-import { Subscription } from '@tg-app/api';
 import Reporting from '@tg-app/reporting';
 import {
   Benefits,
   WalletWidget,
   Snackbar,
-  ConfirmModal,
   Caption,
   Headline,
   IconBanner,
   HeartIcon,
   Subheadline,
+  Button,
 } from '@tg-app/ui';
 
 import { useSubscriptions, useWallet, useWalletSubscriptions } from '~/hooks';
@@ -24,16 +23,17 @@ export const Wallet = (_props: WalletProps) => {
   const wallet = useWallet();
   const [hasToast, setHasToast] = useState(false);
   const [inProgress, setInProgress] = useState(false);
-  const [plan, setPlan] = useState<Subscription>();
   const { data: allSubscriptions } = useSubscriptions();
   const { loading, data: currentSubscription, sync: syncSubscription } = useWalletSubscriptions(wallet.address);
 
-  const handleConfirm = async () => {
-    if (!plan) {
+  const targetPlan = allSubscriptions?.subscriptions[0];
+
+  const handleSubscribe = async () => {
+    if (!targetPlan) {
       return;
     }
 
-    const { price } = plan;
+    const { price } = targetPlan;
     const to = allSubscriptions!.destinationWallet;
 
     setInProgress(true);
@@ -43,7 +43,6 @@ export const Wallet = (_props: WalletProps) => {
       await syncSubscription();
 
       setHasToast(true);
-      setPlan(undefined);
 
       Reporting.message(`User subscribed to ${price} TON plan`, {
         event: 'userSubscribed',
@@ -103,20 +102,19 @@ export const Wallet = (_props: WalletProps) => {
             </Caption>
           </>
         )}
+
+        {!loading && !currentSubscription && targetPlan && (
+          <Button stretched size="l" loading={inProgress} style={{ marginTop: 16 }} onClick={handleSubscribe}>
+            Subscribe for ${targetPlan.price} TON per {targetPlan.durationInDays} days
+          </Button>
+        )}
       </div>
 
-      {hasToast && <Snackbar onClose={() => setHasToast(false)}>Welcome to Premium! 🎉</Snackbar>}
-
-      <ConfirmModal
-        open={!!plan}
-        inProgress={inProgress}
-        onClose={() => setPlan(undefined)}
-        title={`Confirm your ${plan?.price} Ton subscription to CereMedia Premium`}
-        confirmText="Confirm Subscription"
-        onConfirm={handleConfirm}
-      >
-        TBD
-      </ConfirmModal>
+      {hasToast && (
+        <Snackbar description="Your order is complete! Thank you for your purchase." onClose={() => setHasToast(false)}>
+          Welcome to Premium! 🎉
+        </Snackbar>
+      )}
     </>
   );
 };

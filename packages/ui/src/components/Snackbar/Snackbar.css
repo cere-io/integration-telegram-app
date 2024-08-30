@@ -1,0 +1,9 @@
+.Snackbar-root {
+  bottom: calc(var(--safe_area_inset_bottom) + 70px);
+}
+
+.Snackbar-root > div {
+  padding: 16px;
+  background-color: #49BF63;
+  
+}

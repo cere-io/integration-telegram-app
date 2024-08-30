@@ -15,8 +15,6 @@ export {
   type CellProps,
   Badge,
   type BadgeProps,
-  Snackbar,
-  type SnackbarProps,
   Modal,
   type ModalProps,
   Card,
@@ -40,3 +38,4 @@ export * from './Tabbar';
 export * from './Benefits';
 export * from './IconBanner';
 export * from './Menu';
+export * from './Snackbar';
