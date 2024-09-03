@@ -47,7 +47,9 @@ const transfer = async (ui: TonConnectUI, { to, amount }: TransferArgs) => {
     ],
   };
 
-  const { boc } = await ui.sendTransaction(request);
+  const { boc } = await ui.sendTransaction(request, {
+    notifications: ['error', 'success'],
+  });
 
   console.log('Transfer completed', { boc });
   Reporting.message(`Transfer of ${amount} TON completed`, {
