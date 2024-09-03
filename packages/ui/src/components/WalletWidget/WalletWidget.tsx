@@ -1,4 +1,4 @@
-import { Title, Button, Text, Divider, Skeleton } from '@telegram-apps/telegram-ui';
+import { Title, Button, Text, Divider } from '@telegram-apps/telegram-ui';
 
 import './WalletWidget.css';
 
@@ -35,7 +35,7 @@ export const WalletWidget = ({ address, balance, onConnect, onDisconnect }: Wall
         <div className="WalletWidget-actions">
           {address ? (
             <IconBanner
-              header={balance ? `${balance} TON` : <Skeleton visible style={{ height: 21, width: 100 }} />}
+              header={balance ? `${balance} TON` : <div style={{ height: 22 }} />}
               icon={<ToncoinIcon />}
               description={
                 <>
