@@ -19,12 +19,14 @@ const benefits = [
   { icon: Benefit3Icon, title: 'Progress Tracking', description: 'Monitor your progress and stay motivated' },
 ];
 
-export const SubscriptionInfo = ({ children }: SubscriptionInfoProps) => {
+export const SubscriptionInfo = ({ subscription, children }: SubscriptionInfoProps) => {
   const { isDark } = useMiniApp();
   const appearanceClass = `SubscriptionInfo-${isDark ? 'dark' : 'light'}`;
 
   return (
     <div className={`SubscriptionInfo-root ${appearanceClass}`}>
+      <div className="SubscriptionInfo-bgLayer SubscriptionInfo-layer0"></div>
+
       <Title level="1" weight="1" className="SubscriptionInfo-title">
         Get Fit Faster
       </Title>
@@ -33,14 +35,14 @@ export const SubscriptionInfo = ({ children }: SubscriptionInfoProps) => {
         Unlock exclusive fitness content to reach your goals
       </Text>
 
-      <div className="SubscriptionInfo-benefits">
+      <div className="SubscriptionInfo-benefits SubscriptionInfo-layer1">
         {benefits.map(({ icon: Icon, title, description }) => (
           <div key={title} className="SubscriptionInfo-benefit">
             <div className="SubscriptionInfo-benefitIcon">
               <Icon />
             </div>
             <div className="SubscriptionInfo-benefitContent">
-              <Text Component="div" weight="2" className="SubscriptionInfo-benefitTitle">
+              <Text Component="div" weight="1" className="SubscriptionInfo-benefitTitle">
                 {title}
               </Text>
               <Text className="SubscriptionInfo-benefitDescription">{description}</Text>
@@ -49,20 +51,23 @@ export const SubscriptionInfo = ({ children }: SubscriptionInfoProps) => {
         ))}
       </div>
 
-      <div className="SubscriptionInfo-banner">
-        <Subheadline Component="div" weight="2" className="SubscriptionInfo-bannerTitle">
-          Ready to take the next step? <br />
-          Subscribe now and start your transformation!
-        </Subheadline>
+      {subscription && (
+        <>
+          <div className="SubscriptionInfo-banner SubscriptionInfo-layer1">
+            <Subheadline Component="div" weight="2" className="SubscriptionInfo-bannerTitle">
+              Ready to take the next step? <br />
+              Subscribe now and start your transformation!
+            </Subheadline>
 
-        <Text>Annual Subscription</Text>
-        <Headline weight="1" className="SubscriptionInfo-bannerSubscription">
-          1 TON / year
-        </Headline>
-      </div>
+            <Text>Subscription</Text>
+            <Headline weight="1" className="SubscriptionInfo-bannerSubscription">
+              {subscription.price} TON / {subscription.durationInDays} days
+            </Headline>
+          </div>
 
-      <div className="SubscriptionInfo-action">{children}</div>
-      <div className="SubscriptionInfo-bgLayer"></div>
+          <div className="SubscriptionInfo-action SubscriptionInfo-layer1">{children}</div>
+        </>
+      )}
     </div>
   );
 };

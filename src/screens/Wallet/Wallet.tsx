@@ -29,6 +29,7 @@ export const Wallet = ({ showSubscribe = false }: WalletProps) => {
   const { data: allSubscriptions } = useSubscriptions();
   const { loading, data: currentSubscription, sync: syncSubscription } = useWalletSubscriptions(wallet.address);
   const targetPlan = allSubscriptions?.subscriptions[0];
+  const isLoading = loading || !wallet.address;
 
   const handleSubscribe = async () => {
     if (!targetPlan) {
@@ -60,11 +61,11 @@ export const Wallet = ({ showSubscribe = false }: WalletProps) => {
 
   const subscribeButton = targetPlan && (
     <Button stretched size="l" loading={inProgress} style={{ marginTop: 16 }} onClick={handleSubscribe}>
-      Subscribe for ${targetPlan.price} TON per {targetPlan.durationInDays} days
+      Subscribe for {targetPlan.price} TON
     </Button>
   );
 
-  if (loading && !showSubscribe) {
+  if (isLoading && !showSubscribe) {
     return null;
   }
 
@@ -82,7 +83,7 @@ export const Wallet = ({ showSubscribe = false }: WalletProps) => {
       />
 
       <div style={{ marginTop: 16, padding: 16 }}>
-        {(!loading || !wallet.address) && !currentSubscription && (
+        {!isLoading && !currentSubscription && (
           <div style={{ textAlign: 'center' }}>
             <Headline weight="2" style={{ marginBottom: 12 }}>
               Unlock Premium Access
@@ -102,7 +103,7 @@ export const Wallet = ({ showSubscribe = false }: WalletProps) => {
           </div>
         )}
 
-        {!loading && currentSubscription && (
+        {!isLoading && currentSubscription && (
           <>
             <Subheadline weight="2" style={{ marginBottom: 12 }}>
               Active subscription
@@ -121,7 +122,7 @@ export const Wallet = ({ showSubscribe = false }: WalletProps) => {
           </>
         )}
 
-        {!loading && !currentSubscription && subscribeButton}
+        {!isLoading && !currentSubscription && subscribeButton}
       </div>
 
       {hasToast && (
