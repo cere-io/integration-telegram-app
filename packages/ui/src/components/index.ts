@@ -29,6 +29,8 @@ export {
   type ListProps,
   Caption,
   type CaptionProps,
+  Spinner,
+  type SpinnerProps,
 } from '@telegram-apps/telegram-ui';
 
 export * from './MediaList';

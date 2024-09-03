@@ -4,9 +4,10 @@ import { Video } from '@tg-app/api';
 
 import { useBot, useToken } from '~/hooks';
 import { VideoPlayer } from '~/components';
+import type { ActiveTab } from '~/App';
 
 type MediaProps = {
-  setActiveTab: (index: number) => void;
+  setActiveTab: (tab: ActiveTab) => void;
 };
 
 export const Media = ({ setActiveTab }: MediaProps) => {
@@ -53,7 +54,7 @@ export const Media = ({ setActiveTab }: MediaProps) => {
             bottom: 'calc(var(--safe_area_inset_bottom) + 80px)',
           }}
         >
-          <Button size="l" onClick={() => setActiveTab(1)}>
+          <Button size="l" onClick={() => setActiveTab({ index: 1, props: { showSubscribe: true } })}>
             ⭐ Become a Premium member!
           </Button>
         </div>

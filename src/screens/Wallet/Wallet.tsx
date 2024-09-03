@@ -12,21 +12,22 @@ import {
   Button,
 } from '@tg-app/ui';
 
+import type { ActiveTab } from '~/App';
 import { useSubscriptions, useWallet, useWalletBalance, useWalletSubscriptions } from '~/hooks';
+import { SubscriptionInfo } from '~/components';
 
 type WalletProps = {
-  setActiveTab: (index: number) => void;
+  showSubscribe?: boolean;
+  setActiveTab: (tab: ActiveTab) => void;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export const Wallet = (_props: WalletProps) => {
+export const Wallet = ({ showSubscribe = false }: WalletProps) => {
   const wallet = useWallet();
   const { balance, sync: syncBalance } = useWalletBalance(wallet.address);
   const [hasToast, setHasToast] = useState(false);
   const [inProgress, setInProgress] = useState(false);
   const { data: allSubscriptions } = useSubscriptions();
   const { loading, data: currentSubscription, sync: syncSubscription } = useWalletSubscriptions(wallet.address);
-
   const targetPlan = allSubscriptions?.subscriptions[0];
 
   const handleSubscribe = async () => {
@@ -56,6 +57,20 @@ export const Wallet = (_props: WalletProps) => {
 
     setInProgress(false);
   };
+
+  const subscribeButton = targetPlan && (
+    <Button stretched size="l" loading={inProgress} style={{ marginTop: 16 }} onClick={handleSubscribe}>
+      Subscribe for ${targetPlan.price} TON per {targetPlan.durationInDays} days
+    </Button>
+  );
+
+  if (loading && !showSubscribe) {
+    return null;
+  }
+
+  if (!currentSubscription) {
+    return <SubscriptionInfo subscription={targetPlan}>{subscribeButton}</SubscriptionInfo>;
+  }
 
   return (
     <>
@@ -106,11 +121,7 @@ export const Wallet = (_props: WalletProps) => {
           </>
         )}
 
-        {!loading && !currentSubscription && targetPlan && (
-          <Button stretched size="l" loading={inProgress} style={{ marginTop: 16 }} onClick={handleSubscribe}>
-            Subscribe for ${targetPlan.price} TON per {targetPlan.durationInDays} days
-          </Button>
-        )}
+        {!loading && !currentSubscription && subscribeButton}
       </div>
 
       {hasToast && (
