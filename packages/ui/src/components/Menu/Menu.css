@@ -1,0 +1,12 @@
+.Menu-trigger {
+  display: inline-block;
+}
+
+.Menu-trigger button {
+  color: var(--tgui--text_color);
+  font-size: 18px;
+}
+
+.Menu-item {
+  background-color: var(--tgui--bg_color);
+}

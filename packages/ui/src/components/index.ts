@@ -9,16 +9,12 @@ export {
   type SubheadlineProps,
   Headline,
   type HeadlineProps,
-  Tabbar,
-  type TabbarProps,
   Section,
   type SectionProps,
   Cell,
   type CellProps,
   Badge,
   type BadgeProps,
-  Snackbar,
-  type SnackbarProps,
   Modal,
   type ModalProps,
   Card,
@@ -29,8 +25,17 @@ export {
   type BannerProps,
   Button,
   type ButtonProps,
+  List,
+  type ListProps,
+  Caption,
+  type CaptionProps,
 } from '@telegram-apps/telegram-ui';
 
 export * from './MediaList';
 export * from './WalletWidget';
 export * from './ConfirmModal';
+export * from './Tabbar';
+export * from './Benefits';
+export * from './IconBanner';
+export * from './Menu';
+export * from './Snackbar';

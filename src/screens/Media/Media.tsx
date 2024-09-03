@@ -14,13 +14,14 @@ export const Media = ({ setActiveTab }: MediaProps) => {
   const [videos, setVideos] = useState<Video[]>([]);
   const [currentVideo, setCurrentVideo] = useState<Video>();
   const { token, loading } = useToken();
+  const hasSubscribeButton = !token && !loading && !!videos.length;
 
   useEffect(() => {
     bot.getVideos().then(setVideos);
   }, [bot]);
 
   return (
-    <>
+    <div style={{ paddingBottom: hasSubscribeButton ? 62 : 0 }}>
       <Banner
         before={<MediaLogo />}
         header="#FREEDUROV"
@@ -41,9 +42,20 @@ export const Media = ({ setActiveTab }: MediaProps) => {
         ))}
       </MediaList>
 
-      {!token && !loading && !!videos.length && (
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16, marginTop: 16 }}>
-          <Button onClick={() => setActiveTab(1)}>Subscribe to Unlock All!</Button>
+      {hasSubscribeButton && (
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            bottom: 'calc(var(--safe_area_inset_bottom) + 80px)',
+          }}
+        >
+          <Button size="l" onClick={() => setActiveTab(1)}>
+            ⭐ Become a Premium member!
+          </Button>
         </div>
       )}
 
@@ -53,6 +65,6 @@ export const Media = ({ setActiveTab }: MediaProps) => {
         token={token}
         onClose={() => setCurrentVideo(undefined)}
       />
-    </>
+    </div>
   );
 };

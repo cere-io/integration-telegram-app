@@ -1,0 +1,40 @@
+.WalletWidget-root {
+  padding: 16px;
+  border-bottom: 1px solid var(--tgui--divider);
+}
+
+.WalletWidget-title {
+  display: block;
+}
+
+.WalletWidget-caption {
+  color: var(--tgui--hint_color);
+}
+
+.WalletWidget-actions {
+  margin-top: 12px;
+}
+
+.WalletWidget-wallet {
+  display: flex;
+  flex-direction: column;
+}
+
+.WalletWidget-image {
+  height: 180px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.WalletWidget-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 24px;
+  border-radius: 8px;
+  height: 32px;
+  width: 32px;
+  background-color: #fff;
+  color: #0A1E24;
+  margin-right: -4px;
+}

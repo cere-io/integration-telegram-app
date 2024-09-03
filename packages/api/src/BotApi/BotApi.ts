@@ -65,11 +65,11 @@ export class BotApi {
     return response.json();
   }
 
-  async getUserSubscription(address: string): Promise<Subscription | undefined> {
+  async getUserSubscription(address: string): Promise<Subscription | null> {
     const response = await this.request(`subscriptions/${address}`, { allowStatus: [404] });
 
     if (response.status === 404) {
-      return undefined;
+      return null;
     }
 
     return response.json();
@@ -81,5 +81,11 @@ export class BotApi {
     });
 
     return response.ok;
+  }
+
+  async getWaletBalance(address: string) {
+    const response = await this.request(`wallets/${address}/balance`);
+
+    return BigInt(await response.text());
   }
 }
