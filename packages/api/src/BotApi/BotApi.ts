@@ -82,4 +82,10 @@ export class BotApi {
 
     return response.ok;
   }
+
+  async getWaletBalance(address: string) {
+    const response = await this.request(`wallets/${address}/balance`);
+
+    return BigInt(await response.text());
+  }
 }

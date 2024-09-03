@@ -1,4 +1,4 @@
-import { Title, Button, Text, Divider } from '@telegram-apps/telegram-ui';
+import { Title, Button, Text, Divider, Skeleton } from '@telegram-apps/telegram-ui';
 
 import './WalletWidget.css';
 
@@ -11,11 +11,12 @@ import { Menu } from '../Menu';
 
 export type WalletWidgetProps = {
   address?: string;
+  balance?: string;
   onConnect?: () => void;
   onDisconnect?: () => void;
 };
 
-export const WalletWidget = ({ address, onConnect, onDisconnect }: WalletWidgetProps) => {
+export const WalletWidget = ({ address, balance, onConnect, onDisconnect }: WalletWidgetProps) => {
   return (
     <>
       <div className="WalletWidget-root">
@@ -34,7 +35,7 @@ export const WalletWidget = ({ address, onConnect, onDisconnect }: WalletWidgetP
         <div className="WalletWidget-actions">
           {address ? (
             <IconBanner
-              header="48 TON" // TODO: Replace with actual balance
+              header={balance ? `${balance} TON` : <Skeleton visible style={{ height: 21, width: 100 }} />}
               icon={<ToncoinIcon />}
               description={
                 <>

@@ -12,7 +12,7 @@ import {
   Button,
 } from '@tg-app/ui';
 
-import { useSubscriptions, useWallet, useWalletSubscriptions } from '~/hooks';
+import { useSubscriptions, useWallet, useWalletBalance, useWalletSubscriptions } from '~/hooks';
 
 type WalletProps = {
   setActiveTab: (index: number) => void;
@@ -21,6 +21,7 @@ type WalletProps = {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const Wallet = (_props: WalletProps) => {
   const wallet = useWallet();
+  const { balance, sync: syncBalance } = useWalletBalance(wallet.address);
   const [hasToast, setHasToast] = useState(false);
   const [inProgress, setInProgress] = useState(false);
   const { data: allSubscriptions } = useSubscriptions();
@@ -41,6 +42,7 @@ export const Wallet = (_props: WalletProps) => {
     try {
       await wallet.transfer({ to, amount: price });
       await syncSubscription();
+      await syncBalance();
 
       setHasToast(true);
 
@@ -59,6 +61,7 @@ export const Wallet = (_props: WalletProps) => {
     <>
       <WalletWidget
         address={wallet.address}
+        balance={balance}
         onConnect={() => wallet.connect()}
         onDisconnect={() => wallet.disconnect()}
       />
