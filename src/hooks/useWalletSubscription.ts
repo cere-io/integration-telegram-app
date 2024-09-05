@@ -7,6 +7,7 @@ import { useBot } from './useBot';
 export const useWalletSubscriptions = (address?: string) => {
   const bot = useBot();
   const [data, setData] = useState<Subscription | null>();
+  const [loading, setLoading] = useState(false);
 
   const sync = useCallback(async () => {
     if (!address) {
@@ -22,19 +23,33 @@ export const useWalletSubscriptions = (address?: string) => {
     }
   }, [bot, address]);
 
+  const load = useCallback(
+    async (customAddress?: string) => {
+      const finalAddress = customAddress || address;
+
+      if (!finalAddress) {
+        return setData(undefined);
+      }
+
+      setLoading(true);
+
+      const subscription = await bot.getUserSubscription(finalAddress);
+      setData(subscription);
+      setLoading(false);
+
+      return subscription;
+    },
+    [bot, address],
+  );
+
   useEffect(() => {
-    if (!address) {
-      setData(undefined);
-
-      return;
-    }
-
-    bot.getUserSubscription(address).then(setData);
-  }, [bot, address]);
+    load();
+  }, [load]);
 
   return {
     data,
     sync,
-    loading: data === undefined,
+    load,
+    loading,
   };
 };

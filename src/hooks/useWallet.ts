@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toNano } from '@ton/core/dist/utils/convert';
 import Reporting from '@tg-app/reporting';
 import {
@@ -25,7 +25,7 @@ export type Wallet = {
   loading: boolean;
   transfer: (args: TransferArgs) => Promise<void>;
   disconnect: () => void;
-  connect: () => void;
+  connect: () => Promise<string>;
   tonProof?: TonProofItemReplySuccess;
 };
 
@@ -79,6 +79,18 @@ export const useWallet = (): Wallet => {
     return tonProofJson ? JSON.parse(tonProofJson) : undefined;
   }, [connectItems, storageKey]);
 
+  const connect = useCallback(async () => {
+    await ui.openModal();
+
+    return new Promise<string>((resolve) => {
+      ui.onStatusChange((wallet) => {
+        if (wallet) {
+          resolve(toUserFriendlyAddress(wallet.account.address));
+        }
+      });
+    });
+  }, [ui]);
+
   useEffect(() => {
     ui.connectionRestored.finally(() => setLoading(false));
     ui.setConnectRequestParameters({ state: 'loading' });
@@ -107,8 +119,8 @@ export const useWallet = (): Wallet => {
     tonProof,
     address,
     loading,
+    connect,
     transfer: transfer.bind(null, ui),
     disconnect: () => ui.disconnect(),
-    connect: () => ui.openModal(),
   };
 };
