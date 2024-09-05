@@ -1,74 +1,40 @@
 .SubscriptionInfo-root {
+  box-sizing: border-box;
   position: relative;
   margin: 16px;
   margin-bottom: 0;
-  padding: 16px;
   border-radius: 16px;
   display: flex;
   flex-direction: column;
-  min-height: calc(var(--tg-viewport-stable-height) - 124px);
+  min-height: calc(var(--tg-viewport-stable-height) - (80px + 16px));
 }
 
-.SubscriptionInfo-title,
+.SubscriptionInfo-header,
 .SubscriptionInfo-description,
 .SubscriptionInfo-benefits,
 .SubscriptionInfo-benefit {
   margin-bottom: 16px;
 }
 
-.SubscriptionInfo-bannerTitle {
-  margin-bottom: 8px;
+.SubscriptionInfo-header img {
+  object-fit: contain;
+  min-height: 278px;
+  max-height: 300px;
+  width: 100%;
 }
 
-.SubscriptionInfo-benefitTitle {
-  margin-bottom: 8px;
+.SubscriptionInfo-benefits {
+  margin-top: 16px;
 }
 
-.SubscriptionInfo-benefit {
-  display: flex;
-}
-
-.SubscriptionInfo-benefitIcon {
-  font-size: 28px;
-  margin-right: 12px;
-}
-
-.SubscriptionInfo-banner {
+.SubscriptionInfo-footer {
   margin-top: auto;
-  padding: 12px 12px 16px 12px;
-  border-radius: 8px;
-  background-color: #ffffffcc;
-  box-shadow: 0px 4px 8px 0px #36363629;
-  backdrop-filter: blur(2px);
 }
 
-.SubscriptionInfo-bannerSubscription {
-  color: var(--tgui--accent_text_color);
-}
-
-.SubscriptionInfo-bgLayer {
-  position: absolute;
-  bottom: 0;
-  right: -16px;
-  height: 300px;
-  width: 200px;
-  margin-bottom: 48px;
-  background-image: url('./light-bg1.png');
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: contain;
-}
-
-.SubscriptionInfo-layer1 {
-  position: relative;
-}
-
-.SubscriptionInfo-light {
-  background-color: #e4e4e4;
-}
-
-.SubscriptionInfo-light .SubscriptionInfo-title {
-  color: var(--tgui--accent_text_color);
+.SubscriptionInfo-dark {
+  background-color: #F8F8F8;
+  padding: 16px;
+  color: #000;
 }
 
 

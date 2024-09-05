@@ -1,16 +1,6 @@
 import { useState } from 'react';
 import Reporting from '@tg-app/reporting';
-import {
-  Benefits,
-  WalletWidget,
-  Snackbar,
-  Caption,
-  Headline,
-  IconBanner,
-  HeartIcon,
-  Subheadline,
-  Button,
-} from '@tg-app/ui';
+import { WalletWidget, Snackbar, Caption, IconBanner, HeartIcon, Subheadline, Button } from '@tg-app/ui';
 
 import type { ActiveTab } from '~/App';
 import { useSubscriptions, useWallet, useWalletBalance, useWalletSubscriptions } from '~/hooks';
@@ -59,18 +49,20 @@ export const Wallet = ({ showSubscribe = false }: WalletProps) => {
     setInProgress(false);
   };
 
-  const subscribeButton = targetPlan && (
-    <Button stretched size="l" loading={inProgress} style={{ marginTop: 16 }} onClick={handleSubscribe}>
-      Subscribe for {targetPlan.price} TON
-    </Button>
-  );
-
   if (isLoading && !showSubscribe) {
     return null;
   }
 
   if (!currentSubscription) {
-    return <SubscriptionInfo subscription={targetPlan}>{subscribeButton}</SubscriptionInfo>;
+    return (
+      <SubscriptionInfo subscription={targetPlan}>
+        {targetPlan && (
+          <Button mode="cta" stretched size="l" loading={inProgress} onClick={handleSubscribe}>
+            Subscribe for {targetPlan.price} TON / {targetPlan.durationInDays} days
+          </Button>
+        )}
+      </SubscriptionInfo>
+    );
   }
 
   return (
@@ -83,46 +75,22 @@ export const Wallet = ({ showSubscribe = false }: WalletProps) => {
       />
 
       <div style={{ marginTop: 16, padding: 16 }}>
-        {!isLoading && !currentSubscription && (
-          <div style={{ textAlign: 'center' }}>
-            <Headline weight="2" style={{ marginBottom: 12 }}>
-              Unlock Premium Access
-            </Headline>
+        <>
+          <Subheadline weight="2" style={{ marginBottom: 12 }}>
+            Active subscription
+          </Subheadline>
 
-            <Caption style={{ display: 'block', marginBottom: 12 }}>
-              Experience the best of our service with a premium subscription. Enjoy exclusive features, ad-free
-              browsing, priority support, and much more. Elevate your experience and get the most out of your
-              subscription today!
-            </Caption>
+          <IconBanner
+            header="My subscription"
+            icon={<HeartIcon />}
+            description={`${currentSubscription.durationInDays} days for ${currentSubscription.price} TON`}
+          />
 
-            <Benefits>
-              <Benefits.Item before="✨">Ad-free viewing</Benefits.Item>
-              <Benefits.Item before="💎️">Exclusive series</Benefits.Item>
-              <Benefits.Item before="🤙">Cancel anytime</Benefits.Item>
-            </Benefits>
-          </div>
-        )}
-
-        {!isLoading && currentSubscription && (
-          <>
-            <Subheadline weight="2" style={{ marginBottom: 12 }}>
-              Active subscription
-            </Subheadline>
-
-            <IconBanner
-              header="My subscription"
-              icon={<HeartIcon />}
-              description={`${currentSubscription.durationInDays} days for ${currentSubscription.price} TON`}
-            />
-
-            <Caption Component="div" style={{ marginTop: 12, color: 'var(--tgui--hint_color)' }}>
-              This subscription renews automatically. You will be charged at the beginning of each billing cycle unless
-              canceled beforehand.
-            </Caption>
-          </>
-        )}
-
-        {!isLoading && !currentSubscription && subscribeButton}
+          <Caption Component="div" style={{ marginTop: 12, color: 'var(--tgui--hint_color)' }}>
+            This subscription renews automatically. You will be charged at the beginning of each billing cycle unless
+            canceled beforehand.
+          </Caption>
+        </>
       </div>
 
       {hasToast && (
