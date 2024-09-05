@@ -16,10 +16,14 @@
   margin-bottom: 16px;
 }
 
+.SubscriptionInfo-header,
 .SubscriptionInfo-header img {
-  object-fit: contain;
   min-height: 278px;
   max-height: 300px;
+}
+
+.SubscriptionInfo-header img {
+  object-fit: contain;
   width: 100%;
 }
 
