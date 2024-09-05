@@ -120,7 +120,7 @@ export const useWallet = (): Wallet => {
     address,
     loading,
     connect,
-    transfer: transfer.bind(null, ui),
-    disconnect: () => ui.disconnect(),
+    transfer: useCallback((...args) => transfer(ui, ...args), [ui]),
+    disconnect: useCallback(() => ui.disconnect(), [ui]),
   };
 };

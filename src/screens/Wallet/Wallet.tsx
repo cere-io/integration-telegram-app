@@ -17,13 +17,7 @@ export const Wallet = ({ showSubscribe = false }: WalletProps) => {
   const [hasToast, setHasToast] = useState(false);
   const [inProgress, setInProgress] = useState(false);
   const { data: allSubscriptions } = useSubscriptions();
-  const {
-    loading,
-    data: currentSubscription,
-    sync: syncSubscription,
-    load: loadSubscription,
-  } = useWalletSubscriptions(wallet.address);
-
+  const { loading, data: currentSubscription, sync: syncSubscription } = useWalletSubscriptions(wallet.address);
   const targetPlan = allSubscriptions?.subscriptions[0];
 
   const handleSubscribe = async () => {
@@ -35,17 +29,6 @@ export const Wallet = ({ showSubscribe = false }: WalletProps) => {
     const to = allSubscriptions!.destinationWallet;
 
     setInProgress(true);
-
-    if (!wallet.account) {
-      const address = await wallet.connect();
-      const subscription = await loadSubscription(address);
-
-      if (subscription) {
-        setInProgress(false);
-
-        return;
-      }
-    }
 
     try {
       await wallet.transfer({ to, amount: price });
@@ -72,7 +55,13 @@ export const Wallet = ({ showSubscribe = false }: WalletProps) => {
   if (!currentSubscription) {
     return (
       <SubscriptionInfo subscription={targetPlan}>
-        {targetPlan && (
+        {!wallet.account && (
+          <Button stretched mode="bezeled" size="l" onClick={() => wallet.connect()}>
+            Connect your wallet
+          </Button>
+        )}
+
+        {wallet.account && targetPlan && (
           <Button mode="cta" stretched size="l" loading={inProgress} onClick={handleSubscribe}>
             Subscribe for {targetPlan.price} TON / {targetPlan.durationInDays} days
           </Button>
