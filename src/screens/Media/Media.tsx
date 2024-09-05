@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { MediaList, MediaListItem, Banner, MediaLogo, Button } from '@tg-app/ui';
+import { MediaList, MediaListItem, Button, Title } from '@tg-app/ui';
 import { Video } from '@tg-app/api';
 
 import { useBot, useToken } from '~/hooks';
@@ -23,11 +23,15 @@ export const Media = ({ setActiveTab }: MediaProps) => {
 
   return (
     <div style={{ paddingBottom: hasSubscribeButton ? 62 : 0 }}>
-      <Banner
+      {/* <Banner
         before={<MediaLogo />}
         header="#FREEDUROV"
         subheader="Join the Decentralization Movement, watch Tucker Carlson’s uncensored, unstoppable interview with Pavel Durov now, streamed from the Cere DDC."
-      />
+      /> */}
+
+      <Title weight="2" style={{ marginLeft: 16, marginTop: 16 }}>
+        Library
+      </Title>
 
       <MediaList>
         {videos.map((video, index) => (

@@ -17,7 +17,7 @@ const tabs = [
   {
     icon: MediaIcon,
     screen: Media,
-    text: 'Media catalog',
+    text: 'Library',
   },
   {
     icon: SubscriptionIcon,
