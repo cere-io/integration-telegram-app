@@ -5,30 +5,29 @@ import { useMiniApp } from '@telegram-apps/sdk-react';
 
 import './SubscriptionInfo.css';
 
-import headerImage from './header.png';
+import { useWhiteLabel } from '~/hooks';
 
 export type SubscriptionInfoProps = PropsWithChildren<{
   subscription?: Subscription;
 }>;
 
-const benefits = ['🏋️‍♂️ Personalized Workouts', '🎓 Expert Guidance', '📈 Progress Tracking'];
-
 export const SubscriptionInfo = ({ children }: SubscriptionInfoProps) => {
   const { isDark } = useMiniApp();
+  const { subscription } = useWhiteLabel();
   const appearanceClass = `SubscriptionInfo-${isDark ? 'dark' : 'light'}`;
 
   return (
     <div className={`SubscriptionInfo-root ${appearanceClass}`}>
       <div className="SubscriptionInfo-header">
-        <img src={headerImage} />
+        <img src={subscription.imageUrl} />
       </div>
 
       <Text Component="div" className="SubscriptionInfo-description">
-        Unlock exclusive fitness content to reach your goals 💪
+        {subscription.description}
       </Text>
 
       <div className="SubscriptionInfo-benefits SubscriptionInfo-layer1">
-        {benefits.map((title) => (
+        {subscription.benefits.map((title) => (
           <Text key={title} Component="div" className="SubscriptionInfo-benefit">
             {title}
           </Text>
