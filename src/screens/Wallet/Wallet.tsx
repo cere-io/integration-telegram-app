@@ -56,9 +56,15 @@ export const Wallet = ({ showSubscribe = false }: WalletProps) => {
     return (
       <SubscriptionInfo subscription={targetPlan}>
         {!wallet.account && (
-          <Button stretched mode="bezeled" size="l" onClick={() => wallet.connect()}>
-            Connect your wallet
-          </Button>
+          <>
+            <Subheadline level="2" style={{ marginBottom: 8, textAlign: 'center' }}>
+              To proceed with the payment, please, connect your wallet first
+            </Subheadline>
+
+            <Button stretched mode="bezeled" size="l" onClick={() => wallet.connect()}>
+              Connect your Wallet
+            </Button>
+          </>
         )}
 
         {wallet.account && targetPlan && (

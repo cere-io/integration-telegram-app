@@ -58,7 +58,7 @@ export const Media = ({ setActiveTab }: MediaProps) => {
             bottom: 'calc(var(--safe_area_inset_bottom) + 80px)',
           }}
         >
-          <Button size="l" onClick={() => setActiveTab({ index: 1, props: { showSubscribe: true } })}>
+          <Button mode="cta" size="l" onClick={() => setActiveTab({ index: 1, props: { showSubscribe: true } })}>
             ⭐ Become a Premium member!
           </Button>
         </div>
