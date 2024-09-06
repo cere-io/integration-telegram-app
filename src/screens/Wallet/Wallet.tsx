@@ -77,19 +77,11 @@ export const Wallet = ({ showSubscribe = false }: WalletProps) => {
             </Button>
 
             <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
-              <Button
-                mode="link"
-                size="s"
-                onClick={() => utils.openLink(`${APP_URL}/privacy-policy.html`, { tryInstantView: true })}
-              >
+              <Button mode="link" size="s" onClick={() => utils.openLink(`${APP_URL}/privacy-policy.html`)}>
                 Privacy policy
               </Button>
 
-              <Button
-                mode="link"
-                size="s"
-                onClick={() => utils.openLink(`${APP_URL}/terms-of-use.html`, { tryInstantView: true })}
-              >
+              <Button mode="link" size="s" onClick={() => utils.openLink(`${APP_URL}/terms-of-use.html`)}>
                 Terms of use
               </Button>
             </div>
