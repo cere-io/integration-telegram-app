@@ -6,3 +6,8 @@
 .Button-size-l {
   height: 56px;
 }
+
+.Button-mode-link {
+  color: var(--tgui--text_color);
+  text-decoration: underline;
+}

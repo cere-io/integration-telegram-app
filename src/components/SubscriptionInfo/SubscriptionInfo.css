@@ -35,6 +35,10 @@
   margin-top: auto;
 }
 
+.SubscriptionInfo-footer .Button-mode-link {
+  color: #000;
+}
+
 .SubscriptionInfo-dark {
   background-color: #F8F8F8;
   padding: 16px;

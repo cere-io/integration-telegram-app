@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import Reporting from '@tg-app/reporting';
+import { useUtils } from '@telegram-apps/sdk-react';
 import { WalletWidget, Snackbar, Caption, IconBanner, HeartIcon, Subheadline, Button } from '@tg-app/ui';
 
 import type { ActiveTab } from '~/App';
 import { useSubscriptions, useWallet, useWalletBalance, useWalletSubscriptions } from '~/hooks';
 import { SubscriptionInfo } from '~/components';
+import { APP_URL } from '~/constants';
 
 type WalletProps = {
   showSubscribe?: boolean;
@@ -13,6 +15,7 @@ type WalletProps = {
 
 export const Wallet = ({ showSubscribe = false }: WalletProps) => {
   const wallet = useWallet();
+  const utils = useUtils();
   const { balance, sync: syncBalance } = useWalletBalance(wallet.address);
   const [hasToast, setHasToast] = useState(false);
   const [inProgress, setInProgress] = useState(false);
@@ -68,9 +71,29 @@ export const Wallet = ({ showSubscribe = false }: WalletProps) => {
         )}
 
         {wallet.account && targetPlan && (
-          <Button mode="cta" stretched size="l" loading={inProgress} onClick={handleSubscribe}>
-            Subscribe for {targetPlan.price} TON / {targetPlan.durationInDays} days
-          </Button>
+          <>
+            <Button mode="cta" stretched size="l" loading={inProgress} onClick={handleSubscribe}>
+              Subscribe for {targetPlan.price} TON / {targetPlan.durationInDays} days
+            </Button>
+
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
+              <Button
+                mode="link"
+                size="s"
+                onClick={() => utils.openLink(`${APP_URL}/privacy-policy.html`, { tryInstantView: true })}
+              >
+                Privacy policy
+              </Button>
+
+              <Button
+                mode="link"
+                size="s"
+                onClick={() => utils.openLink(`${APP_URL}/terms-of-use.html`, { tryInstantView: true })}
+              >
+                Terms of use
+              </Button>
+            </div>
+          </>
         )}
       </SubscriptionInfo>
     );
