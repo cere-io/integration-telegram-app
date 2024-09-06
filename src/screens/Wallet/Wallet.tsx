@@ -4,9 +4,8 @@ import { useUtils } from '@telegram-apps/sdk-react';
 import { WalletWidget, Snackbar, Caption, IconBanner, HeartIcon, Subheadline, Button } from '@tg-app/ui';
 
 import type { ActiveTab } from '~/App';
-import { useSubscriptions, useWallet, useWalletBalance, useWalletSubscriptions } from '~/hooks';
+import { useSubscriptions, useWallet, useWalletBalance, useWalletSubscriptions, useWhiteLabel } from '~/hooks';
 import { SubscriptionInfo } from '~/components';
-import { APP_URL } from '~/constants';
 
 type WalletProps = {
   showSubscribe?: boolean;
@@ -14,6 +13,7 @@ type WalletProps = {
 };
 
 export const Wallet = ({ showSubscribe = false }: WalletProps) => {
+  const { termsOfUseUrl, privacyPolicyUrl } = useWhiteLabel();
   const wallet = useWallet();
   const utils = useUtils();
   const { balance, sync: syncBalance } = useWalletBalance(wallet.address);
@@ -77,11 +77,11 @@ export const Wallet = ({ showSubscribe = false }: WalletProps) => {
             </Button>
 
             <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
-              <Button mode="link" size="s" onClick={() => utils.openLink(`${APP_URL}/privacy-policy.html`)}>
+              <Button mode="link" size="s" onClick={() => utils.openLink(privacyPolicyUrl)}>
                 Privacy policy
               </Button>
 
-              <Button mode="link" size="s" onClick={() => utils.openLink(`${APP_URL}/terms-of-use.html`)}>
+              <Button mode="link" size="s" onClick={() => utils.openLink(termsOfUseUrl)}>
                 Terms of use
               </Button>
             </div>
