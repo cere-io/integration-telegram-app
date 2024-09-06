@@ -17,7 +17,7 @@ const tabs = [
   {
     icon: MediaIcon,
     screen: Media,
-    text: 'Media catalog',
+    text: 'Library',
   },
   {
     icon: SubscriptionIcon,
@@ -26,14 +26,19 @@ const tabs = [
   },
 ];
 
+export type ActiveTab = {
+  index: number;
+  props?: Record<string, unknown>;
+};
+
 export const App = () => {
   const miniApp = useMiniApp();
   const themeParams = useThemeParams();
   const viewport = useViewport();
   const { user } = useInitData() || {};
 
-  const [activeTab, setActiveTab] = useState(0);
-  const Screen = tabs[activeTab].screen;
+  const [activeTab, setActiveTab] = useState<ActiveTab>({ index: 0 });
+  const Screen = tabs[activeTab.index].screen;
 
   useEffect(() => {
     bindMiniAppCSSVars(miniApp, themeParams);
@@ -51,11 +56,16 @@ export const App = () => {
 
   return (
     <UIProvider appearance={miniApp.isDark ? 'dark' : 'light'}>
-      <Screen setActiveTab={setActiveTab} />
+      <Screen setActiveTab={setActiveTab} {...activeTab.props} />
 
       <Tabbar>
         {tabs.map(({ icon: Icon, text }, index) => (
-          <Tabbar.Item key={index} text={text} selected={activeTab === index} onClick={() => setActiveTab(index)}>
+          <Tabbar.Item
+            key={index}
+            text={text}
+            selected={activeTab.index === index}
+            onClick={() => setActiveTab({ index })}
+          >
             <Icon style={{ margin: 2, fontSize: 28 }} />
           </Tabbar.Item>
         ))}

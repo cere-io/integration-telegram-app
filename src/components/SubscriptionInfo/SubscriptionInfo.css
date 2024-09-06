@@ -1,0 +1,44 @@
+.SubscriptionInfo-root {
+  box-sizing: border-box;
+  position: relative;
+  margin: 16px;
+  margin-bottom: 0;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(var(--tg-viewport-stable-height) - (80px + 16px));
+}
+
+.SubscriptionInfo-header,
+.SubscriptionInfo-description,
+.SubscriptionInfo-benefits,
+.SubscriptionInfo-benefit {
+  margin-bottom: 16px;
+}
+
+.SubscriptionInfo-header,
+.SubscriptionInfo-header img {
+  min-height: 278px;
+  max-height: 300px;
+}
+
+.SubscriptionInfo-header img {
+  object-fit: contain;
+  width: 100%;
+}
+
+.SubscriptionInfo-benefits {
+  margin-top: 16px;
+}
+
+.SubscriptionInfo-footer {
+  margin-top: auto;
+}
+
+.SubscriptionInfo-dark {
+  background-color: #F8F8F8;
+  padding: 16px;
+  color: #000;
+}
+
+

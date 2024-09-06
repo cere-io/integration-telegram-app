@@ -33,7 +33,7 @@ export const VideoPlayer = ({ token, video, open = false, onClose }: VideoPlayer
 
   return (
     <Modal open={open && !!video && !!token} onOpenChange={(open) => !open && onClose?.()}>
-      <Modal.Header>{video?.name}</Modal.Header>
+      <Modal.Header>Media Player</Modal.Header>
 
       <Card className="VideoPlayer-card">
         {url && (

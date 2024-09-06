@@ -23,12 +23,12 @@ export {
   type SkeletonProps,
   Banner,
   type BannerProps,
-  Button,
-  type ButtonProps,
   List,
   type ListProps,
   Caption,
   type CaptionProps,
+  Spinner,
+  type SpinnerProps,
 } from '@telegram-apps/telegram-ui';
 
 export * from './MediaList';
@@ -39,3 +39,4 @@ export * from './Benefits';
 export * from './IconBanner';
 export * from './Menu';
 export * from './Snackbar';
+export * from './Button';
