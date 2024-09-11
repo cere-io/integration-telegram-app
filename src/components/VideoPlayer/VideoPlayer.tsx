@@ -28,8 +28,12 @@ const createUrl = (video?: Video, token?: string) => {
 export const VideoPlayer = ({ token, video, open = false, onClose }: VideoPlayerProps) => {
   const { width = 0 } = useViewport() || {};
 
+  /**
+   * TODO: Properly detect the video aspect ratio
+   * TODO: Apply aspect ratio using CSS
+   */
+  const height = (width / 16) * 9;
   const url = createUrl(video, token);
-  const height = video?.width && video?.height ? (video.height / video.width) * width : 0;
 
   return (
     <Modal open={open && !!video && !!token} onOpenChange={(open) => !open && onClose?.()}>
@@ -40,7 +44,7 @@ export const VideoPlayer = ({ token, video, open = false, onClose }: VideoPlayer
           <CerePlayer
             hlsEnabled={false}
             src={url!}
-            type={video?.mimeType}
+            type="video/mp4"
             loadingComponent={<div />}
             videoOverrides={{
               autoPlay: true,
@@ -50,7 +54,7 @@ export const VideoPlayer = ({ token, video, open = false, onClose }: VideoPlayer
         )}
 
         <Card.Cell readOnly subtitle={video?.description} style={{ paddingBottom: 16 }}>
-          {video?.name}
+          {video?.title}
         </Card.Cell>
       </Card>
     </Modal>

@@ -1,13 +1,8 @@
 export type Video = {
   url: string;
-  name: string;
+  title: string;
   description: string;
-  width: number;
-  height: number;
-  duration: number;
-  fileSize: number;
   thumbnailUrl: string | null;
-  mimeType: string;
 };
 
 export type Subscription = {

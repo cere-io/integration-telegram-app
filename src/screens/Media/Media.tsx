@@ -23,12 +23,6 @@ export const Media = ({ setActiveTab }: MediaProps) => {
 
   return (
     <div style={{ paddingBottom: hasSubscribeButton ? 62 : 0 }}>
-      {/* <Banner
-        before={<MediaLogo />}
-        header="#FREEDUROV"
-        subheader="Join the Decentralization Movement, watch Tucker Carlson’s uncensored, unstoppable interview with Pavel Durov now, streamed from the Cere DDC."
-      /> */}
-
       <Title weight="2" style={{ marginLeft: 16, marginTop: 16 }}>
         Library
       </Title>
@@ -39,7 +33,7 @@ export const Media = ({ setActiveTab }: MediaProps) => {
             key={index}
             locked={!token}
             loading={loading}
-            name={video.name}
+            name={video.title}
             description={video.description}
             thumbnailUrl={video.thumbnailUrl}
             onClick={() => setCurrentVideo(video)}
