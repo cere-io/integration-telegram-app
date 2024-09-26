@@ -20,8 +20,12 @@ export const useWhiteLabel = (): WhiteLabel => {
     termsOfUseUrl: `${appUrl}/terms-of-use.html`,
     subscription: {
       imageUrl: `${appUrl}/images/subscription.png`,
-      description: 'Unlock exclusive fitness content to reach your goals 💪',
-      benefits: ['🏋️‍♂️ Personalized Workouts', '🎓 Expert Guidance', '📈 Progress Tracking'],
+      description: 'Subscribe for exclusive content from your favorite Telegram Creator!',
+      benefits: [
+        '⭐ Creators receive 100% of profits',
+        '🧑‍✈️ Fully censorship-resistant streaming',
+        '📺 Use AirPlay to stream directly to your TV',
+      ],
     },
   };
 };
