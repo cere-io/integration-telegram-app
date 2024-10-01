@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { MediaList, MediaListItem, Button, Title } from '@tg-app/ui';
 import { Video } from '@tg-app/api';
+import { useUtils } from '@telegram-apps/sdk-react';
 
 import { useBot, useToken } from '~/hooks';
 import { VideoPlayer } from '~/components';
@@ -12,6 +13,7 @@ type MediaProps = {
 
 export const Media = ({ setActiveTab }: MediaProps) => {
   const bot = useBot();
+  const utils = useUtils();
   const [videos, setVideos] = useState<Video[]>([]);
   const [currentVideo, setCurrentVideo] = useState<Video>();
   const { token, loading } = useToken();
@@ -36,7 +38,11 @@ export const Media = ({ setActiveTab }: MediaProps) => {
             name={video.title}
             description={video.description}
             thumbnailUrl={video.thumbnailUrl}
-            onClick={() => setCurrentVideo(video)}
+            onClick={() => {
+              utils.openLink(video.url, {
+                tryInstantView: true,
+              });
+            }}
           />
         ))}
       </MediaList>
