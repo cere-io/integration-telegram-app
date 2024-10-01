@@ -15,5 +15,11 @@
   background-color: transparent;
 }
 
-.VideoPlayer-card .plyr--fullscreen-fallback {}
-.VideoPlayer-card .plyr--fullscreen-fallback video {}
+body[data-video-fullscreen] div[vaul-drawer] {
+  transform: none!important;
+  transition: none!important;
+}
+
+body[data-video-fullscreen] .VideoPlayer-card video {
+  height: 100%!important;
+}
