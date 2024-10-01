@@ -14,3 +14,12 @@
 .VideoPlayer-card .loading-container {
   background-color: transparent;
 }
+
+.VideoPlayer-card .plyr--fullscreen-fallback {
+  position: static;
+  height: calc(100vh - 100px);
+}
+
+.VideoPlayer-card .plyr--fullscreen-fallback video {
+  height: auto;
+}
