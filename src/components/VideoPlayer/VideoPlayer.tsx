@@ -46,6 +46,15 @@ export const VideoPlayer = ({ token, video, open = false, onClose }: VideoPlayer
             src={url!}
             type="video/mp4"
             loadingComponent={<div />}
+            onFullScreenChange={(fullScreen) => {
+              console.log('onFullScreenChange', fullScreen);
+
+              if (fullScreen) {
+                document.body.setAttribute('data-video-fullscreen', '1');
+              } else {
+                document.body.removeAttribute('data-video-fullscreen');
+              }
+            }}
             videoOverrides={{
               autoPlay: true,
               style: `width: ${width}px; height: ${height}px;` as any,

@@ -14,3 +14,12 @@
 .VideoPlayer-card .loading-container {
   background-color: transparent;
 }
+
+body[data-video-fullscreen] div[vaul-drawer] {
+  transform: none!important;
+  transition: none!important;
+}
+
+body[data-video-fullscreen] .VideoPlayer-card video {
+  height: 100%!important;
+}
