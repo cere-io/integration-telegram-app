@@ -23,3 +23,8 @@ body[data-video-fullscreen] div[vaul-drawer] {
 body[data-video-fullscreen] .VideoPlayer-card video {
   height: 100%!important;
 }
+
+.VideoPlayer-card .plyr--fullscreen-fallback .plyr__controls {
+  margin-bottom: var(--safe_area_inset_bottom);
+}
+
