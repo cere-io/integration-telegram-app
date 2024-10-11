@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { MediaList, MediaListItem, Button, Title } from '@tg-app/ui';
 import { Video } from '@tg-app/api';
+import { AnalyticsId } from '@tg-app/analytics';
 
 import { useBot, useToken } from '~/hooks';
 import { VideoPlayer } from '~/components';
@@ -52,7 +53,12 @@ export const Media = ({ setActiveTab }: MediaProps) => {
             bottom: 'calc(var(--safe_area_inset_bottom) + 80px)',
           }}
         >
-          <Button mode="cta" size="l" onClick={() => setActiveTab({ index: 1, props: { showSubscribe: true } })}>
+          <Button
+            mode="cta"
+            size="l"
+            className={AnalyticsId.premiumBtn}
+            onClick={() => setActiveTab({ index: 1, props: { showSubscribe: true } })}
+          >
             ⭐ Become a Premium member!
           </Button>
         </div>

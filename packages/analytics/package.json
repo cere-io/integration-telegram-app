@@ -1,0 +1,15 @@
+{
+  "name": "@tg-app/analytics",
+  "version": "0.0.0",
+  "private": true,
+  "sideEffects": false,
+  "types": "./src",
+  "exports": {
+    "import": "./src"
+  },
+  "dependencies": {
+    "@types/react-gtm-module": "^2.0.3",
+    "react-gtm-module": "^2.0.11"
+  },
+  "scripts": {}
+}
