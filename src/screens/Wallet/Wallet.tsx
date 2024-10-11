@@ -6,6 +6,7 @@ import { WalletWidget, Snackbar, Caption, IconBanner, HeartIcon, Subheadline, Bu
 import type { ActiveTab } from '~/App';
 import { useSubscriptions, useWallet, useWalletBalance, useWalletSubscriptions, useWhiteLabel } from '~/hooks';
 import { SubscriptionInfo } from '~/components';
+import Analytics, { AnalyticsId } from '@tg-app/analytics';
 
 type WalletProps = {
   showSubscribe?: boolean;
@@ -22,6 +23,16 @@ export const Wallet = ({ showSubscribe = false }: WalletProps) => {
   const { data: allSubscriptions } = useSubscriptions();
   const { loading, data: currentSubscription, sync: syncSubscription } = useWalletSubscriptions(wallet.address);
   const targetPlan = allSubscriptions?.subscriptions[0];
+
+  const handleConnect = async () => {
+    await wallet.connect();
+
+    if (wallet.account) {
+      Analytics.trackEvent(AnalyticsId.walletConnected, {
+        address: wallet.address,
+      });
+    }
+  };
 
   const handleSubscribe = async () => {
     if (!targetPlan) {
@@ -64,7 +75,7 @@ export const Wallet = ({ showSubscribe = false }: WalletProps) => {
               To proceed with the payment, please, connect your wallet first
             </Subheadline>
 
-            <Button stretched mode="bezeled" size="l" onClick={() => wallet.connect()}>
+            <Button stretched mode="bezeled" size="l" onClick={handleConnect}>
               Connect your Wallet
             </Button>
           </>
@@ -72,7 +83,14 @@ export const Wallet = ({ showSubscribe = false }: WalletProps) => {
 
         {wallet.account && targetPlan && (
           <>
-            <Button mode="cta" stretched size="l" loading={inProgress} onClick={handleSubscribe}>
+            <Button
+              mode="cta"
+              stretched
+              size="l"
+              className={AnalyticsId.subscribeBtn}
+              loading={inProgress}
+              onClick={handleSubscribe}
+            >
               Subscribe for {targetPlan.price} TON / {targetPlan.durationInDays} days
             </Button>
 
