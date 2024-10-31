@@ -9,6 +9,10 @@
   min-height: calc(var(--tg-viewport-stable-height) - (80px + 16px));
 }
 
+.SubscriptionInfo-description {
+  white-space: pre-wrap;
+}
+
 .SubscriptionInfo-header,
 .SubscriptionInfo-description,
 .SubscriptionInfo-benefits,
