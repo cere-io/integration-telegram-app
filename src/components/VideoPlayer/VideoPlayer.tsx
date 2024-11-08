@@ -22,6 +22,8 @@ const createUrl = (video?: Video, token?: string) => {
     url.searchParams.set('token', token);
   }
 
+  url.searchParams.set('source', 'telegram');
+
   return url.href;
 };
 
