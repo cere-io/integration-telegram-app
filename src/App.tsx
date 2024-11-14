@@ -11,7 +11,7 @@ import {
   useInitData,
 } from '@telegram-apps/sdk-react';
 
-import { Media, Wallet } from './screens';
+import { Leaderboard, Media, Wallet } from './screens';
 
 const tabs = [
   {
@@ -23,6 +23,11 @@ const tabs = [
     icon: SubscriptionIcon,
     screen: Wallet,
     text: 'Subscription info',
+  },
+  {
+    icon: SubscriptionIcon,
+    screen: Leaderboard,
+    text: 'Leaderboard',
   },
 ];
 
