@@ -18,21 +18,10 @@ export const useEvents = () => {
   );
 
   return useMemo(() => {
-    const source = new EventSource(signer, {
+    return new EventSource(signer, {
       appId: '2102',
       dispatchUrl: 'https://stage-ai-event-service.core-stage.aws.cere.io',
       listenUrl: 'https://socket.dev.cere.io',
     });
-
-    source.isReady().then(
-      (ready) => {
-        console.log('EventSource ready:', ready);
-      },
-      (error) => {
-        console.error('EventSource error:', error);
-      },
-    );
-
-    return source;
   }, [signer]);
 };

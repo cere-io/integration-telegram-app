@@ -40,13 +40,23 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
 
   useEffect(() => {
     setLoading(true);
-    // TODO get the leaderboard from elastic search
-    // eventSource.dispatchEvent();
+
+    eventSource.isReady().then(
+      (ready) => {
+        console.log('EventSource ready:', ready);
+        // TODO send GET_LEADERBOARD event
+      },
+      (error) => {
+        console.error('EventSource error:', error);
+      },
+    );
+
+    // TODO listen to LEADERBOARD event with data from elastic search
     setTimeout(() => {
       setLeaderboardData(leaderboardDataMock);
       setLoading(false);
     }, 500);
-  }, []);
+  }, [eventSource]);
 
   return (
     <div className="leaderboard">
