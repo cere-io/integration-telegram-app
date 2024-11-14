@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@cere-activity-sdk/events": "^0.0.1-rc.2",
-    "@cere/media-sdk-react": "^1.6.0-rc.2",
+    "@cere/media-sdk-react": "1.6.0-rc.3",
     "@telegram-apps/sdk-react": "^1.1.3",
     "@ton/core": "^0.57.0",
     "@tonconnect/ui-react": "^2.0.9"

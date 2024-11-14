@@ -32,6 +32,9 @@ export const VideoPlayer = ({ token, video, open = false, onClose }: VideoPlayer
   const { width = 0 } = useViewport() || {};
   const { account } = useWallet();
 
+  console.log('ACCOUNT', account);
+  console.log('publicKey', account?.publicKey);
+
   /**
    * TODO: Properly detect the video aspect ratio
    * TODO: Apply aspect ratio using CSS
