@@ -67,7 +67,7 @@ export const VideoPlayer = ({ token, video, open = false, onClose }: VideoPlayer
             dispatchUrl="https://stage-ai-event-service.core-stage.aws.cere.io/"
             listenUrl="https://socket.dev.cere.io"
             walletType="ed25519"
-            base64PublicKey={account?.publicKey}
+            publicKey={account?.publicKey}
           />
         )}
 
