@@ -1,6 +1,6 @@
 import { Subscription, SubscriptionsResponse, TokenRequest, Video } from './types';
 
-type RequestOprions = RequestInit & {
+type RequestOptions = RequestInit & {
   allowStatus?: number[];
 };
 
@@ -17,7 +17,7 @@ export class BotApi {
     this.startParam = options.startParam;
   }
 
-  private async request(url: string, { allowStatus = [], ...options }: RequestOprions = {}) {
+  private async request(url: string, { allowStatus = [], ...options }: RequestOptions = {}) {
     const response = await fetch(new URL(url, this.baseUrl), {
       ...options,
       headers: {

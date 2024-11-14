@@ -1,19 +1,21 @@
 import './Leaderboard.css';
-import { Button, Title } from '@tg-app/ui';
-import { useMemo, useState } from 'react';
+import { Button, Spinner, Title } from '@tg-app/ui';
+import { useEffect, useMemo, useState } from 'react';
 import { Score, ScoreProps } from '~/components/Leaderboard/Score/Score.tsx';
 import { AnalyticsId } from '@tg-app/analytics';
 import { ActiveTab } from '~/App.tsx';
 import { leaderboardDataMock } from '~/components/Leaderboard/leaderboard-mock.ts';
-import { useWallet } from '~/hooks';
+import { useEvents, useWallet } from '~/hooks';
 
 type LeaderboardProps = {
   setActiveTab: (tab: ActiveTab) => void;
 };
 export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
-  const [leaderboardData, setLeaderboardData] = useState<Omit<ScoreProps, 'rank'>[]>(leaderboardDataMock);
+  const [leaderboardData, setLeaderboardData] = useState<Omit<ScoreProps, 'rank'>[]>([]);
+  const [isLoading, setLoading] = useState(false);
 
   const { account } = useWallet();
+  const eventSource = useEvents();
 
   const userScore: ScoreProps | undefined = useMemo(
     () =>
@@ -21,8 +23,8 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         .sort((a, b) => b.score - a.score)
         .reduce(
           (acc, score, index) => {
-            console.log({ acc, score });
             if (acc) return acc;
+            // if (score.user === '0x002...') {
             if (score.user === account?.address) {
               return {
                 ...score,
@@ -36,30 +38,48 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
     [account?.address, leaderboardData],
   );
 
+  useEffect(() => {
+    setLoading(true);
+    // TODO get the leaderboard from elastic search
+    // eventSource.dispatchEvent();
+    setTimeout(() => {
+      setLeaderboardData(leaderboardDataMock);
+      setLoading(false);
+    }, 500);
+  }, []);
+
   return (
     <div className="leaderboard">
       <Title weight="2">Leaderboard</Title>
 
-      {userScore ? (
-        <Score user={userScore.user} score={userScore.score} rank={userScore.rank} />
+      {isLoading ? (
+        <Spinner size="l" />
       ) : (
-        <div className="cta-button-wrapper">
-          <Button
-            mode="cta"
-            size="l"
-            className={AnalyticsId.premiumBtn}
-            onClick={() => setActiveTab({ index: 1, props: { showSubscribe: true } })}
-          >
-            Subscribe and start getting up to the top
-          </Button>
-        </div>
-      )}
+        <>
+          {userScore ? (
+            <Score user={userScore.user} score={userScore.score} rank={userScore.rank} />
+          ) : (
+            <div className="cta-button-wrapper">
+              <Button
+                mode="cta"
+                size="l"
+                className={AnalyticsId.premiumBtn}
+                onClick={() => setActiveTab({ index: 1, props: { showSubscribe: true } })}
+              >
+                Subscribe and start getting up to the top
+              </Button>
+            </div>
+          )}
 
-      {leaderboardData
-        .sort((a, b) => b.score - a.score)
-        .map((score, index) => (
-          <Score key={index} user={score.user} score={score.score} rank={index + 1} />
-        ))}
+          <div>
+            {leaderboardData
+              .sort((a, b) => b.score - a.score)
+              .map((score, index) => (
+                <Score key={index} user={score.user} score={score.score} rank={index + 1} />
+              ))}
+          </div>
+        </>
+      )}
     </div>
   );
 };
