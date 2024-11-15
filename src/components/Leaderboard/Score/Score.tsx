@@ -10,7 +10,7 @@ export const Score = ({ user, score, rank }: ScoreProps) => {
   const { account } = useWallet();
 
   return (
-    <div className={`score ${account?.address === user ?? 'my-score'}`}>
+    <div className={`score ${account?.address === user && 'my-score'}`}>
       <div>Rank: {rank}</div>
       <div>User: {user}</div>
       <div>Score: {score}</div>
