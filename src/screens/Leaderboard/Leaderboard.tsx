@@ -81,13 +81,15 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
       setLeaderboardData(leaderboardDataMock);
       setLoading(false);
     }, 500);
-  }, []);
+  }, [eventSource]);
 
   // useEffect(() => {
   //   eventSource.addEventListener('engagement', (event) => {
   //     console.log('LEADERBOARD event:', event);
   //     setLeaderboardData(event.data);
   //   });
+  //
+  //   return eventSource.removeEventListener('engagement', () => {});
   // }, []);
 
   return (
