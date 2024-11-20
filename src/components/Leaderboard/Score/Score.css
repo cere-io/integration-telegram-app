@@ -1,9 +1,0 @@
-.score {
-  display: flex;
-  gap: 3rem;
-  border: solid 1px #e0e0e0;
-}
-
-.my-score {
-  background-color: lightgray;
-}
