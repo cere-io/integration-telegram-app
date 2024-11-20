@@ -4,7 +4,6 @@ import { useViewport } from '@telegram-apps/sdk-react';
 import { VideoPlayer as CerePlayer } from '@cere/media-sdk-react';
 
 import './VideoPlayer.css';
-import { useWallet } from '~/hooks';
 
 export type VideoPlayerProps = Pick<ModalProps, 'open'> & {
   video?: Video;
@@ -30,7 +29,6 @@ const createUrl = (video?: Video, token?: string) => {
 
 export const VideoPlayer = ({ token, video, open = false, onClose }: VideoPlayerProps) => {
   const { width = 0 } = useViewport() || {};
-  const { account } = useWallet();
 
   /**
    * TODO: Properly detect the video aspect ratio
@@ -63,11 +61,6 @@ export const VideoPlayer = ({ token, video, open = false, onClose }: VideoPlayer
               autoPlay: true,
               style: `width: ${width}px; height: ${height}px;` as any,
             }}
-            appId="2102"
-            dispatchUrl="https://stage-ai-event-service.core-stage.aws.cere.io/"
-            listenUrl="https://socket.dev.cere.io"
-            walletType="ed25519"
-            publicKey={account?.publicKey}
           />
         )}
 
