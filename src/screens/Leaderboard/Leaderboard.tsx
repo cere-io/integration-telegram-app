@@ -1,65 +1,46 @@
 import './Leaderboard.css';
-import { Button, Spinner, Title } from '@tg-app/ui';
-import { useEffect, useMemo, useState } from 'react';
-import { Score, ScoreProps } from '~/components/Leaderboard/Score/Score.tsx';
+import { Button, Spinner } from '@tg-app/ui';
+import { useEffect, useState } from 'react';
 import { AnalyticsId } from '@tg-app/analytics';
 import { ActiveTab } from '~/App.tsx';
-import { leaderboardDataMock } from '~/components/Leaderboard/leaderboard-mock.ts';
+import Frame from 'react-frame-component';
 import { useEvents, useWallet } from '~/hooks';
 import { ActivityEvent } from '@cere-activity-sdk/events';
-import { EVENT_APP_ID } from '~/constants.ts';
+import { EngagementEventData } from '~/screens';
+import * as hbs from 'handlebars';
 
 type LeaderboardProps = {
   setActiveTab: (tab: ActiveTab) => void;
 };
+
 export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
-  const [leaderboardData, setLeaderboardData] = useState<Omit<ScoreProps, 'rank'>[]>([]);
-  const [isLoading, setLoading] = useState(false);
+  // const [leaderboardData, setLeaderboardData] = useState<Omit<ScoreProps, 'rank'>[]>([]);
+  const [leaderboardHtml, setLeaderboardHtml] = useState<string>('');
+  const [isLoading, setLoading] = useState(true); // Изначально лоадер отображается
 
   const { account } = useWallet();
   const eventSource = useEvents();
 
-  const userScore: ScoreProps | undefined = useMemo(
-    () =>
-      leaderboardData
-        .sort((a, b) => b.score - a.score)
-        .reduce(
-          (acc, score, index) => {
-            if (acc) return acc;
-            // if (score.user === '0x002...') {
-            if (score.user === account?.address) {
-              return {
-                ...score,
-                rank: index + 1,
-              };
-            }
-            return undefined;
-          },
-          undefined as ScoreProps | undefined,
-        ),
-    [account?.address, leaderboardData],
-  );
-
   useEffect(() => {
-    setLoading(true);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
 
-    eventSource.isReady().then(
-      (ready) => {
+        const ready = await eventSource.isReady();
         console.log('EventSource ready:', ready);
 
         const { event_type, timestamp, userPubKey, appPubKey, data } = {
           event_type: 'GET_LEADERBOARD',
           timestamp: '2024-11-15T09:01:01Z',
           userPubKey: '2ce686f936c69f91d91c30b4f4c6dc54d20dc13e50cdfba0b98f63dc57f27b78',
-          appPubKey: '2102',
+          appPubKey: '2095',
           data: JSON.stringify({
             id: '920cbd6e-3ac6-45fc-8b74-05adc5f6387f',
-            app_id: EVENT_APP_ID,
+            app_id: '2095',
             account_id: '2ce686f936c69f91d91c30b4f4c6dc54d20dc13e50cdfba0b98f63dc57f27b78',
           }),
         };
         const parsedData = JSON.parse(data);
-
         const event = new ActivityEvent(event_type, {
           ...parsedData,
           timestamp,
@@ -67,63 +48,74 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           appPubKey,
         });
 
-        eventSource.dispatchEvent(event).then(() => {
-          console.log(`GET_LEADERBOARD dispatched`);
-        });
-      },
-      (error) => {
-        console.error('EventSource error:', error);
-      },
-    );
+        await eventSource.dispatchEvent(event);
+        console.log('GET_LEADERBOARD dispatched');
+      } catch (error) {
+        console.error('Error dispatching event:', error);
+      }
+    };
 
-    // TODO listen to LEADERBOARD event with data from elastic search
-    setTimeout(() => {
-      setLeaderboardData(leaderboardDataMock);
-      setLoading(false);
-    }, 500);
+    fetchData();
   }, [eventSource]);
 
   useEffect(() => {
-    eventSource.addEventListener('engagement', (event) => {
-      console.log('engagement event listener');
-      console.log({ event });
-      // setLeaderboardData(event.data);
-    });
+    const handleEngagementEvent = (event: any) => {
+      console.log('LEADERBOARD event:', event);
+      if (event?.payload) {
+        const { engagement, userProfile }: EngagementEventData = event.payload;
+        const { widget_template } = engagement;
+        const newData =
+          userProfile[0]?.users.map(({ key, doc_count }) => ({
+            user: key,
+            score: doc_count,
+          })) || [];
 
-    // return eventSource.removeEventListener('engagement', () => {});
+        const compiledHTML = hbs.compile(widget_template.params || '')({
+          users: new hbs.SafeString(JSON.stringify(newData)),
+        });
+        setLeaderboardHtml(compiledHTML);
+
+        setLoading(false);
+      }
+    };
+
+    eventSource.addEventListener('engagement', handleEngagementEvent);
+
+    return () => {
+      eventSource.removeEventListener('engagement', handleEngagementEvent);
+    };
   }, [eventSource]);
 
   return (
     <div className="leaderboard">
-      <Title weight="2">Leaderboard</Title>
-
       {isLoading ? (
-        <Spinner size="l" />
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '90vh',
+          }}
+        >
+          <Spinner size="l" />
+        </div>
       ) : (
-        <>
-          {userScore ? (
-            <Score user={userScore.user} score={userScore.score} rank={userScore.rank} />
-          ) : (
-            <div className="cta-button-wrapper">
-              <Button
-                mode="cta"
-                size="l"
-                className={AnalyticsId.premiumBtn}
-                onClick={() => setActiveTab({ index: 1, props: { showSubscribe: true } })}
-              >
-                Subscribe and start getting up to the top
-              </Button>
-            </div>
-          )}
-
-          <div>
-            {leaderboardData
-              .sort((a, b) => b.score - a.score)
-              .map((score, index) => (
-                <Score key={index} user={score.user} score={score.score} rank={index + 1} />
-              ))}
-          </div>
-        </>
+        <Frame>
+          <div dangerouslySetInnerHTML={{ __html: leaderboardHtml }} />
+        </Frame>
+      )}
+      {!account?.address && (
+        <div className="cta-button-wrapper">
+          <Button
+            mode="cta"
+            size="l"
+            className={AnalyticsId.premiumBtn}
+            onClick={() => setActiveTab({ index: 1, props: { showSubscribe: true } })}
+          >
+            Subscribe and start getting up to the top
+          </Button>
+        </div>
       )}
     </div>
   );
