@@ -4,7 +4,7 @@ import { useViewport } from '@telegram-apps/sdk-react';
 import { VideoPlayer as CerePlayer } from '@cere/media-sdk-react';
 
 import './VideoPlayer.css';
-import { useBot, useWallet } from '~/hooks';
+import { useBot, useEvents, useWallet } from '~/hooks';
 
 export type VideoPlayerProps = Pick<ModalProps, 'open'> & {
   video?: Video;
@@ -31,6 +31,7 @@ const createUrl = (video?: Video, token?: string) => {
 export const VideoPlayer = ({ token, video, open = false, onClose }: VideoPlayerProps) => {
   const { width = 0 } = useViewport() || {};
   const { account } = useWallet();
+  const eventSource = useEvents();
   const bot = useBot();
 
   /**
@@ -64,12 +65,10 @@ export const VideoPlayer = ({ token, video, open = false, onClose }: VideoPlayer
               autoPlay: true,
               style: `width: ${width}px; height: ${height}px;` as any,
             }}
-            appId="2102"
             channelId={bot?.startParam}
-            dispatchUrl="https://stage-ai-event-service.core-stage.aws.cere.io/"
-            listenUrl="https://socket.dev.cere.io"
             walletType="ed25519"
             publicKey={account?.publicKey}
+            eventSource={eventSource}
           />
         )}
 
