@@ -30,7 +30,7 @@ export const useEvents = () => {
     return new EventSource(signer, {
       appId: '2102',
       dispatchUrl: 'https://stage-ai-event-service.core-stage.aws.cere.io',
-      listenUrl: 'https://socket.dev.cere.io',
+      listenUrl: 'https://ai-socket.stage.cere.io',
     });
   }, [signer]);
 };

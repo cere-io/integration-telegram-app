@@ -67,8 +67,8 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           appPubKey,
         });
 
-        eventSource.dispatchEvent(event).then((response) => {
-          console.log(`GET_LEADERBOARD dispatched: ${{ response }}`);
+        eventSource.dispatchEvent(event).then(() => {
+          console.log(`GET_LEADERBOARD dispatched`);
         });
       },
       (error) => {
@@ -83,14 +83,15 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
     }, 500);
   }, [eventSource]);
 
-  // useEffect(() => {
-  //   eventSource.addEventListener('engagement', (event) => {
-  //     console.log('LEADERBOARD event:', event);
-  //     setLeaderboardData(event.data);
-  //   });
-  //
-  //   return eventSource.removeEventListener('engagement', () => {});
-  // }, []);
+  useEffect(() => {
+    eventSource.addEventListener('engagement', (event) => {
+      console.log('engagement event listener');
+      console.log({ event });
+      // setLeaderboardData(event.data);
+    });
+
+    // return eventSource.removeEventListener('engagement', () => {});
+  }, [eventSource]);
 
   return (
     <div className="leaderboard">
