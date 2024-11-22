@@ -41,6 +41,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
             id: '920cbd6e-3ac6-45fc-8b74-05adc5f6387f',
             app_id: EVENT_APP_ID,
             account_id: account?.publicKey,
+            publicKey: account?.publicKey,
           }),
         };
         const parsedData = JSON.parse(data);
