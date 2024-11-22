@@ -52,7 +52,6 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         });
 
         await eventSource.dispatchEvent(event);
-        console.log('GET_LEADERBOARD dispatched');
       } catch (error) {
         console.error('Error dispatching event:', error);
       }
@@ -63,7 +62,6 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
 
   useEffect(() => {
     const handleEngagementEvent = (event: any) => {
-      console.log('LEADERBOARD event:', event);
       if (event?.payload) {
         const { engagement, userProfile }: EngagementEventData = event.payload;
         const { widget_template } = engagement;
