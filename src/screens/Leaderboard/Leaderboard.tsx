@@ -7,6 +7,7 @@ import { useEvents, useWallet } from '~/hooks';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { EngagementEventData } from '~/screens';
 import * as hbs from 'handlebars';
+import { EVENT_APP_ID } from '~/constants.ts';
 
 type LeaderboardProps = {
   setActiveTab: (tab: ActiveTab) => void;
@@ -32,12 +33,12 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         const { event_type, timestamp, userPubKey, appPubKey, data } = {
           event_type: 'GET_LEADERBOARD',
           timestamp: '2024-11-15T09:01:01Z',
-          userPubKey: '2ce686f936c69f91d91c30b4f4c6dc54d20dc13e50cdfba0b98f63dc57f27b78',
-          appPubKey: '2095',
+          userPubKey: account?.publicKey,
+          appPubKey: EVENT_APP_ID,
           data: JSON.stringify({
             id: '920cbd6e-3ac6-45fc-8b74-05adc5f6387f',
-            app_id: '2095',
-            account_id: '2ce686f936c69f91d91c30b4f4c6dc54d20dc13e50cdfba0b98f63dc57f27b78',
+            app_id: EVENT_APP_ID,
+            account_id: account?.publicKey,
           }),
         };
         const parsedData = JSON.parse(data);
