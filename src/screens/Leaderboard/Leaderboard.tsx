@@ -3,7 +3,6 @@ import { Button, Spinner } from '@tg-app/ui';
 import { useEffect, useState } from 'react';
 import { AnalyticsId } from '@tg-app/analytics';
 import { ActiveTab } from '~/App.tsx';
-import Frame from 'react-frame-component';
 import { useEvents, useWallet } from '~/hooks';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { EngagementEventData } from '~/screens';
@@ -13,10 +12,11 @@ type LeaderboardProps = {
   setActiveTab: (tab: ActiveTab) => void;
 };
 
+hbs.registerHelper('json', (context) => JSON.stringify(context));
+
 export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
-  // const [leaderboardData, setLeaderboardData] = useState<Omit<ScoreProps, 'rank'>[]>([]);
   const [leaderboardHtml, setLeaderboardHtml] = useState<string>('');
-  const [isLoading, setLoading] = useState(true); // Изначально лоадер отображается
+  const [isLoading, setLoading] = useState(true);
 
   const { account } = useWallet();
   const eventSource = useEvents();
@@ -66,12 +66,12 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         const { widget_template } = engagement;
         const newData =
           userProfile[0]?.users.map(({ key, doc_count }) => ({
-            user: key,
+            publicKey: key,
             score: doc_count,
           })) || [];
 
         const compiledHTML = hbs.compile(widget_template.params || '')({
-          users: new hbs.SafeString(JSON.stringify(newData)),
+          users: newData,
         });
         setLeaderboardHtml(compiledHTML);
 
@@ -101,9 +101,11 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           <Spinner size="l" />
         </div>
       ) : (
-        <Frame style={{ border: 'none' }}>
-          <div dangerouslySetInnerHTML={{ __html: leaderboardHtml }} />
-        </Frame>
+        <iframe
+          srcDoc={leaderboardHtml}
+          style={{ width: '100%', height: '100%', border: 'none' }}
+          title="Leaderboard"
+        />
       )}
       {!account?.address && (
         <div className="cta-button-wrapper">
