@@ -37,9 +37,9 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           userPubKey: account?.publicKey,
           appPubKey: EVENT_APP_ID,
           data: JSON.stringify({
-            channelId: bot?.startParam,
+            channelId: bot?.startParam || '1',
             id: '920cbd6e-3ac6-45fc-8b74-05adc5f6387f',
-            app_id: EVENT_APP_ID,
+            app_id: EVENT_APP_ID || '2ce686f936c69f91d91c30b4f4c6dc54d20dc13e50cdfba0b98f63dc57f27b78',
             account_id: account?.publicKey,
           }),
         };
