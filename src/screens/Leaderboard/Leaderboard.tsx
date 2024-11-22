@@ -64,9 +64,9 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   useEffect(() => {
     const handleEngagementEvent = (event: any) => {
       if (event?.payload) {
-        const { engagement, userProfile }: EngagementEventData = event.payload;
+        const { engagement, integrationScriptResults }: EngagementEventData = event.payload;
         const { widget_template } = engagement;
-        const users: { key: string; doc_count: number }[] = (userProfile as any)[0]?.users || [];
+        const users: { key: string; doc_count: number }[] = (integrationScriptResults as any)[0]?.users || [];
         const newData =
           users?.map(({ key, doc_count }) => ({
             publicKey: key,
