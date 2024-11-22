@@ -57,7 +57,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
     };
 
     fetchData();
-  }, [eventSource]);
+  }, [account?.publicKey, eventSource]);
 
   useEffect(() => {
     const handleEngagementEvent = (event: any) => {
