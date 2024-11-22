@@ -3,7 +3,7 @@ import { Button, Spinner } from '@tg-app/ui';
 import { useEffect, useState } from 'react';
 import { AnalyticsId } from '@tg-app/analytics';
 import { ActiveTab } from '~/App.tsx';
-import { useEvents, useWallet } from '~/hooks';
+import { useBot, useEvents, useWallet } from '~/hooks';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { EngagementEventData } from '~/screens';
 import * as hbs from 'handlebars';
@@ -20,6 +20,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   const [isLoading, setLoading] = useState(true);
 
   const { account } = useWallet();
+  const bot = useBot();
   const eventSource = useEvents();
 
   useEffect(() => {
@@ -36,6 +37,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           userPubKey: account?.publicKey,
           appPubKey: EVENT_APP_ID,
           data: JSON.stringify({
+            channelId: bot?.startParam,
             id: '920cbd6e-3ac6-45fc-8b74-05adc5f6387f',
             app_id: EVENT_APP_ID,
             account_id: account?.publicKey,
@@ -57,7 +59,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
     };
 
     fetchData();
-  }, [account?.publicKey, eventSource]);
+  }, [account?.publicKey, bot?.startParam, eventSource]);
 
   useEffect(() => {
     const handleEngagementEvent = (event: any) => {
