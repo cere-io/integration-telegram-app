@@ -101,7 +101,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           <Spinner size="l" />
         </div>
       ) : (
-        <Frame>
+        <Frame style={{ border: 'none' }}>
           <div dangerouslySetInnerHTML={{ __html: leaderboardHtml }} />
         </Frame>
       )}
