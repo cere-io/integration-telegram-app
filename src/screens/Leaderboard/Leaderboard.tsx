@@ -67,6 +67,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         const { engagement, integrationScriptResults }: EngagementEventData = event.payload;
         const { widget_template } = engagement;
         const users: { key: string; doc_count: number }[] = (integrationScriptResults as any)[0]?.users || [];
+        const userPublicKey: string = (integrationScriptResults as any)[0]?.userPublicKey || null;
         const newData =
           users?.map(({ key, doc_count }) => ({
             publicKey: key,
@@ -75,6 +76,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
 
         const compiledHTML = hbs.compile(widget_template.params || '')({
           users: newData,
+          userPublicKey,
         });
         setLeaderboardHtml(compiledHTML);
 
