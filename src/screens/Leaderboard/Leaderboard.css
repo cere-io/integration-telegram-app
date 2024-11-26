@@ -3,6 +3,7 @@
   flex-direction: column;
   margin: 16px;
   gap: 1rem;
+  height: 90vh;
 }
 
 .cta-button-wrapper {
