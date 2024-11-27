@@ -8,6 +8,8 @@ import { ActivityEvent } from '@cere-activity-sdk/events';
 import { EngagementEventData } from '~/screens';
 import * as hbs from 'handlebars';
 import { EVENT_APP_ID } from '~/constants.ts';
+import { Modal } from '~/components/Modal';
+import { QuestsModalContent } from '~/components/Leaderboard/QuestsModalContent';
 
 type LeaderboardProps = {
   setActiveTab: (tab: ActiveTab) => void;
@@ -18,10 +20,29 @@ hbs.registerHelper('json', (context) => JSON.stringify(context));
 export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   const [leaderboardHtml, setLeaderboardHtml] = useState<string>('');
   const [isLoading, setLoading] = useState(true);
+  const [currentUserData, setCurrentUserData] = useState<{ publicKey: string; score: number }>(null);
+  const [isModalOpen, setModalOpen] = useState(false);
+  const [modalContent, setModalContent] = useState<React.ReactNode>(null);
 
   const { account } = useWallet();
   const bot = useBot();
   const eventSource = useEvents();
+
+  useEffect(() => {
+    const handleIframeClick = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data.type === 'GET_QUEST_BOARD') {
+        setModalContent(<QuestsModalContent currentUser={currentUserData} setActiveTab={setActiveTab} />);
+        setModalOpen(true);
+      }
+    };
+
+    window.addEventListener('message', handleIframeClick);
+
+    return () => {
+      window.removeEventListener('message', handleIframeClick);
+    };
+  }, [currentUserData]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -34,14 +55,14 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         const { event_type, timestamp, userPubKey, appPubKey, data } = {
           event_type: 'GET_LEADERBOARD',
           timestamp: '2024-11-15T09:01:01Z',
-          userPubKey: account?.publicKey,
+          userPubKey: '05d5ad0c78195a94faf62644d27031421758b93b3fc479880fa90d99bd4b34bc',
           appPubKey: EVENT_APP_ID,
           data: JSON.stringify({
             channelId: bot?.startParam,
             id: '920cbd6e-3ac6-45fc-8b74-05adc5f6387f',
             app_id: EVENT_APP_ID,
-            account_id: account?.publicKey,
-            publicKey: account?.publicKey,
+            account_id: '05d5ad0c78195a94faf62644d27031421758b93b3fc479880fa90d99bd4b34bc',
+            publicKey: '05d5ad0c78195a94faf62644d27031421758b93b3fc479880fa90d99bd4b34bc',
           }),
         };
         const parsedData = JSON.parse(data);
@@ -79,6 +100,9 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           userPublicKey,
         });
         setLeaderboardHtml(compiledHTML);
+
+        const currentUser = newData.find((u) => u.publicKey === userPublicKey);
+        setCurrentUserData(currentUser);
 
         setLoading(false);
       }
@@ -124,6 +148,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           </Button>
         </div>
       )}
+      <Modal isOpen={isModalOpen} onClose={() => setModalOpen(false)} content={modalContent} />
     </div>
   );
 };

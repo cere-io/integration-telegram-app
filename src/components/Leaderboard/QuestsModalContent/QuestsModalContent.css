@@ -1,0 +1,74 @@
+.top-widget {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    background: linear-gradient(65.05deg, #6864F4 4.42%, #AC55F2 66.24%, #EB4799 104.02%);
+    border-radius: 8px;
+    width: 280px;
+    margin-bottom: 24px;
+    color: white;
+}
+
+.progress-bar-block {}
+
+.progress-bar-text {
+    color: var(--tgui--text--secondaty_color);
+}
+
+.progress-bar {
+    background: rgba(162, 172, 176, 0.4);
+    color: var(--tgui--accent_text_color);
+    margin-bottom: 4px;
+}
+
+.quests-board {
+    margin-top: 24px;
+}
+
+.quest-block {
+    display: grid;
+    grid-template-columns: auto 88px;
+    grid-column-gap: 8px;
+    padding: 16px;
+    border-radius: 16px;
+    background-color: rgba(246, 246, 249, 1);
+    &:not(:last-child) {
+        margin-bottom: 8px;
+    }
+}
+
+.quest-title {
+   color: #000000;
+}
+
+.pseudo-link {
+    color: var(--tgui--link_color);
+    font-weight: 700;
+}
+
+.pseudo-link:hover {
+    cursor: pointer;
+    opacity: 0.9;
+}
+
+.quest-status {
+    padding: 7px 12px;
+    border-radius: 200px;
+    text-align: center;
+}
+
+.quest-status > svg {
+    margin-right: 5px;
+}
+
+.quest-status.watched {
+    background-color: rgba(162, 172, 176, 0.2);
+    color: rgba(73, 191, 99, 1);
+}
+
+.quest-status.not-watched {
+    background: linear-gradient(90deg, #6864F4 9.44%, #AC55F2 65.64%, #EB4799 100%);
+    color: #ffffff;
+    white-space: nowrap;
+}
