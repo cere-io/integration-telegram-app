@@ -20,7 +20,7 @@ hbs.registerHelper('json', (context) => JSON.stringify(context));
 export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   const [leaderboardHtml, setLeaderboardHtml] = useState<string>('');
   const [isLoading, setLoading] = useState(true);
-  const [currentUserData, setCurrentUserData] = useState<{ publicKey: string; score: number }>(null);
+  const [currentUserData, setCurrentUserData] = useState<{ publicKey: string; score: number }>();
   const [isModalOpen, setModalOpen] = useState(false);
   const [modalContent, setModalContent] = useState<React.ReactNode>(null);
 
@@ -31,7 +31,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   useEffect(() => {
     const handleIframeClick = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
-      if (event.data.type === 'GET_QUEST_BOARD') {
+      if (event.data.type === 'GET_QUEST_BOARD' && currentUserData) {
         setModalContent(<QuestsModalContent currentUser={currentUserData} setActiveTab={setActiveTab} />);
         setModalOpen(true);
       }
@@ -102,7 +102,9 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         setLeaderboardHtml(compiledHTML);
 
         const currentUser = newData.find((u) => u.publicKey === userPublicKey);
-        setCurrentUserData(currentUser);
+        if (currentUser) {
+          setCurrentUserData(currentUser);
+        }
 
         setLoading(false);
       }
