@@ -55,14 +55,14 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         const { event_type, timestamp, userPubKey, appPubKey, data } = {
           event_type: 'GET_LEADERBOARD',
           timestamp: '2024-11-15T09:01:01Z',
-          userPubKey: '05d5ad0c78195a94faf62644d27031421758b93b3fc479880fa90d99bd4b34bc',
+          userPubKey: account?.publicKey,
           appPubKey: EVENT_APP_ID,
           data: JSON.stringify({
             channelId: bot?.startParam,
             id: '920cbd6e-3ac6-45fc-8b74-05adc5f6387f',
             app_id: EVENT_APP_ID,
-            account_id: '05d5ad0c78195a94faf62644d27031421758b93b3fc479880fa90d99bd4b34bc',
-            publicKey: '05d5ad0c78195a94faf62644d27031421758b93b3fc479880fa90d99bd4b34bc',
+            account_id: account?.publicKey,
+            publicKey: account?.publicKey,
           }),
         };
         const parsedData = JSON.parse(data);

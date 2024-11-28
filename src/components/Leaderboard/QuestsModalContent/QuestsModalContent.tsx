@@ -24,6 +24,15 @@ export const QuestsModalContent = ({ currentUser, setActiveTab }: Props) => {
   const totalCount = videos.length;
   const progress = totalCount > 0 ? (watchedCount / totalCount) * 100 : 0;
 
+  let progressText = '';
+  if (progress === 0) {
+    progressText = 'Start to work';
+  } else if (progress < 100) {
+    progressText = 'Could do better';
+  } else {
+    progressText = 'Nice work!';
+  }
+
   return (
     <>
       <div className="top-widget">
@@ -35,7 +44,7 @@ export const QuestsModalContent = ({ currentUser, setActiveTab }: Props) => {
       <div className="progress-bar-block">
         <Progress value={progress} className="progress-bar" />
         <Text className="progress-bar-text">
-          {watchedCount} out of {totalCount} tasks completed – nice work!
+          {watchedCount} out of {totalCount} tasks completed – {progressText}
         </Text>
       </div>
       {videos.length > 0 &&
