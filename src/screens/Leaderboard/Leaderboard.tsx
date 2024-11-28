@@ -42,7 +42,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
     return () => {
       window.removeEventListener('message', handleIframeClick);
     };
-  }, [currentUserData]);
+  }, [currentUserData, setActiveTab]);
 
   useEffect(() => {
     const fetchData = async () => {
