@@ -31,7 +31,7 @@ const createUrl = (video?: Video, token?: string) => {
 export const VideoPlayer = ({ token, video, open = false, onClose }: VideoPlayerProps) => {
   const { width = 0 } = useViewport() || {};
   const { account } = useWallet();
-  const eventSource = useEvents();
+  const { eventSource } = useEvents();
   const bot = useBot();
 
   /**

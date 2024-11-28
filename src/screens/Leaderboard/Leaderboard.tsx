@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { AnalyticsId } from '@tg-app/analytics';
 import { ActiveTab } from '~/App.tsx';
 import { useBot, useEvents, useWallet } from '~/hooks';
-import { ActivityEvent } from '@cere-activity-sdk/events';
 import { EngagementEventData } from '~/screens';
 import * as hbs from 'handlebars';
 import { EVENT_APP_ID } from '~/constants.ts';
@@ -19,47 +18,24 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   const [leaderboardHtml, setLeaderboardHtml] = useState<string>('');
   const [isLoading, setLoading] = useState(true);
 
-  const { account } = useWallet();
   const bot = useBot();
-  const eventSource = useEvents();
+  const { account } = useWallet();
+  const { eventSource, dispatch } = useEvents();
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-
-        const ready = await eventSource.isReady();
-        console.log('EventSource ready:', ready);
-
-        const { event_type, timestamp, userPubKey, appPubKey, data } = {
-          event_type: 'GET_LEADERBOARD',
-          timestamp: '2024-11-15T09:01:01Z',
-          userPubKey: account?.publicKey,
-          appPubKey: EVENT_APP_ID,
-          data: JSON.stringify({
-            channelId: bot?.startParam,
-            id: '920cbd6e-3ac6-45fc-8b74-05adc5f6387f',
-            app_id: EVENT_APP_ID,
-            account_id: account?.publicKey,
-            publicKey: account?.publicKey,
-          }),
-        };
-        const parsedData = JSON.parse(data);
-        const event = new ActivityEvent(event_type, {
-          ...parsedData,
-          timestamp,
-          userPubKey,
-          appPubKey,
-        });
-
-        await eventSource.dispatchEvent(event);
-      } catch (error) {
-        console.error('Error dispatching event:', error);
-      }
-    };
-
-    fetchData();
-  }, [account?.publicKey, bot?.startParam, eventSource]);
+    try {
+      setLoading(true);
+      dispatch('GET_LEADERBOARD', {
+        channelId: bot?.startParam,
+        id: '920cbd6e-3ac6-45fc-8b74-05adc5f6387f',
+        app_id: EVENT_APP_ID,
+        account_id: account?.publicKey,
+        publicKey: account?.publicKey,
+      });
+    } catch (error) {
+      console.error('Error dispatching event:', error);
+    }
+  }, [account?.publicKey, bot?.startParam, dispatch]);
 
   useEffect(() => {
     const handleEngagementEvent = (event: any) => {
@@ -79,13 +55,11 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           userPublicKey,
         });
         setLeaderboardHtml(compiledHTML);
-
         setLoading(false);
       }
     };
 
     eventSource.addEventListener('engagement', handleEngagementEvent);
-
     return () => {
       eventSource.removeEventListener('engagement', handleEngagementEvent);
     };
