@@ -3,6 +3,7 @@ export type Video = {
   title: string;
   description: string;
   thumbnailUrl: string | null;
+  watched?: boolean;
 };
 
 export type Subscription = {

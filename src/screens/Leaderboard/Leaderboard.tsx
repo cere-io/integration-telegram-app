@@ -8,6 +8,8 @@ import { ActivityEvent } from '@cere-activity-sdk/events';
 import { EngagementEventData } from '~/screens';
 import * as hbs from 'handlebars';
 import { EVENT_APP_ID } from '~/constants.ts';
+import { Modal } from '~/components/Modal';
+import { QuestsModalContent } from '~/components/Leaderboard/QuestsModalContent';
 
 type LeaderboardProps = {
   setActiveTab: (tab: ActiveTab) => void;
@@ -18,10 +20,29 @@ hbs.registerHelper('json', (context) => JSON.stringify(context));
 export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   const [leaderboardHtml, setLeaderboardHtml] = useState<string>('');
   const [isLoading, setLoading] = useState(true);
+  const [currentUserData, setCurrentUserData] = useState<{ publicKey: string; score: number }>();
+  const [isModalOpen, setModalOpen] = useState(false);
+  const [modalContent, setModalContent] = useState<React.ReactNode>(null);
 
   const { account } = useWallet();
   const bot = useBot();
   const eventSource = useEvents();
+
+  useEffect(() => {
+    const handleIframeClick = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data.type === 'GET_QUEST_BOARD' && currentUserData) {
+        setModalContent(<QuestsModalContent currentUser={currentUserData} setActiveTab={setActiveTab} />);
+        setModalOpen(true);
+      }
+    };
+
+    window.addEventListener('message', handleIframeClick);
+
+    return () => {
+      window.removeEventListener('message', handleIframeClick);
+    };
+  }, [currentUserData, setActiveTab]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -80,6 +101,11 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         });
         setLeaderboardHtml(compiledHTML);
 
+        const currentUser = newData.find((u) => u.publicKey === userPublicKey);
+        if (currentUser) {
+          setCurrentUserData(currentUser);
+        }
+
         setLoading(false);
       }
     };
@@ -124,6 +150,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           </Button>
         </div>
       )}
+      <Modal isOpen={isModalOpen} onClose={() => setModalOpen(false)} content={modalContent} />
     </div>
   );
 };
