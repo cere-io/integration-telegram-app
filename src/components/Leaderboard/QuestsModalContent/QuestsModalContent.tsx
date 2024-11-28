@@ -1,4 +1,4 @@
-import { Truncate, Text, CheckMarkIcon } from '@tg-app/ui';
+import { Truncate, Text, CheckMarkIcon, Spinner } from '@tg-app/ui';
 import './QuestsModalContent.css';
 import { Video } from '@tg-app/api';
 import { useEffect, useState } from 'react';
@@ -15,9 +15,13 @@ export const QuestsModalContent = ({ currentUser, setActiveTab }: Props) => {
   const bot = useBot();
 
   const [videos, setVideos] = useState<Video[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    bot.getVideos().then(setVideos);
+    bot.getVideos().then((videos) => {
+      setVideos(videos);
+      setLoading(false);
+    });
   }, [bot]);
 
   const watchedCount = videos.filter((video) => video.watched).length;
@@ -47,7 +51,20 @@ export const QuestsModalContent = ({ currentUser, setActiveTab }: Props) => {
           {watchedCount} out of {totalCount} tasks completed – {progressText}
         </Text>
       </div>
-      {videos.length > 0 &&
+      {loading ? (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '90vh',
+          }}
+        >
+          <Spinner size="m" />
+        </div>
+      ) : (
+        videos.length > 0 &&
         videos.map(({ title, url, watched }) => (
           <div key={url} className="quests-board">
             <div className="quest-block">
@@ -71,7 +88,8 @@ export const QuestsModalContent = ({ currentUser, setActiveTab }: Props) => {
               </Text>
             </div>
           </div>
-        ))}
+        ))
+      )}
     </>
   );
 };
