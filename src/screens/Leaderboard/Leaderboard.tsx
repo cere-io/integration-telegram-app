@@ -126,7 +126,6 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            height: '90vh',
           }}
         >
           <Spinner size="l" />

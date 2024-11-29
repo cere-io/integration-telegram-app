@@ -58,7 +58,6 @@ export const QuestsModalContent = ({ currentUser, setActiveTab }: Props) => {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            height: '90vh',
           }}
         >
           <Spinner size="m" />
