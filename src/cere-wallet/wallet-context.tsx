@@ -1,5 +1,5 @@
 import { createContext, PropsWithChildren, useContext, useMemo } from 'react';
-import { EmbedWallet } from '@cere/embed-wallet';
+import { EmbedWallet, WalletEnvironment } from '@cere/embed-wallet';
 import { useLaunchParams } from '@telegram-apps/sdk-react';
 import { APP_ENV, TELEGRAM_BOT_ID } from '~/constants.ts'; // Cere wallet SDK package
 
@@ -20,13 +20,13 @@ export const CereWalletProvider = ({ children }: PropsWithChildren<NonNullable<u
 
   const wallet = useMemo(() => {
     const wallet = new EmbedWallet({
-      env: APP_ENV,
+      env: APP_ENV as WalletEnvironment,
     });
 
     wallet
       .init({
         appId: 'telegram-mini-app',
-        env: APP_ENV,
+        env: APP_ENV as WalletEnvironment,
         authMethod: { type: 'telegram-mini-app', token: `${TELEGRAM_BOT_ID}:${initDataRaw}` },
       })
       .then(() => {
