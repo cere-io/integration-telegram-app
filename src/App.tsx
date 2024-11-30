@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Tabbar, MediaIcon, Provider as UIProvider, SubscriptionIcon, LeaderboardIcon } from '@tg-app/ui';
+import { Tabbar, MediaIcon, Provider as UIProvider, SubscriptionIcon } from '@tg-app/ui';
 import Reporting from '@tg-app/reporting';
 import {
   bindMiniAppCSSVars,
