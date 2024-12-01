@@ -5,8 +5,8 @@ import { SDKProvider } from '@telegram-apps/sdk-react';
 import Reporting, { ErrorBoundary } from '@tg-app/reporting';
 import Analytics from '@tg-app/analytics';
 
-import { App } from './App';
 import { APP_ENV, APP_VERSION, TELEGRAM_APP_URL, TONCONNECT_MANIFEST_URL } from './constants';
+import Root from '~/Root.tsx';
 
 Analytics.init();
 Reporting.init({
@@ -23,7 +23,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       }}
     >
       <ErrorBoundary>
-        <App />
+        <Root />
       </ErrorBoundary>
     </TonConnectUIProvider>
   </SDKProvider>,

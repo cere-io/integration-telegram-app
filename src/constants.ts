@@ -13,3 +13,5 @@ export const EVENT_SIGNER_MNEMONIC = import.meta.env.VITE_EVENT_SIGNER_MNEMONIC;
 export const EVENT_SIGNER_TYPE = import.meta.env.VITE_EVENT_SIGNER_TYPE;
 export const EVENT_DISPATCH_URL = import.meta.env.VITE_EVENT_DISPATCH_URL;
 export const EVENT_LISTEN_URL = import.meta.env.VITE_EVENT_LISTEN_URL;
+
+export const IS_OWNER = import.meta.env.VITE_IS_OWNER || false;
