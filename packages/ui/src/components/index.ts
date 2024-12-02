@@ -29,6 +29,10 @@ export {
   type CaptionProps,
   Spinner,
   type SpinnerProps,
+  Input,
+  Textarea,
+    Placeholder,
+  InlineButtons,
 } from '@telegram-apps/telegram-ui';
 
 export * from './MediaList';

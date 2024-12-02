@@ -22,9 +22,7 @@ export class BotApi {
       ...options,
       headers: {
         ...options.headers,
-        ...(this.startParam && {
-          'X-Telegram-Chat': this.startParam,
-        }),
+          'X-Telegram-Chat': '-1002433493900',
       },
     });
 
@@ -39,6 +37,26 @@ export class BotApi {
     const response = await this.request('videos');
 
     return response.json();
+  }
+
+  async saveVideo(video: Video): Promise<boolean> {
+    const response = await this.request('videos', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(video),
+    });
+
+    return response.ok;
+  }
+
+  async deleteVideo(id: number | undefined): Promise<boolean> {
+    const response = await this.request(`videos/${id}`, {
+      method: 'DELETE',
+    });
+
+    return response.ok;
   }
 
   async getProofChallenge() {
