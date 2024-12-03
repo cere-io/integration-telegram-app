@@ -1,4 +1,4 @@
-import {Quest, Subscription, SubscriptionsResponse, TokenRequest, Video} from './types';
+import {Campaign, Quest, Subscription, SubscriptionsResponse, TokenRequest, Video} from './types';
 
 type RequestOprions = RequestInit & {
   allowStatus?: number[];
@@ -127,6 +127,32 @@ export class BotApi {
 
   async deleteQuest(id: number | undefined): Promise<boolean> {
     const response = await this.request(`quests/${id}`, {
+      method: 'DELETE',
+    });
+
+    return response.ok;
+  }
+
+  async getCampaigns(): Promise<Quest[]> {
+    const response = await this.request('campaigns');
+
+    return response.json();
+  }
+
+  async saveCampaign(campaign: Campaign): Promise<boolean> {
+    const response = await this.request('campaigns', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(campaign),
+    });
+
+    return response.ok;
+  }
+
+  async deleteCampaign(id: number | undefined): Promise<boolean> {
+    const response = await this.request(`campaigns/${id}`, {
       method: 'DELETE',
     });
 

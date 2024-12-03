@@ -35,6 +35,7 @@ export {
   InlineButtons,
   Radio,
   Select,
+  Multiselect,
 } from '@telegram-apps/telegram-ui';
 
 export * from './MediaList';
