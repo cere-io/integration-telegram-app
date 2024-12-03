@@ -1,0 +1,11 @@
+:root {
+  --safe_area_inset_bottom: calc(100vh - var(--tg-viewport-stable-height, 100vh))
+}
+
+body .App-root {
+  --tgui--accent_text_color: #9244E0;
+  --tgui--link_color: #9244E0;
+  --tgui--button_color: #9244E0;
+  --tgui--font_weight--accent2: 500;
+  --tgui--text--secondaty_color: #707579;
+}

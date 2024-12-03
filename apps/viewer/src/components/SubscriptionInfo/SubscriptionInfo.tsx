@@ -1,5 +1,5 @@
 import { PropsWithChildren } from 'react';
-import { Subscription } from '../../../../../packages/api';
+import { Subscription } from '@tg-app/api';
 import { Text } from '@tg-app/ui';
 import { useMiniApp } from '@telegram-apps/sdk-react';
 

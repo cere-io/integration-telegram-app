@@ -1,8 +1,8 @@
 import './mockEnv';
 import ReactDOM from 'react-dom/client';
 import { SDKProvider } from '@telegram-apps/sdk-react';
-import Reporting, { ErrorBoundary } from '../../../packages/reporting';
-import Analytics from '../../../packages/analytics';
+import Reporting, { ErrorBoundary } from '@tg-app/reporting';
+import Analytics from '@tg-app/analytics';
 
 import { App } from './App';
 import { APP_ENV, APP_VERSION } from './constants';

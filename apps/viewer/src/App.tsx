@@ -1,6 +1,7 @@
+import './index.css';
 import { useEffect, useState } from 'react';
 import { Tabbar, MediaIcon, SubscriptionIcon, LeaderboardIcon } from '@tg-app/ui';
-import Reporting from '../../../packages/reporting';
+import Reporting from '@tg-app/reporting';
 import {
   bindMiniAppCSSVars,
   useMiniApp,

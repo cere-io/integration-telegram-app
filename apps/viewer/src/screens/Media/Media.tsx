@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { MediaList, MediaListItem, Button, Title } from '@tg-app/ui';
-import { Video } from '../../../../../packages/api';
-import { AnalyticsId } from '../../../../../packages/analytics';
+import { Video } from '@tg-app/api';
+import { AnalyticsId } from '@tg-app/analytics';
 
 import { useBot, useToken } from '../../hooks';
 import { VideoPlayer } from '../../components';

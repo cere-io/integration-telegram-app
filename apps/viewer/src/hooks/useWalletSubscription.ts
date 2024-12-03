@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Subscription } from '../../../../packages/api';
-import Reporting from '../../../../packages/reporting';
+import { Subscription } from '@tg-app/api';
+import Reporting from '@tg-app/reporting';
 
 import { useBot } from './useBot';
 

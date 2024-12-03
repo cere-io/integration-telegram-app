@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useInitData } from '@telegram-apps/sdk-react';
-import { BotApi } from '../../../../packages/api';
+import { BotApi } from '@tg-app/api';
 
 import { DEFAULT_START_PARAM, TELEGRAM_BOT_URL } from '../constants';
 
