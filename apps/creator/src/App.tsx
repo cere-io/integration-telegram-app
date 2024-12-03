@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 import { Tabbar, MediaIcon, LockIcon, CampaignIcon } from '@tg-app/ui';
 import Reporting from '../../../packages/reporting';
 import {
@@ -39,6 +39,10 @@ export type ActiveTab = {
   props?: Record<string, unknown>;
 };
 
+interface ScreenProps {
+  setActiveTab?: any;
+}
+
 export const App = () => {
   const miniApp = useMiniApp();
   const themeParams = useThemeParams();
@@ -46,7 +50,7 @@ export const App = () => {
   const { user } = useInitData() || {};
 
   const [activeTab, setActiveTab] = useState<ActiveTab>({ index: 0 });
-  const Screen = tabs[activeTab.index].screen;
+  const Screen: FC<ScreenProps> = tabs[activeTab.index].screen;
 
   useEffect(() => {
     bindMiniAppCSSVars(miniApp, themeParams);
@@ -65,7 +69,6 @@ export const App = () => {
   return (
     <AppRoot appearance={miniApp.isDark ? 'dark' : 'light'} className="App-root" id="app-root">
       <Screen setActiveTab={setActiveTab} {...activeTab.props} />
-
       <Tabbar>
         {tabs.map(({ icon: Icon, text }, index) => (
           <Tabbar.Item

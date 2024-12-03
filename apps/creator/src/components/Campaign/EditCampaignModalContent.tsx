@@ -25,7 +25,7 @@ export const EditCampaignModalContent = ({ campaign, onSave, onDelete, isLoading
   const [quests, setQuests] = useState<Quest[]>([]);
 
   const [selectedQuests, setSelectedQuests] = useState<MultiselectOption[]>(
-    campaign?.quests?.map((q) => ({ value: q.id! + '', label: q.title! })),
+    campaign?.quests?.map((q) => ({ value: q.id! + '', label: q.title! })) || [],
   );
 
   useEffect(() => {
@@ -35,16 +35,21 @@ export const EditCampaignModalContent = ({ campaign, onSave, onDelete, isLoading
   }, [bot]);
 
   const handleSave = () => {
-    onSave({
+    onSave?.({
       id: campaign?.id,
       title: title!,
       description: description!,
-      quests: selectedQuests.map<Quest>((quest) => quests.find((q) => q.id == quest.value)),
+      quests: selectedQuests.map<Quest>((quest) => {
+        const foundQuest = quests.filter((q) => q.id === Number(quest.value))[0];
+        return foundQuest || {};
+      }),
     });
   };
 
   const handleDelete = () => {
-    onDelete(campaign?.id);
+    if (campaign?.id) {
+      onDelete?.(campaign.id);
+    }
   };
 
   return (
@@ -64,8 +69,8 @@ export const EditCampaignModalContent = ({ campaign, onSave, onDelete, isLoading
       <Multiselect
         header="Quests"
         placeholder="I am usual input, just leave me alone"
-        onChange={setSelectedQuests}
-        options={quests.map((quest) => ({ value: quest.id, label: quest.title }))}
+        onChange={setSelectedQuests as any}
+        options={quests?.map((quest) => ({ value: quest.id, label: quest.title })) as any}
         value={selectedQuests}
       />
       <Button

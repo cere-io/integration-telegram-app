@@ -16,7 +16,7 @@ export const EditVideoModalContent = ({ video, onSave, onDelete, isLoading }: Mo
   const [videoUrl, setVideoUrl] = useState(video?.url);
 
   const handleSave = () => {
-    onSave({
+    onSave?.({
       id: video?.id,
       url: videoUrl!,
       title: title!,
@@ -26,7 +26,9 @@ export const EditVideoModalContent = ({ video, onSave, onDelete, isLoading }: Mo
   };
 
   const handleDelete = () => {
-    onDelete(video?.id);
+    if (video?.id) {
+      onDelete?.(video.id);
+    }
   };
 
   return (
@@ -46,13 +48,13 @@ export const EditVideoModalContent = ({ video, onSave, onDelete, isLoading }: Mo
       <Input
         header="Thumbnail URL"
         placeholder="I am usual input, just leave me alone"
-        value={thumbnailUrl}
+        value={thumbnailUrl || ''}
         onChange={(e) => setThumbnailUrl(e.target.value)}
       />
       <Input
         header="Video URL"
         placeholder="I am usual input, just leave me alone"
-        value={videoUrl}
+        value={videoUrl || ''}
         onChange={(e) => setVideoUrl(e.target.value)}
       />
       <Button

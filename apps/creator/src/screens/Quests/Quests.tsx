@@ -78,8 +78,8 @@ export const Quests = () => {
             key={index}
             title={quest.title}
             description={quest.description}
-            type={quest.type}
-            rewardPoints={quest.rewardPoints}
+            questType={quest.type}
+            rewardPoints={quest?.rewardPoints || 0}
             onClick={() => setSelectedQuest(quest)}
           />
         ))

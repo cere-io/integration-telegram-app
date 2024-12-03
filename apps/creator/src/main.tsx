@@ -15,8 +15,8 @@ Reporting.init({
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <SDKProvider acceptCustomStyles debug>
-      <ErrorBoundary>
-        <App />
-      </ErrorBoundary>
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </SDKProvider>,
 );
