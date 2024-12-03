@@ -1,7 +1,7 @@
 import { useBot } from '../../hooks';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Quest } from '@tg-app/api';
-import { Button, List } from '@tg-app/ui';
+import { Button, Text } from '@tg-app/ui';
 import { Modal } from '../../components/Modal';
 import { QuestListItem } from '../../components/Quests/QuestListItem.tsx';
 import { EditQuestModalContent } from '../../components/Quests/EditQuestModalContent.tsx';
@@ -10,6 +10,7 @@ export const Quests = () => {
   const bot = useBot();
   const [quests, setQuests] = useState<Quest[]>([]);
   const [selectedQuest, setSelectedQuest] = useState<Quest>();
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     bot.getQuests().then((quests) => {
@@ -17,9 +18,41 @@ export const Quests = () => {
     });
   }, [bot]);
 
+  const handleOnQuestSave = useCallback(
+    async (quest: Quest) => {
+      setIsLoading(true);
+      try {
+        await bot.saveVideo(quest);
+        setQuests((prevQuests) => [...prevQuests, quest]);
+      } catch (error) {
+        console.error('Error saving video:', error);
+      } finally {
+        setIsLoading(false);
+        setSelectedQuest(undefined);
+      }
+    },
+    [bot],
+  );
+
+  const handleOnDelete = useCallback(
+    async (questId: number) => {
+      setIsLoading(true);
+      try {
+        await bot.deleteVideo(questId);
+        setQuests((prevQuests) => prevQuests.filter((quest) => quest.id !== questId));
+      } catch (error) {
+        console.error('Error deleting video:', error);
+      } finally {
+        setIsLoading(false);
+        setSelectedQuest(undefined);
+      }
+    },
+    [bot],
+  );
+
   return (
     <div>
-      <div className="HIJtihMA8FHczS02iWF5">
+      <div className="container">
         <Button
           mode="filled"
           size="s"
@@ -29,22 +62,35 @@ export const Quests = () => {
           Add quest
         </Button>
       </div>
-      {quests.map((quest, index) => (
-        <QuestListItem
-          key={index}
-          title={quest.title}
-          description={quest.description}
-          type={quest.type}
-          videoId={quest.videoId}
-          rewardPoints={quest.rewardPoints}
-          onClick={() => setSelectedQuest(quest)}
-        />
-      ))}
+      {quests.length === 0 ? (
+        <div className="container">
+          <Text>No quests available. Click "Add Quest" to get started.</Text>
+        </div>
+      ) : (
+        quests.map((quest, index) => (
+          <QuestListItem
+            key={index}
+            title={quest.title}
+            description={quest.description}
+            type={quest.type}
+            videoId={quest.videoId}
+            rewardPoints={quest.rewardPoints}
+            onClick={() => setSelectedQuest(quest)}
+          />
+        ))
+      )}
       {selectedQuest ? (
         <Modal
           isOpen={true}
           onClose={() => setSelectedQuest(null)}
-          content={<EditQuestModalContent quest={selectedQuest} />}
+          content={
+            <EditQuestModalContent
+              quest={selectedQuest}
+              onSave={handleOnQuestSave}
+              onDelete={handleOnDelete}
+              isLoading={isLoading}
+            />
+          }
         />
       ) : (
         <div></div>

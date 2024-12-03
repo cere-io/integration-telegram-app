@@ -31,10 +31,10 @@ export {
   type SpinnerProps,
   Input,
   Textarea,
-    Placeholder,
+  Placeholder,
   InlineButtons,
-    Radio,
-    Select
+  Radio,
+  Select,
 } from '@telegram-apps/telegram-ui';
 
 export * from './MediaList';

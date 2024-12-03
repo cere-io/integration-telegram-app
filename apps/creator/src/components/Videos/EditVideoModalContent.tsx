@@ -1,24 +1,22 @@
 import { Input, Textarea, Button } from '@tg-app/ui';
 import { useState } from 'react';
 import { Video } from '@tg-app/api';
-import { useBot } from '@integration-telegram-app/viewer/src/hooks';
 
 type ModalProps = {
+  isLoading: boolean;
   video?: Video;
+  onSave?: (video: Video) => void;
+  onDelete?: (videoId: number) => void;
 };
 
-export const EditVideoModalContent = ({ video }: ModalProps) => {
-  console.log('VIDEO TO EDIT');
-  console.log(video);
-  const bot = useBot();
-
+export const EditVideoModalContent = ({ video, onSave, onDelete, isLoading }: ModalProps) => {
   const [title, setTitle] = useState(video?.title);
   const [description, setDescription] = useState(video?.description);
   const [thumbnailUrl, setThumbnailUrl] = useState(video?.thumbnailUrl);
   const [videoUrl, setVideoUrl] = useState(video?.url);
 
   const handleSave = () => {
-    bot.saveVideo({
+    onSave({
       id: video?.id,
       url: videoUrl!,
       title: title!,
@@ -28,7 +26,7 @@ export const EditVideoModalContent = ({ video }: ModalProps) => {
   };
 
   const handleDelete = () => {
-    bot.deleteVideo(video?.id);
+    onDelete(video?.id);
   };
 
   return (
@@ -57,10 +55,17 @@ export const EditVideoModalContent = ({ video }: ModalProps) => {
         value={videoUrl}
         onChange={(e) => setVideoUrl(e.target.value)}
       />
-      <Button mode="gray" size="s" style={{ float: 'left' }} onClick={handleDelete} disabled={!video?.id}>
+      <Button
+        mode="gray"
+        size="s"
+        style={{ float: 'left' }}
+        onClick={handleDelete}
+        disabled={!video?.id}
+        loading={isLoading}
+      >
         Delete
       </Button>
-      <Button mode="filled" size="s" style={{ float: 'right' }} onClick={handleSave}>
+      <Button mode="filled" size="s" style={{ float: 'right' }} onClick={handleSave} loading={isLoading}>
         Save
       </Button>
     </>

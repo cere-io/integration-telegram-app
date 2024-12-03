@@ -1,14 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-  Tabbar,
-  MediaIcon,
-  Provider as UIProvider,
-  QuestIcon,
-  LeaderboardIcon,
-  Input,
-  Textarea,
-  LockIcon
-} from '@tg-app/ui';
+import { Tabbar, MediaIcon, Provider as UIProvider, LockIcon } from '@tg-app/ui';
 import Reporting from '../../../packages/reporting';
 import {
   bindMiniAppCSSVars,
@@ -20,7 +11,7 @@ import {
   useInitData,
 } from '@telegram-apps/sdk-react';
 
-import { Quests, Videos, Campaigns } from './screens';
+import { Quests, Videos } from './screens';
 
 const tabs = [
   {
@@ -28,7 +19,7 @@ const tabs = [
     screen: Videos,
     text: 'Videos',
   },
-/*  {
+  /*  {
     icon: QuestIcon,
     screen: Campaigns,
     text: 'Campaigns',
@@ -70,7 +61,7 @@ export const App = () => {
 
   return (
     <UIProvider appearance={miniApp.isDark ? 'dark' : 'light'}>
-     <Screen setActiveTab={setActiveTab} {...activeTab.props} />
+      <Screen setActiveTab={setActiveTab} {...activeTab.props} />
 
       <Tabbar>
         {tabs.map(({ icon: Icon, text }, index) => (
@@ -84,7 +75,6 @@ export const App = () => {
           </Tabbar.Item>
         ))}
       </Tabbar>
-
     </UIProvider>
   );
 };

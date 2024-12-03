@@ -1,13 +1,16 @@
-import { Input, Textarea, Button, Cell, Placeholder, Radio, Select } from '@tg-app/ui';
+import { Input, Textarea, Button, Select } from '@tg-app/ui';
 import { useEffect, useState } from 'react';
 import { Quest, Video } from '@tg-app/api';
 import { useBot } from '@integration-telegram-app/viewer/src/hooks';
 
 type ModalProps = {
+  isLoading: boolean;
   quest?: Quest;
+  onSave?: (video: Video) => void;
+  onDelete?: (videoId: number) => void;
 };
 
-export const EditQuestModalContent = ({ quest }: ModalProps) => {
+export const EditQuestModalContent = ({ quest, onSave, onDelete, isLoading }: ModalProps) => {
   const bot = useBot();
 
   const [title, setTitle] = useState(quest?.title);
@@ -21,7 +24,6 @@ export const EditQuestModalContent = ({ quest }: ModalProps) => {
   useEffect(() => {
     bot.getVideos().then((videos) => {
       setVideos(videos);
-      // set first video as default
       if (!videoId && videos.length > 0) {
         setVideoId(`${videos[0].id!}`);
       }
@@ -29,7 +31,7 @@ export const EditQuestModalContent = ({ quest }: ModalProps) => {
   }, [bot, videoId]);
 
   const handleSave = () => {
-    bot.saveQuest({
+    onSave({
       id: quest?.id,
       title: title!,
       description: description!,
@@ -40,7 +42,7 @@ export const EditQuestModalContent = ({ quest }: ModalProps) => {
   };
 
   const handleDelete = () => {
-    bot.deleteQuest(quest?.id);
+    onDelete(quest?.id);
   };
 
   return (
@@ -83,10 +85,17 @@ export const EditQuestModalContent = ({ quest }: ModalProps) => {
         value={rewardPoints}
         onChange={(e) => setRewardPoints(e.target.value)}
       />
-      <Button mode="gray" size="s" style={{ float: 'left' }} onClick={handleDelete} disabled={!quest?.id}>
+      <Button
+        mode="gray"
+        size="s"
+        style={{ float: 'left' }}
+        onClick={handleDelete}
+        disabled={!quest?.id}
+        loading={isLoading}
+      >
         Delete
       </Button>
-      <Button mode="filled" size="s" style={{ float: 'right' }} onClick={handleSave}>
+      <Button mode="filled" size="s" style={{ float: 'right' }} onClick={handleSave} loading={isLoading}>
         Save
       </Button>
     </>
