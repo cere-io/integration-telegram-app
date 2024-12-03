@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import {Tabbar, MediaIcon, Provider as UIProvider, LockIcon, CampaignIcon} from '@tg-app/ui';
+import { Tabbar, MediaIcon, LockIcon, CampaignIcon } from '@tg-app/ui';
 import Reporting from '../../../packages/reporting';
 import {
   bindMiniAppCSSVars,
@@ -11,7 +11,10 @@ import {
   useInitData,
 } from '@telegram-apps/sdk-react';
 
-import {Campaigns, Quests, Videos} from './screens';
+import { Campaigns, Quests, Videos } from './screens';
+
+import { AppRoot } from '@telegram-apps/telegram-ui';
+import '@telegram-apps/telegram-ui/dist/styles.css';
 
 const tabs = [
   {
@@ -60,7 +63,7 @@ export const App = () => {
   );
 
   return (
-    <UIProvider appearance={miniApp.isDark ? 'dark' : 'light'}>
+    <AppRoot appearance={miniApp.isDark ? 'dark' : 'light'} className="App-root" id="app-root">
       <Screen setActiveTab={setActiveTab} {...activeTab.props} />
 
       <Tabbar>
@@ -75,6 +78,6 @@ export const App = () => {
           </Tabbar.Item>
         ))}
       </Tabbar>
-    </UIProvider>
+    </AppRoot>
   );
 };

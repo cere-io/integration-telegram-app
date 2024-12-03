@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Tabbar, MediaIcon, Provider as UIProvider, SubscriptionIcon, LeaderboardIcon } from '@tg-app/ui';
+import { Tabbar, MediaIcon, SubscriptionIcon, LeaderboardIcon } from '@tg-app/ui';
 import Reporting from '../../../packages/reporting';
 import {
   bindMiniAppCSSVars,
@@ -12,6 +12,9 @@ import {
 } from '@telegram-apps/sdk-react';
 
 import { Leaderboard, Media, Wallet } from './screens';
+
+import { AppRoot } from '@telegram-apps/telegram-ui';
+import '@telegram-apps/telegram-ui/dist/styles.css';
 
 const tabs = [
   {
@@ -60,7 +63,7 @@ export const App = () => {
   );
 
   return (
-    <UIProvider appearance={miniApp.isDark ? 'dark' : 'light'}>
+    <AppRoot appearance={miniApp.isDark ? 'dark' : 'light'} className="App-root" platform="ios" id="app-root">
       <Screen setActiveTab={setActiveTab} {...activeTab.props} />
 
       <Tabbar>
@@ -75,6 +78,6 @@ export const App = () => {
           </Tabbar.Item>
         ))}
       </Tabbar>
-    </UIProvider>
+    </AppRoot>
   );
 };
