@@ -1,10 +1,14 @@
 import { Input, Textarea, Button, Multiselect } from '@tg-app/ui';
 import { useEffect, useState } from 'react';
-import { Campaign, Quest } from '@tg-app/api';
+import { Campaign, Quest, Video } from '@tg-app/api';
 import { useBot } from '@integration-telegram-app/viewer/src/hooks';
 
 type ModalProps = {
+  isLoading: boolean;
+
   campaign?: Campaign;
+  onSave?: (video: Video) => void;
+  onDelete?: (videoId: number) => void;
 };
 
 export type MultiselectOption = {
@@ -12,7 +16,7 @@ export type MultiselectOption = {
   label: string;
 };
 
-export const EditCampaignModalContent = ({ campaign }: ModalProps) => {
+export const EditCampaignModalContent = ({ campaign, onSave, onDelete, isLoading }: ModalProps) => {
   const bot = useBot();
 
   const [title, setTitle] = useState(campaign?.title);
@@ -31,7 +35,7 @@ export const EditCampaignModalContent = ({ campaign }: ModalProps) => {
   }, [bot]);
 
   const handleSave = () => {
-    bot.saveCampaign({
+    onSave({
       id: campaign?.id,
       title: title!,
       description: description!,
@@ -40,7 +44,7 @@ export const EditCampaignModalContent = ({ campaign }: ModalProps) => {
   };
 
   const handleDelete = () => {
-    bot.deleteCampaign(campaign?.id);
+    onDelete(campaign?.id);
   };
 
   return (
@@ -64,10 +68,17 @@ export const EditCampaignModalContent = ({ campaign }: ModalProps) => {
         options={quests.map((quest) => ({ value: quest.id, label: quest.title }))}
         value={selectedQuests}
       />
-      <Button mode="gray" size="s" style={{ float: 'left' }} onClick={handleDelete} disabled={!campaign?.id}>
+      <Button
+        mode="gray"
+        size="s"
+        style={{ float: 'left' }}
+        onClick={handleDelete}
+        disabled={!campaign?.id}
+        loading={isLoading}
+      >
         Delete
       </Button>
-      <Button mode="filled" size="s" style={{ float: 'right' }} onClick={handleSave}>
+      <Button mode="filled" size="s" style={{ float: 'right' }} onClick={handleSave} loading={isLoading}>
         Save
       </Button>
     </>

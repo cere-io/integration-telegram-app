@@ -26,7 +26,7 @@ export const Quests = () => {
         await bot.saveQuest(quest);
         setQuests((prevQuests) => [...prevQuests, quest]);
       } catch (error) {
-        console.error('Error saving video:', error);
+        console.error('Error saving quest:', error);
       } finally {
         setIsLoading(false);
         setSelectedQuest(undefined);
@@ -42,7 +42,7 @@ export const Quests = () => {
         await bot.deleteQuest(questId);
         setQuests((prevQuests) => prevQuests.filter((quest) => quest.id !== questId));
       } catch (error) {
-        console.error('Error deleting video:', error);
+        console.error('Error deleting quest:', error);
       } finally {
         setIsLoading(false);
         setSelectedQuest(undefined);

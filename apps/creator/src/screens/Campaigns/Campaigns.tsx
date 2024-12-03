@@ -1,10 +1,8 @@
 import { useBot } from '../../hooks';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Campaign } from '@tg-app/api';
 import { Button } from '@tg-app/ui';
-import { QuestListItem } from '../../components/Quests/QuestListItem.tsx';
 import { Modal } from '../../components/Modal';
-import { EditQuestModalContent } from '../../components/Quests/EditQuestModalContent.tsx';
 import { CampaignListItem } from '../../components/Campaign/CampaigntListItem.tsx';
 import { EditCampaignModalContent } from '../../components/Campaign/EditCampaignModalContent.tsx';
 
@@ -12,6 +10,7 @@ export const Campaigns = () => {
   const bot = useBot();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign>();
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     bot.getCampaigns().then((campaigns) => {
@@ -19,9 +18,41 @@ export const Campaigns = () => {
     });
   }, [bot]);
 
+  const handleOnCampaignSave = useCallback(
+    async (campaign: Campaign) => {
+      setIsLoading(true);
+      try {
+        await bot.saveCampaign(campaign);
+        setCampaigns((prevCampaigns) => [...prevCampaigns, campaign]);
+      } catch (error) {
+        console.error('Error saving campaign:', error);
+      } finally {
+        setIsLoading(false);
+        setSelectedCampaign(null);
+      }
+    },
+    [bot],
+  );
+
+  const handleOnDelete = useCallback(
+    async (campaignId: number) => {
+      setIsLoading(true);
+      try {
+        await bot.deleteCampaign(campaignId);
+        setCampaigns((prevCampaigns) => prevCampaigns.filter((campaign) => campaign.id !== campaignId));
+      } catch (error) {
+        console.error('Error deleting campaign:', error);
+      } finally {
+        setIsLoading(false);
+        setSelectedCampaign(null);
+      }
+    },
+    [bot],
+  );
+
   return (
     <div>
-      <div className="HIJtihMA8FHczS02iWF5">
+      <div className="container">
         <Button
           mode="filled"
           size="s"
@@ -40,14 +71,19 @@ export const Campaigns = () => {
           onClick={() => setSelectedCampaign(campaign)}
         />
       ))}
-      {selectedCampaign ? (
+      {selectedCampaign && (
         <Modal
           isOpen={true}
           onClose={() => setSelectedCampaign(null)}
-          content={<EditCampaignModalContent campaign={selectedCampaign} />}
+          content={
+            <EditCampaignModalContent
+              isLoading={isLoading}
+              campaign={selectedCampaign}
+              onSave={handleOnCampaignSave}
+              onDelete={handleOnDelete}
+            />
+          }
         />
-      ) : (
-        <div></div>
       )}
     </div>
   );
