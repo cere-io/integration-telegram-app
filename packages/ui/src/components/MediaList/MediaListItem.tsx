@@ -1,13 +1,7 @@
-import {ButtonCell, Card, CardProps, IconButton, Image, InlineButtons} from '@telegram-apps/telegram-ui';
+import { Card, CardProps, Image } from '@telegram-apps/telegram-ui';
 
 import defaultThumbnail from './defaultThumbnail.png';
 import { LockIcon } from '../../icons';
-import {Icon20QuestionMark} from "@telegram-apps/telegram-ui/dist/icons/20/question_mark";
-import {
-    InlineButtonsItem
-} from "@telegram-apps/telegram-ui/dist/components/Blocks/InlineButtons/components/InlineButtonsItem/InlineButtonsItem";
-import {Icon24Chat} from "@telegram-apps/telegram-ui/dist/icons/24/chat";
-import {Icon24Notifications} from "@telegram-apps/telegram-ui/dist/icons/24/notifications";
 
 export type MediaListItemProps = Pick<CardProps, 'onClick'> & {
   name: string;
@@ -19,7 +13,7 @@ export type MediaListItemProps = Pick<CardProps, 'onClick'> & {
 
 export const MediaListItem = ({ name, description, thumbnailUrl, locked, loading, onClick }: MediaListItemProps) => {
   return (
-    <Card style={{ margin: 16, display: 'block'}} onClick={onClick}>
+    <Card style={{ margin: 16, display: 'block' }} onClick={onClick}>
       <Image
         src={thumbnailUrl || defaultThumbnail}
         style={{

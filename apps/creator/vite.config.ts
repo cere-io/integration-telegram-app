@@ -4,7 +4,6 @@ import { defineConfig, searchForWorkspaceRoot, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import tsconfigPaths from 'vite-tsconfig-paths';
-import generate from 'vite-plugin-generate-file';
 import { ngrok } from 'vite-plugin-ngrok';
 import svgr from 'vite-plugin-svgr';
 
@@ -13,9 +12,6 @@ const outDir = path.join(rootDir, 'dist', path.basename(__dirname));
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd());
-
-  const appName = env.VITE_APP_NAME;
-  const appUrl = env.VITE_APP_URL;
 
   const plugins = [
     tsconfigPaths({ root: __dirname }),

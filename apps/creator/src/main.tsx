@@ -6,7 +6,6 @@ import Analytics from '../../../packages/analytics';
 
 import { App } from './App';
 import { APP_ENV, APP_VERSION } from './constants';
-import { CereWalletProvider } from './cere-wallet';
 
 Analytics.init();
 Reporting.init({

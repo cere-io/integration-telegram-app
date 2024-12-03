@@ -82,7 +82,7 @@ export const Quests = () => {
       {selectedQuest && (
         <Modal
           isOpen={true}
-          onClose={() => setSelectedQuest(null)}
+          onClose={() => setSelectedQuest(undefined)}
           content={
             <EditQuestModalContent
               quest={selectedQuest}

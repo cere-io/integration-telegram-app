@@ -3,11 +3,10 @@ import { PlayIcon, XIcon } from '@tg-app/ui';
 import { ReactNode } from 'react';
 
 export type QuestListItemProps = Pick<CardProps, 'onClick'> & {
-  title: string;
-  description: string;
-  type: string;
-  loading?: boolean;
-  locked?: boolean;
+  title?: string;
+  description?: string;
+  type?: string;
+  rewardPoints?: number;
 };
 
 const iconByType = new Map<string, ReactNode>([
@@ -20,7 +19,7 @@ export const QuestListItem = ({ title, description, type, rewardPoints, onClick 
     <Cell
       after={<Badge type="number">{rewardPoints} Points</Badge>}
       description={description}
-      titleBadge={iconByType.get(type)}
+      titleBadge={iconByType.get(type!)}
       onClick={onClick}
     >
       {title}

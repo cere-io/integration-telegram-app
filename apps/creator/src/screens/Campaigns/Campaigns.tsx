@@ -44,7 +44,7 @@ export const Campaigns = () => {
         console.error('Error deleting campaign:', error);
       } finally {
         setIsLoading(false);
-        setSelectedCampaign(null);
+        setSelectedCampaign(undefined);
       }
     },
     [bot],
@@ -74,7 +74,7 @@ export const Campaigns = () => {
       {selectedCampaign && (
         <Modal
           isOpen={true}
-          onClose={() => setSelectedCampaign(null)}
+          onClose={() => setSelectedCampaign(undefined)}
           content={
             <EditCampaignModalContent
               isLoading={isLoading}

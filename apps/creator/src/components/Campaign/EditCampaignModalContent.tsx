@@ -1,14 +1,14 @@
 import { Input, Textarea, Button, Multiselect } from '@tg-app/ui';
 import { useEffect, useState } from 'react';
-import { Campaign, Quest, Video } from '@tg-app/api';
+import { Campaign, Quest } from '@tg-app/api';
 import { useBot } from '@integration-telegram-app/viewer/src/hooks';
 
 type ModalProps = {
   isLoading: boolean;
 
   campaign?: Campaign;
-  onSave?: (video: Video) => void;
-  onDelete?: (videoId: number) => void;
+  onSave?: (campaign: Campaign) => void;
+  onDelete?: (campaignId: number) => void;
 };
 
 export type MultiselectOption = {

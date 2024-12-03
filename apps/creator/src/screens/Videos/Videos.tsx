@@ -3,16 +3,11 @@ import { Button, MediaListItem, Text } from '@tg-app/ui';
 import { Video } from '@tg-app/api';
 
 import { useBot } from '../../hooks';
-import type { ActiveTab } from '../../App';
 import { EditVideoModalContent } from '../../components/Videos/EditVideoModalContent.tsx';
 import { Modal } from '../../components/Modal';
 import './Videos.css';
 
-type MediaProps = {
-  setActiveTab: (tab: ActiveTab) => void;
-};
-
-export const Videos = ({ setActiveTab }: MediaProps) => {
+export const Videos = () => {
   const bot = useBot();
   const [videos, setVideos] = useState<Video[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<Video>();
@@ -90,7 +85,7 @@ export const Videos = ({ setActiveTab }: MediaProps) => {
       {selectedVideo && (
         <Modal
           isOpen={true}
-          onClose={() => setSelectedVideo(null)}
+          onClose={() => setSelectedVideo(undefined)}
           content={
             <EditVideoModalContent
               isLoading={isLoading}

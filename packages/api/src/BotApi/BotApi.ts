@@ -133,7 +133,7 @@ export class BotApi {
     return response.ok;
   }
 
-  async getCampaigns(): Promise<Quest[]> {
+  async getCampaigns(): Promise<Campaign[]> {
     const response = await this.request('campaigns');
 
     return response.json();
