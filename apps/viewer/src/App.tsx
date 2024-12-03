@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Tabbar, MediaIcon, SubscriptionIcon, LeaderboardIcon } from '@tg-app/ui';
+import { Tabbar, MediaIcon, SubscriptionIcon, LeaderboardIcon, QuestsIcon } from '@tg-app/ui';
 import Reporting from '../../../packages/reporting';
 import {
   bindMiniAppCSSVars,
@@ -11,7 +11,7 @@ import {
   useInitData,
 } from '@telegram-apps/sdk-react';
 
-import { Leaderboard, Media, Wallet } from './screens';
+import { Leaderboard, Media, Wallet, ActiveQuests } from './screens';
 
 import { AppRoot } from '@telegram-apps/telegram-ui';
 import '@telegram-apps/telegram-ui/dist/styles.css';
@@ -31,6 +31,11 @@ const tabs = [
     icon: LeaderboardIcon,
     screen: Leaderboard,
     text: 'Leaderboard',
+  },
+  {
+    icon: QuestsIcon,
+    screen: ActiveQuests,
+    text: 'Active Quests',
   },
 ];
 
