@@ -39,7 +39,7 @@ export class BotApi {
     return response.json();
   }
 
-  async saveVideo(video: Video): Promise<boolean> {
+  async saveVideo(video: Video): Promise<Video> {
     const response = await this.request('videos', {
       method: 'POST',
       headers: {
@@ -113,7 +113,7 @@ export class BotApi {
     return response.json();
   }
 
-  async saveQuest(quest: Quest): Promise<boolean> {
+  async saveQuest(quest: Quest): Promise<Quest> {
     const response = await this.request('quests', {
       method: 'POST',
       headers: {
@@ -139,7 +139,7 @@ export class BotApi {
     return response.json();
   }
 
-  async saveCampaign(campaign: Campaign): Promise<boolean> {
+  async saveCampaign(campaign: Campaign): Promise<Campaign> {
     const response = await this.request('campaigns', {
       method: 'POST',
       headers: {

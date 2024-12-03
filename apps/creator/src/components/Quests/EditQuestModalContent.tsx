@@ -6,8 +6,8 @@ import { useBot } from '@integration-telegram-app/viewer/src/hooks';
 type ModalProps = {
   isLoading: boolean;
   quest?: Quest;
-  onSave?: (video: Video) => void;
-  onDelete?: (videoId: number) => void;
+  onSave?: (quest: Quest) => void;
+  onDelete?: (questId: number) => void;
 };
 
 export const EditQuestModalContent = ({ quest, onSave, onDelete, isLoading }: ModalProps) => {
@@ -31,7 +31,7 @@ export const EditQuestModalContent = ({ quest, onSave, onDelete, isLoading }: Mo
   }, [bot, videoId]);
 
   const handleSave = () => {
-    onSave({
+    onSave?.({
       id: quest?.id,
       title: title!,
       description: description!,
@@ -42,7 +42,9 @@ export const EditQuestModalContent = ({ quest, onSave, onDelete, isLoading }: Mo
   };
 
   const handleDelete = () => {
-    onDelete(quest?.id);
+    if (quest?.id) {
+      onDelete?.(quest.id);
+    }
   };
 
   return (
@@ -61,6 +63,8 @@ export const EditQuestModalContent = ({ quest, onSave, onDelete, isLoading }: Mo
       />
       <Select
         header="Quest type"
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-expect-error
         placeholder="I am usual input, just leave me alone"
         onChange={(e) => setType(e.target.value)}
         displayEmpty
@@ -72,6 +76,8 @@ export const EditQuestModalContent = ({ quest, onSave, onDelete, isLoading }: Mo
       </Select>
       <Select
         header="Video"
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-expect-error
         placeholder="I am usual input, just leave me alone"
         onChange={(e) => setVideoId(e.target.value)}
       >
@@ -85,7 +91,7 @@ export const EditQuestModalContent = ({ quest, onSave, onDelete, isLoading }: Mo
         header="Reward points"
         placeholder="I am usual input, just leave me alone"
         value={rewardPoints}
-        onChange={(e) => setRewardPoints(e.target.value)}
+        onChange={(e) => setRewardPoints(e.target.value as any)} // @TODO remove any
       />
       <Button
         mode="gray"

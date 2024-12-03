@@ -1,12 +1,15 @@
-import { CardProps, Cell, Badge } from '@telegram-apps/telegram-ui';
+import { ReactElement, ReactNode } from 'react';
+import { CardProps, Cell, Badge, BadgeProps } from '@telegram-apps/telegram-ui';
 import { PlayIcon, XIcon } from '@tg-app/ui';
-import { ReactNode } from 'react';
 
 export type QuestListItemProps = Pick<CardProps, 'onClick'> & {
+  type?: string;
   title?: string;
   description?: string;
-  type?: string;
   rewardPoints?: number;
+  questType?: string;
+  loading?: boolean;
+  locked?: boolean;
 };
 
 const iconByType = new Map<string, ReactNode>([
@@ -14,12 +17,12 @@ const iconByType = new Map<string, ReactNode>([
   ['post_x', <XIcon />],
 ]);
 
-export const QuestListItem = ({ title, description, type, rewardPoints, onClick }: QuestListItemProps) => {
+export const QuestListItem = ({ title, description, questType, rewardPoints, onClick }: QuestListItemProps) => {
   return (
     <Cell
       after={<Badge type="number">{rewardPoints} Points</Badge>}
       description={description}
-      titleBadge={iconByType.get(type!)}
+      titleBadge={iconByType.get(questType as string) as ReactElement<BadgeProps> | undefined}
       onClick={onClick}
     >
       {title}

@@ -33,7 +33,7 @@ export const Campaigns = () => {
         console.error('Error saving campaign:', error);
       } finally {
         setIsLoading(false);
-        setSelectedCampaign(null);
+        setSelectedCampaign(undefined);
       }
     },
     [bot],
