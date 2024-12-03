@@ -1,4 +1,4 @@
-import { Subscription, SubscriptionsResponse, TokenRequest, Video } from './types';
+import {Quest, Subscription, SubscriptionsResponse, TokenRequest, Video} from './types';
 
 type RequestOprions = RequestInit & {
   allowStatus?: number[];
@@ -105,5 +105,31 @@ export class BotApi {
     const response = await this.request(`wallets/${address}/balance`);
 
     return BigInt(await response.text());
+  }
+
+  async getQuests(): Promise<Quest[]> {
+    const response = await this.request('quests');
+
+    return response.json();
+  }
+
+  async saveQuest(quest: Quest): Promise<boolean> {
+    const response = await this.request('quests', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(quest),
+    });
+
+    return response.ok;
+  }
+
+  async deleteQuest(id: number | undefined): Promise<boolean> {
+    const response = await this.request(`quests/${id}`, {
+      method: 'DELETE',
+    });
+
+    return response.ok;
   }
 }

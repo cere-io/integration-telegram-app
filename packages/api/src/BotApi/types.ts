@@ -36,3 +36,12 @@ export type TokenRequest = {
   public_key: string;
   proof: Proof;
 };
+
+export type Quest = {
+  id?: number;
+  title: string;
+  description: string;
+  type: string;
+  videoId: string;
+  rewardPoints: number;
+};

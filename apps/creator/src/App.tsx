@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react';
-import {Tabbar, MediaIcon, Provider as UIProvider, QuestIcon, LeaderboardIcon, Input, Textarea} from '@tg-app/ui';
+import {
+  Tabbar,
+  MediaIcon,
+  Provider as UIProvider,
+  QuestIcon,
+  LeaderboardIcon,
+  Input,
+  Textarea,
+  LockIcon
+} from '@tg-app/ui';
 import Reporting from '../../../packages/reporting';
 import {
   bindMiniAppCSSVars,
@@ -23,12 +32,12 @@ const tabs = [
     icon: QuestIcon,
     screen: Campaigns,
     text: 'Campaigns',
-  },
-  {
-    icon: LeaderboardIcon,
-    screen: Leaderboard,
-    text: 'Quests',
   },*/
+  {
+    icon: LockIcon,
+    screen: Quests,
+    text: 'Quests',
+  },
 ];
 
 export type ActiveTab = {

@@ -1,5 +1,5 @@
 export { BsWallet2 as WalletIcon, BsCheck as CheckIcon } from 'react-icons/bs';
-export { AiOutlineDisconnect as DisconnectIcon, AiOutlineEdit as EditIcon, AiOutlineDelete as DeleteIcon, AiOutlinePlayCircle as PlayIcon } from 'react-icons/ai';
+export { AiOutlineDisconnect as DisconnectIcon, AiOutlineEdit as EditIcon, AiOutlineDelete as DeleteIcon, AiOutlinePlayCircle as PlayIcon, AiOutlineX as XIcon } from 'react-icons/ai';
 
 export { default as MediaLogo } from './MediaLogo.svg?react';
 export { default as MediaIcon } from './MediaIcon.svg?react';

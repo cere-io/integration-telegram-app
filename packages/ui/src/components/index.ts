@@ -33,6 +33,8 @@ export {
   Textarea,
     Placeholder,
   InlineButtons,
+    Radio,
+    Select
 } from '@telegram-apps/telegram-ui';
 
 export * from './MediaList';
