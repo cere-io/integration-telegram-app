@@ -30,8 +30,13 @@ export const Videos = ({ setActiveTab }: MediaProps) => {
     async (video: Video) => {
       setIsLoading(true);
       try {
-        await bot.saveVideo(video);
-        setVideos((prevVideos) => [...prevVideos, video]);
+        if (video.id) {
+          await bot.saveVideo(video);
+          setVideos((prevVideos) => prevVideos.map((v) => (v.id === video.id ? video : v)));
+        } else {
+          const newVideo = await bot.saveVideo(video);
+          setVideos((prevVideos) => [...prevVideos, newVideo]);
+        }
       } catch (error) {
         console.error('Error saving video:', error);
       } finally {

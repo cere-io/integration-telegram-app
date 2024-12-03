@@ -1,4 +1,4 @@
-import {Campaign, Quest, Subscription, SubscriptionsResponse, TokenRequest, Video} from './types';
+import { Campaign, Quest, Subscription, SubscriptionsResponse, TokenRequest, Video } from './types';
 
 type RequestOprions = RequestInit & {
   allowStatus?: number[];
@@ -22,7 +22,7 @@ export class BotApi {
       ...options,
       headers: {
         ...options.headers,
-          'X-Telegram-Chat': '-1002433493900',
+        'X-Telegram-Chat': '-1002433493900',
       },
     });
 
@@ -48,7 +48,7 @@ export class BotApi {
       body: JSON.stringify(video),
     });
 
-    return response.ok;
+    return response.json();
   }
 
   async deleteVideo(id: number | undefined): Promise<boolean> {
@@ -122,7 +122,7 @@ export class BotApi {
       body: JSON.stringify(quest),
     });
 
-    return response.ok;
+    return response.json();
   }
 
   async deleteQuest(id: number | undefined): Promise<boolean> {
@@ -148,7 +148,7 @@ export class BotApi {
       body: JSON.stringify(campaign),
     });
 
-    return response.ok;
+    return response.json();
   }
 
   async deleteCampaign(id: number | undefined): Promise<boolean> {
