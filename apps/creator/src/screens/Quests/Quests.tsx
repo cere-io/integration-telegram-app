@@ -74,13 +74,12 @@ export const Quests = () => {
             title={quest.title}
             description={quest.description}
             type={quest.type}
-            videoId={quest.videoId}
             rewardPoints={quest.rewardPoints}
             onClick={() => setSelectedQuest(quest)}
           />
         ))
       )}
-      {selectedQuest ? (
+      {selectedQuest && (
         <Modal
           isOpen={true}
           onClose={() => setSelectedQuest(null)}
@@ -93,8 +92,6 @@ export const Quests = () => {
             />
           }
         />
-      ) : (
-        <div></div>
       )}
     </div>
   );

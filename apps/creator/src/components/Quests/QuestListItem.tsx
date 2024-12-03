@@ -1,4 +1,4 @@
-import { Card, CardProps, Cell, Avatar, Badge } from '@telegram-apps/telegram-ui';
+import { CardProps, Cell, Badge } from '@telegram-apps/telegram-ui';
 import { PlayIcon, XIcon } from '@tg-app/ui';
 import { ReactNode } from 'react';
 
@@ -15,7 +15,7 @@ const iconByType = new Map<string, ReactNode>([
   ['post_x', <XIcon />],
 ]);
 
-export const QuestListItem = ({ title, description, type, videoId, rewardPoints, onClick }: QuestListItemProps) => {
+export const QuestListItem = ({ title, description, type, rewardPoints, onClick }: QuestListItemProps) => {
   return (
     <Cell
       after={<Badge type="number">{rewardPoints} Points</Badge>}

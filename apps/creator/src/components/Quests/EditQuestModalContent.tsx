@@ -76,7 +76,9 @@ export const EditQuestModalContent = ({ quest, onSave, onDelete, isLoading }: Mo
         onChange={(e) => setVideoId(e.target.value)}
       >
         {videos.map((video) => (
-          <option value={video.id}>{video.title}</option>
+          <option key={video.id} value={video.id}>
+            {video.title}
+          </option>
         ))}
       </Select>
       <Input
