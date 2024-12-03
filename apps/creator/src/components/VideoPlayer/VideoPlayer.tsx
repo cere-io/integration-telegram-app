@@ -1,5 +1,5 @@
 import { Card, Modal, ModalProps } from '@tg-app/ui';
-import { Video } from '../../../../../packages/api';
+import { Video } from '@tg-app/api';
 import { useViewport } from '@telegram-apps/sdk-react';
 import { VideoPlayer as CerePlayer } from '@cere/media-sdk-react';
 

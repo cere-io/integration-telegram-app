@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import Reporting from '../../../../../packages/reporting';
+import Reporting from '@tg-app/reporting';
 import { useUtils } from '@telegram-apps/sdk-react';
 import { WalletWidget, Snackbar, Caption, IconBanner, HeartIcon, Subheadline, Button } from '@tg-app/ui';
 
 import type { ActiveTab } from '../../App';
 import { useSubscriptions, useWallet, useWalletBalance, useWalletSubscriptions, useWhiteLabel } from '../../hooks';
 import { SubscriptionInfo } from '../../components';
-import Analytics, { AnalyticsId } from '../../../../../packages/analytics';
+import Analytics, { AnalyticsId } from '@tg-app/analytics';
 
 type WalletProps = {
   showSubscribe?: boolean;

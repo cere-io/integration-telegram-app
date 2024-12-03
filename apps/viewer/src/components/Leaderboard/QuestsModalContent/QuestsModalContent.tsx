@@ -1,6 +1,6 @@
 import { Truncate, Text, CheckMarkIcon, Spinner } from '@tg-app/ui';
 import './QuestsModalContent.css';
-import { Video } from '../../../../../../packages/api';
+import { Video } from '@tg-app/api';
 import { useEffect, useState } from 'react';
 import { ActiveTab } from '../../../App.tsx';
 import { Progress } from '@telegram-apps/telegram-ui';

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { SubscriptionsResponse } from '../../../../packages/api';
+import { SubscriptionsResponse } from '@tg-app/api';
 
 import { useBot } from './useBot';
 

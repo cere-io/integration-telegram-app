@@ -1,7 +1,7 @@
 import './Leaderboard.css';
 import { Button, Spinner } from '@tg-app/ui';
 import { useEffect, useState } from 'react';
-import { AnalyticsId } from '../../../../../packages/analytics';
+import { AnalyticsId } from '@tg-app/analytics';
 import { ActiveTab } from '../../App.tsx';
 import { useBot, useEvents, useWallet } from '../../hooks';
 import { ActivityEvent } from '@cere-activity-sdk/events';

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toNano } from '@ton/core/dist/utils/convert';
-import Reporting from '../../../../packages/reporting';
+import Reporting from '@tg-app/reporting';
 import {
   Account,
   useTonConnectUI,
