@@ -5,6 +5,7 @@ import { Button, Text } from '@tg-app/ui';
 import { Modal } from '../../components/Modal';
 import { QuestListItem } from '../../components/Quests/QuestListItem.tsx';
 import { EditQuestModalContent } from '../../components/Quests/EditQuestModalContent.tsx';
+import './Quests.css';
 
 export const Quests = () => {
   const bot = useBot();
@@ -22,7 +23,7 @@ export const Quests = () => {
     async (quest: Quest) => {
       setIsLoading(true);
       try {
-        await bot.saveVideo(quest);
+        await bot.saveQuest(quest);
         setQuests((prevQuests) => [...prevQuests, quest]);
       } catch (error) {
         console.error('Error saving video:', error);
@@ -38,7 +39,7 @@ export const Quests = () => {
     async (questId: number) => {
       setIsLoading(true);
       try {
-        await bot.deleteVideo(questId);
+        await bot.deleteQuest(questId);
         setQuests((prevQuests) => prevQuests.filter((quest) => quest.id !== questId));
       } catch (error) {
         console.error('Error deleting video:', error);
