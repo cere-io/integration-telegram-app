@@ -22,7 +22,7 @@ export const Quests = () => {
     async (quest: Quest) => {
       setIsLoading(true);
       try {
-        await bot.saveVideo(quest);
+        await bot.saveQuest(quest);
         setQuests((prevQuests) => [...prevQuests, quest]);
       } catch (error) {
         console.error('Error saving video:', error);

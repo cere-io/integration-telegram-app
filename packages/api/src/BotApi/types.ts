@@ -39,9 +39,16 @@ export type TokenRequest = {
 
 export type Quest = {
   id?: number;
+  title?: string;
+  description?: string;
+  type?: string;
+  videoId?: string;
+  rewardPoints?: number;
+};
+
+export type Campaign = {
+  id?: number;
   title: string;
   description: string;
-  type: string;
-  videoId: string;
-  rewardPoints: number;
+  quests: Quest[];
 };

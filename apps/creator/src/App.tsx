@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Tabbar, MediaIcon, Provider as UIProvider, LockIcon } from '@tg-app/ui';
+import {Tabbar, MediaIcon, Provider as UIProvider, LockIcon, CampaignIcon} from '@tg-app/ui';
 import Reporting from '../../../packages/reporting';
 import {
   bindMiniAppCSSVars,
@@ -11,7 +11,7 @@ import {
   useInitData,
 } from '@telegram-apps/sdk-react';
 
-import { Quests, Videos } from './screens';
+import {Campaigns, Quests, Videos} from './screens';
 
 const tabs = [
   {
@@ -19,15 +19,15 @@ const tabs = [
     screen: Videos,
     text: 'Videos',
   },
-  /*  {
-    icon: QuestIcon,
-    screen: Campaigns,
-    text: 'Campaigns',
-  },*/
   {
     icon: LockIcon,
     screen: Quests,
     text: 'Quests',
+  },
+  {
+    icon: CampaignIcon,
+    screen: Campaigns,
+    text: 'Campaigns',
   },
 ];
 
