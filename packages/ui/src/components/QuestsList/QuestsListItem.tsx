@@ -34,11 +34,7 @@ export const QuestsListItem = ({ name, description, rewardPoints, questType, loc
         }
       >
         {questType === 'post_x' && (
-          <ArrowIcon
-            className={`arrow-icon ${isOpen ? 'open' : ''}`}
-            style={{ marginRight: '12px' }}
-            icon={ArrowIcon}
-          />
+          <ArrowIcon className={`arrow-icon ${isOpen ? 'open' : ''}`} style={{ marginRight: '12px' }} />
         )}
         {name}
       </Card.Cell>

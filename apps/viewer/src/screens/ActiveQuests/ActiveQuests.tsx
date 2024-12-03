@@ -21,10 +21,10 @@ export const ActiveQuests = () => {
           <QuestsListItem
             key={quest.id}
             locked={true}
-            name={quest.title}
-            description={quest.description}
-            rewardPoints={quest.rewardPoints}
-            questType={quest.type}
+            name={quest?.title || ''}
+            description={quest?.description || ''}
+            rewardPoints={quest?.rewardPoints || 0}
+            questType={quest.type as 'video' | 'post_x'}
           />
         ))}
       </QuestsList>
