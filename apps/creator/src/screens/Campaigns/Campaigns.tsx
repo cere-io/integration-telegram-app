@@ -22,8 +22,13 @@ export const Campaigns = () => {
     async (campaign: Campaign) => {
       setIsLoading(true);
       try {
-        await bot.saveCampaign(campaign);
-        setCampaigns((prevCampaigns) => [...prevCampaigns, campaign]);
+        if (campaign.id) {
+          await bot.saveCampaign(campaign);
+          setCampaigns((prevCampaigns) => prevCampaigns.map((v) => (v.id === campaign.id ? campaign : v)));
+        } else {
+          const newCampaign = await bot.saveCampaign(campaign);
+          setCampaigns((prevCampaigns) => [...prevCampaigns, newCampaign]);
+        }
       } catch (error) {
         console.error('Error saving campaign:', error);
       } finally {

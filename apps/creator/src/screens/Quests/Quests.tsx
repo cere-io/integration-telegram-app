@@ -23,8 +23,13 @@ export const Quests = () => {
     async (quest: Quest) => {
       setIsLoading(true);
       try {
-        await bot.saveQuest(quest);
-        setQuests((prevQuests) => [...prevQuests, quest]);
+        if (quest.id) {
+          await bot.saveQuest(quest);
+          setQuests((prevQuests) => prevQuests.map((v) => (v.id === quest.id ? quest : v)));
+        } else {
+          const newQuest = await bot.saveQuest(quest);
+          setQuests((prevQuests) => [...prevQuests, newQuest]);
+        }
       } catch (error) {
         console.error('Error saving quest:', error);
       } finally {
