@@ -1,10 +1,13 @@
 import { Card, Modal, ModalProps } from '@tg-app/ui';
-import { Video } from '@tg-app/api';
+import { Campaign, Video } from '@tg-app/api';
 import { useViewport } from '@telegram-apps/sdk-react';
 import { VideoPlayer as CerePlayer } from '@cere/media-sdk-react';
 
 import './VideoPlayer.css';
 import { useBot, useEvents, useWallet } from '../../hooks';
+import { ActivityEvent } from '@cere-activity-sdk/events';
+import { useCallback, useEffect, useState } from 'react';
+import { getActiveCampaign } from '@integration-telegram-app/creator/src/helpers';
 
 export type VideoPlayerProps = Pick<ModalProps, 'open'> & {
   video?: Video;
@@ -34,22 +37,48 @@ export const VideoPlayer = ({ token, video, open = false, onClose }: VideoPlayer
   const eventSource = useEvents();
   const bot = useBot();
 
+  const [activeCampaign, setActiveCampaign] = useState<Campaign>();
+
   /**
    * TODO: Properly detect the video aspect ratio
    * TODO: Apply aspect ratio using CSS
    */
   const height = (width / 16) * 9;
-  const url = createUrl(video, token);
+  const url = video;
+  // const url = createUrl(video, token);
+  console.log(video);
 
+  useEffect(() => {
+    bot.getCampaigns().then((campaigns) => {
+      const campaign = getActiveCampaign(campaigns);
+      setActiveCampaign(campaign);
+    });
+  }, [bot]);
+
+  const handleSendEvent = useCallback(
+    async (eventName: string, payload?: any) => {
+      const activityEventPayload = {
+        channelId: bot?.startParam || '-1002433493900',
+        videoId: video?.id,
+        publicKey: account?.publicKey || '31a4e51cfcc492da79838bd4a2a59d694280e3feada2ff5f811f4916d9fbb0ac',
+        campaignId: activeCampaign?.id,
+        ...payload,
+      };
+      const activityEvent = new ActivityEvent(eventName, activityEventPayload);
+
+      await eventSource.dispatchEvent(activityEvent);
+    },
+    [account?.publicKey, activeCampaign?.id, bot?.startParam, eventSource, video?.id],
+  );
   return (
-    <Modal open={open && !!video && !!token} onOpenChange={(open) => !open && onClose?.()}>
+    <Modal open={open && !!video} onOpenChange={(open) => !open && onClose?.()}>
       <Modal.Header>Media Player</Modal.Header>
 
       <Card className="VideoPlayer-card">
         {url && (
           <CerePlayer
             hlsEnabled={false}
-            src={url!}
+            src={video.url!}
             type="video/mp4"
             loadingComponent={<div />}
             onFullScreenChange={(fullScreen) => {
@@ -65,10 +94,12 @@ export const VideoPlayer = ({ token, video, open = false, onClose }: VideoPlayer
               autoPlay: true,
               style: `width: ${width}px; height: ${height}px;` as any,
             }}
-            channelId={bot?.startParam}
-            walletType="ed25519"
-            publicKey={account?.publicKey}
-            eventSource={eventSource}
+            onPlay={() => {
+              handleSendEvent('VIDEO_PLAY');
+            }}
+            onPause={() => handleSendEvent('VIDEO_PAUSE')}
+            onSeek={(currentTime) => handleSendEvent('VIDEO_SEEK', { currentTime })}
+            onEnd={() => handleSendEvent('VIDEO_ENDED')}
           />
         )}
 

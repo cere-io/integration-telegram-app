@@ -5,7 +5,7 @@ import { AnalyticsId } from '@tg-app/analytics';
 import { ActiveTab } from '../../App.tsx';
 import { useBot, useEvents, useWallet } from '../../hooks';
 import { ActivityEvent } from '@cere-activity-sdk/events';
-import { EngagementEventData } from '../index';
+import { EngagementEventData } from './types';
 import * as hbs from 'handlebars';
 import { EVENT_APP_ID } from '../../constants.ts';
 import { Modal } from '../../components/Modal';
@@ -55,14 +55,14 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         const { event_type, timestamp, userPubKey, appPubKey, data } = {
           event_type: 'GET_LEADERBOARD',
           timestamp: '2024-11-15T09:01:01Z',
-          userPubKey: account?.publicKey,
+          userPubKey: '31a4e51cfcc492da79838bd4a2a59d694280e3feada2ff5f811f4916d9fbb0ac',
           appPubKey: EVENT_APP_ID,
           data: JSON.stringify({
             channelId: bot?.startParam,
             id: '920cbd6e-3ac6-45fc-8b74-05adc5f6387f',
             app_id: EVENT_APP_ID,
-            account_id: account?.publicKey,
-            publicKey: account?.publicKey,
+            account_id: '31a4e51cfcc492da79838bd4a2a59d694280e3feada2ff5f811f4916d9fbb0ac',
+            publicKey: '31a4e51cfcc492da79838bd4a2a59d694280e3feada2ff5f811f4916d9fbb0ac',
           }),
         };
         const parsedData = JSON.parse(data);

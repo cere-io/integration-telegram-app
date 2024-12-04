@@ -1,4 +1,4 @@
-import { Card, CardProps, Image } from '@telegram-apps/telegram-ui';
+import { Card, CardProps, Image, Text } from '@telegram-apps/telegram-ui';
 
 import defaultThumbnail from './defaultThumbnail.png';
 import { LockIcon } from '../../icons';
@@ -9,9 +9,19 @@ export type MediaListItemProps = Pick<CardProps, 'onClick'> & {
   thumbnailUrl?: string | null;
   loading?: boolean;
   locked?: boolean;
+  rewardPoints?: number;
 };
 
-export const MediaListItem = ({ name, description, thumbnailUrl, locked, loading, onClick }: MediaListItemProps) => {
+export const MediaListItem = ({
+  name,
+  description,
+  thumbnailUrl,
+  rewardPoints,
+  locked,
+  loading,
+  onClick,
+}: MediaListItemProps) => {
+  console.log({ rewardPoints });
   return (
     <Card style={{ margin: 16, display: 'block' }} onClick={onClick}>
       <Image
@@ -39,6 +49,21 @@ export const MediaListItem = ({ name, description, thumbnailUrl, locked, loading
             }}
           >
             {!loading && <LockIcon />}
+          </div>
+        )}
+        {rewardPoints && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '14.5px',
+              right: '16px',
+              backgroundColor: '#9244E0',
+              padding: '4px 12px',
+              borderRadius: '200px',
+              color: '#fff',
+            }}
+          >
+            <Text color="white">+{rewardPoints} points</Text>
           </div>
         )}
       </Image>
