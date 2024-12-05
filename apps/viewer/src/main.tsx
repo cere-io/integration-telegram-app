@@ -22,9 +22,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         twaReturnUrl: TELEGRAM_APP_URL,
       }}
     >
-        <ErrorBoundary>
-          <App />
-        </ErrorBoundary>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
     </TonConnectUIProvider>
   </SDKProvider>,
 );
