@@ -55,8 +55,8 @@ export const EditCampaignModalContent = ({ campaign, onSave, onDelete, isLoading
       id: campaign?.id,
       title,
       description,
-      startDate: formatDateForBackend(startDate),
-      endDate: formatDateForBackend(endDate),
+      startDate: formatDateForBackend(startDate) as unknown as Date,
+      endDate: formatDateForBackend(endDate) as unknown as Date,
       quests: selectedQuests.map(
         (quest) => quests.find((q) => q.id === Number(quest.value)) || { id: Number(quest.value) },
       ),
@@ -101,7 +101,7 @@ export const EditCampaignModalContent = ({ campaign, onSave, onDelete, isLoading
         header="Quests"
         placeholder="Select quests"
         onChange={setSelectedQuests as any}
-        options={quests.map((quest) => ({ value: quest.id.toString(), label: quest.title })) as any}
+        options={quests.map((quest) => ({ value: (quest.id as number).toString(), label: quest.title })) as any}
         value={selectedQuests}
       />
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>

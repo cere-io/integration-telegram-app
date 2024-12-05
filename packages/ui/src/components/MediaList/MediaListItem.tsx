@@ -6,6 +6,7 @@ import { LockIcon } from '../../icons';
 export type MediaListItemProps = Pick<CardProps, 'onClick'> & {
   name: string;
   description: string;
+  completed?: boolean;
   thumbnailUrl?: string | null;
   loading?: boolean;
   locked?: boolean;
@@ -20,8 +21,8 @@ export const MediaListItem = ({
   locked,
   loading,
   onClick,
+  completed = false,
 }: MediaListItemProps) => {
-  console.log({ rewardPoints });
   return (
     <Card style={{ margin: 16, display: 'block' }} onClick={onClick}>
       <Image
@@ -57,10 +58,10 @@ export const MediaListItem = ({
               position: 'absolute',
               top: '14.5px',
               right: '16px',
-              backgroundColor: '#9244E0',
+              backgroundColor: completed ? '#A2ACB066' : '#9244E0',
               padding: '4px 12px',
               borderRadius: '200px',
-              color: '#fff',
+              color: completed ? '#161D30' : '#fff',
             }}
           >
             <Text color="white">+{rewardPoints} points</Text>

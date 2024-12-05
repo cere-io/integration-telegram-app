@@ -2,13 +2,19 @@ import { QuestsList, QuestsListItem, Title } from '@tg-app/ui';
 import { useBot } from '../../hooks';
 import { useEffect, useState } from 'react';
 import { Quest } from '@tg-app/api';
+import { getActiveCampaign } from '@integration-telegram-app/creator/src/helpers';
 
 export const ActiveQuests = () => {
   const bot = useBot();
   const [quests, setQuests] = useState<Quest[]>([]);
 
   useEffect(() => {
-    bot.getQuests().then(setQuests);
+    bot.getCampaigns().then((campaigns) => {
+      const campaign = getActiveCampaign(campaigns);
+      if (campaign) {
+        setQuests(campaign.quests);
+      }
+    });
   }, [bot]);
 
   return (

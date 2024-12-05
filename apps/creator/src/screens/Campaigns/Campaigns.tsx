@@ -62,7 +62,9 @@ export const Campaigns = () => {
           mode="filled"
           size="s"
           style={{ alignItems: 'center' }}
-          onClick={() => setSelectedCampaign({ title: '', description: '', quests: [] })}
+          onClick={() =>
+            setSelectedCampaign({ title: '', description: '', quests: [], startDate: new Date(), endDate: new Date() })
+          }
         >
           Add campaign
         </Button>
