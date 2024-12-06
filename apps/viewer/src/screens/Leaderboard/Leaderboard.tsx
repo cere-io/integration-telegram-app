@@ -1,7 +1,6 @@
 import './Leaderboard.css';
-import { Button, Spinner } from '@tg-app/ui';
+import { Spinner } from '@tg-app/ui';
 import { useEffect, useState } from 'react';
-import { AnalyticsId } from '@tg-app/analytics';
 import { ActiveTab } from '../../App.tsx';
 import { useBot, useEvents, useWallet } from '../../hooks';
 import { ActivityEvent } from '@cere-activity-sdk/events';
@@ -141,18 +140,6 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           style={{ width: '100%', height: '100%', border: 'none' }}
           title="Leaderboard"
         />
-      )}
-      {!account?.address && (
-        <div className="cta-button-wrapper">
-          <Button
-            mode="cta"
-            size="l"
-            className={AnalyticsId.premiumBtn}
-            onClick={() => setActiveTab({ index: 1, props: { showSubscribe: true } })}
-          >
-            Subscribe and start getting up to the top
-          </Button>
-        </div>
       )}
       <Modal isOpen={isModalOpen} onClose={() => setModalOpen(false)} content={modalContent} />
     </div>

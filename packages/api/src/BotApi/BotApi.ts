@@ -22,9 +22,10 @@ export class BotApi {
       ...options,
       headers: {
         ...options.headers,
-        ...(this.startParam && {
-          'X-Telegram-Chat': this.startParam,
-        }),
+        // ...(this.startParam && {
+        //   'X-Telegram-Chat': this.startParam,
+        // }),
+        'X-Telegram-Chat': '7538867627',
       },
     });
 

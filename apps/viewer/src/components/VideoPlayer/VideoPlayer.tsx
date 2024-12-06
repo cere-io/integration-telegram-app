@@ -11,27 +11,22 @@ import { getActiveCampaign } from '@integration-telegram-app/creator/src/helpers
 
 export type VideoPlayerProps = Pick<ModalProps, 'open'> & {
   video?: Video;
-  token?: string;
   onClose?: () => void;
 };
 
-const createUrl = (video?: Video, token?: string) => {
+const createUrl = (video?: Video) => {
   if (!video) {
     return;
   }
 
   const url = new URL(video.url);
 
-  if (token) {
-    url.searchParams.set('token', token);
-  }
-
   url.searchParams.set('source', 'telegram');
 
   return url.href;
 };
 
-export const VideoPlayer = ({ token, video, open = false, onClose }: VideoPlayerProps) => {
+export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) => {
   const { width = 0 } = useViewport() || {};
   const { account } = useWallet();
   const eventSource = useEvents();
@@ -45,7 +40,7 @@ export const VideoPlayer = ({ token, video, open = false, onClose }: VideoPlayer
    * TODO: Apply aspect ratio using CSS
    */
   const height = (width / 16) * 9;
-  const url = createUrl(video, token);
+  const url = createUrl(video);
 
   useEffect(() => {
     bot.getCampaigns().then((campaigns) => {
@@ -84,7 +79,7 @@ export const VideoPlayer = ({ token, video, open = false, onClose }: VideoPlayer
   }, [activeQuests, video?.id]);
 
   return (
-    <Modal open={open && !!video && !!token} onOpenChange={(open) => !open && onClose?.()}>
+    <Modal open={open && !!video} onOpenChange={(open) => !open && onClose?.()}>
       <Modal.Header>Media Player</Modal.Header>
 
       <Card className="VideoPlayer-card">
