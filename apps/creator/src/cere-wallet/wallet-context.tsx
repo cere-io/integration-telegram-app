@@ -5,7 +5,7 @@ import { APP_ENV, TELEGRAM_BOT_ID } from '../constants.ts'; // Cere wallet SDK p
 
 const CereWalletContext = createContext<EmbedWallet | null>(null);
 
-export const useWallet = () => {
+export const useCereWallet = () => {
   const wallet = useContext(CereWalletContext);
 
   if (!wallet) {
