@@ -58,7 +58,15 @@ export const QuestsModalContent = ({ currentUser, setActiveTab }: Props) => {
       await eventSource.dispatchEvent(event);
     };
 
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+    }, 3000);
+
     getCompletedTasks();
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
   }, [account?.publicKey, activeCampaign?.id, bot?.startParam, eventSource]);
 
   useEffect(() => {

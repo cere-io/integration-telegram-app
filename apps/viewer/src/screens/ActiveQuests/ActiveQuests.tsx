@@ -47,7 +47,15 @@ export const ActiveQuests = () => {
       await eventSource.dispatchEvent(event);
     };
 
+    const timeoutId = setTimeout(() => {
+      setPreparingData(false);
+    }, 3000);
+
     getCompletedTasks();
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
   }, [activeCampaign?.id, bot?.startParam, eventSource]);
 
   useEffect(() => {
