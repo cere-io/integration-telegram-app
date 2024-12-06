@@ -7,7 +7,6 @@ import { useBot, useEvents, useWallet } from '../../hooks';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { EngagementEventData } from '../../types';
 import * as hbs from 'handlebars';
-import { EVENT_APP_ID } from '../../constants.ts';
 import { Modal } from '../../components/Modal';
 import { QuestsModalContent } from '../../components/Leaderboard/QuestsModalContent';
 import { Campaign } from '@tg-app/api';
@@ -65,26 +64,18 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         console.log('EventSource ready:', ready);
         if (!activeCampaign?.id) return;
 
-        const { event_type, timestamp, userPubKey, appPubKey, data } = {
+        const { event_type, timestamp, data } = {
           event_type: 'GET_LEADERBOARD',
-          timestamp: '2024-11-15T09:01:01Z',
-          userPubKey: account?.publicKey,
-          appPubKey: EVENT_APP_ID,
+          timestamp: new Date().toISOString(),
           data: JSON.stringify({
             campaignId: activeCampaign?.id,
-            channelId: bot?.startParam,
-            id: '920cbd6e-3ac6-45fc-8b74-05adc5f6387f',
-            app_id: EVENT_APP_ID,
-            account_id: account?.publicKey,
-            publicKey: account?.publicKey,
+            channelId: bot?.startParam || '-1002433493900',
           }),
         };
         const parsedData = JSON.parse(data);
         const event = new ActivityEvent(event_type, {
           ...parsedData,
           timestamp,
-          userPubKey,
-          appPubKey,
         });
 
         await eventSource.dispatchEvent(event);

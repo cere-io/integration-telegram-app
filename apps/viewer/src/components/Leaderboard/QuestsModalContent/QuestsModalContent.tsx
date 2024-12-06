@@ -6,7 +6,6 @@ import { ActiveTab } from '../../../App.tsx';
 import { Progress } from '@telegram-apps/telegram-ui';
 import { useBot, useEvents, useWallet } from '../../../hooks';
 import { getActiveCampaign } from '@integration-telegram-app/creator/src/helpers';
-import { EVENT_APP_ID } from '../../../constants.ts';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { EngagementEventData } from '~/types';
 
@@ -41,17 +40,12 @@ export const QuestsModalContent = ({ currentUser, setActiveTab }: Props) => {
       const ready = await eventSource.isReady();
       console.log('EventSource ready:', ready);
 
-      const { event_type, timestamp, userPubKey, appPubKey, data } = {
+      const { event_type, timestamp, data } = {
         event_type: 'GET_COMPLETED_TASKS',
         timestamp: new Date().toISOString(),
-        userPubKey: account?.publicKey,
-        appPubKey: EVENT_APP_ID,
         data: JSON.stringify({
           campaignId: activeCampaign?.id,
-          channelId: bot?.startParam,
-          id: '920cbd6e-3ac6-45fc-8b74-05adc5f6387f',
-          app_id: EVENT_APP_ID,
-          publicKey: account?.publicKey,
+          channelId: bot?.startParam || '-1002433493900',
         }),
       };
 
@@ -59,8 +53,6 @@ export const QuestsModalContent = ({ currentUser, setActiveTab }: Props) => {
       const event = new ActivityEvent(event_type, {
         ...parsedData,
         timestamp,
-        userPubKey,
-        appPubKey,
       });
 
       await eventSource.dispatchEvent(event);
