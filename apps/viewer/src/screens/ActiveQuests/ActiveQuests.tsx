@@ -67,21 +67,6 @@ export const ActiveQuests = () => {
     };
   }, [eventSource]);
 
-  const questVideoMap = useMemo(() => {
-    return quests.reduce(
-      (acc, quest) => {
-        if (quest.videoId) {
-          acc[quest.videoId] = quest.rewardPoints as number;
-        }
-        return acc;
-      },
-      {} as Record<string, number>,
-    );
-  }, [quests]);
-
-  console.log({ completedTaskIds });
-  console.log({ questVideoMap });
-
   const sortedQuests = useMemo(() => {
     return [...quests].sort((a, b) => {
       const aCompleted = completedTaskIds.includes(a.id as number);
