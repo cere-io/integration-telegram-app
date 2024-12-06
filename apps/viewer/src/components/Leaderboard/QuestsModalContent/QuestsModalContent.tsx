@@ -36,37 +36,39 @@ export const QuestsModalContent = ({ currentUser, setActiveTab }: Props) => {
   }, [bot]);
 
   useEffect(() => {
-    const getCompletedTasks = async () => {
-      const ready = await eventSource.isReady();
-      console.log('EventSource ready:', ready);
+    if (activeCampaign?.id) {
+      const getCompletedTasks = async () => {
+        const ready = await eventSource.isReady();
+        console.log('EventSource ready:', ready);
 
-      const { event_type, timestamp, data } = {
-        event_type: 'GET_COMPLETED_TASKS',
-        timestamp: new Date().toISOString(),
-        data: JSON.stringify({
-          campaignId: activeCampaign?.id,
-          channelId: bot?.startParam,
-        }),
+        const { event_type, timestamp, data } = {
+          event_type: 'GET_COMPLETED_TASKS',
+          timestamp: new Date().toISOString(),
+          data: JSON.stringify({
+            campaignId: activeCampaign?.id,
+            channelId: bot?.startParam,
+          }),
+        };
+
+        const parsedData = JSON.parse(data);
+        const event = new ActivityEvent(event_type, {
+          ...parsedData,
+          timestamp,
+        });
+
+        await eventSource.dispatchEvent(event);
       };
 
-      const parsedData = JSON.parse(data);
-      const event = new ActivityEvent(event_type, {
-        ...parsedData,
-        timestamp,
-      });
+      const timeoutId = setTimeout(() => {
+        setLoading(false);
+      }, 3000);
 
-      await eventSource.dispatchEvent(event);
-    };
+      getCompletedTasks();
 
-    const timeoutId = setTimeout(() => {
-      setLoading(false);
-    }, 3000);
-
-    getCompletedTasks();
-
-    return () => {
-      clearTimeout(timeoutId);
-    };
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    }
   }, [account?.publicKey, activeCampaign?.id, bot?.startParam, eventSource]);
 
   useEffect(() => {
