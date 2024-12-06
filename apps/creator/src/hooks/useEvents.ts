@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { CereWalletSigner, EventSource } from '@cere-activity-sdk/events';
 import { EVENT_APP_ID, EVENT_DISPATCH_URL, EVENT_LISTEN_URL } from '../constants.ts';
-import { useCereWallet } from '@integration-telegram-app/viewer/src/cere-wallet';
+import { useCereWallet } from '../cere-wallet';
 
 export const useEvents = () => {
   const cereWallet = useCereWallet();
