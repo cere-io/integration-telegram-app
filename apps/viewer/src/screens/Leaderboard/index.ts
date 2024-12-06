@@ -1,2 +1,2 @@
 export * from './Leaderboard.tsx';
-export * from './types';
+export * from '../../types';
