@@ -29,6 +29,13 @@ export {
   type CaptionProps,
   Spinner,
   type SpinnerProps,
+  Input,
+  Textarea,
+  Placeholder,
+  InlineButtons,
+  Radio,
+  Select,
+  Multiselect,
 } from '@telegram-apps/telegram-ui';
 
 export * from './MediaList';
@@ -41,3 +48,4 @@ export * from './Menu';
 export * from './Snackbar';
 export * from './Button';
 export * from './Truncate';
+export * from './QuestsList';

@@ -1,4 +1,5 @@
 export type Video = {
+  id?: number;
   url: string;
   title: string;
   description: string;
@@ -34,4 +35,22 @@ export type TokenRequest = {
   network: number;
   public_key: string;
   proof: Proof;
+};
+
+export type Quest = {
+  id?: number;
+  title?: string;
+  description?: string;
+  type?: string;
+  videoId?: string;
+  rewardPoints?: number;
+};
+
+export type Campaign = {
+  id?: number;
+  title: string;
+  description: string;
+  startDate: Date;
+  endDate: Date;
+  quests: Quest[];
 };
