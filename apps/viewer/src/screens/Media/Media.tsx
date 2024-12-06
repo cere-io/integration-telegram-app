@@ -51,7 +51,7 @@ export const Media = ({ setActiveTab }: MediaProps) => {
         timestamp: new Date().toISOString(),
         data: JSON.stringify({
           campaignId: activeCampaign?.id,
-          channelId: bot?.startParam || '-1002433493900',
+          channelId: bot?.startParam,
         }),
       };
 

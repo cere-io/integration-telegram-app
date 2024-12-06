@@ -69,7 +69,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           timestamp: new Date().toISOString(),
           data: JSON.stringify({
             campaignId: activeCampaign?.id,
-            channelId: bot?.startParam || '-1002433493900',
+            channelId: bot?.startParam,
           }),
         };
         const parsedData = JSON.parse(data);
