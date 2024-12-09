@@ -121,7 +121,8 @@ export const ActiveQuests = () => {
               name={quest?.title || ''}
               description={quest?.description || ''}
               rewardPoints={quest?.rewardPoints || 0}
-              questType={quest.type as 'video' | 'post_x'}
+              questType={quest.type as 'video' | 'post_url'}
+              postUrl={quest.url || ''}
             />
           ))}
         </QuestsList>
