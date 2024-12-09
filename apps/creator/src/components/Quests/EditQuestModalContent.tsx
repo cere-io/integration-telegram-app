@@ -17,6 +17,7 @@ export const EditQuestModalContent = ({ quest, onSave, onDelete, isLoading }: Mo
   const [description, setDescription] = useState(quest?.description);
   const [type, setType] = useState(quest?.type || 'video');
   const [videoId, setVideoId] = useState(quest?.videoId);
+  const [postUrl, setPostUrl] = useState<string>(quest?.postUrl || '');
   const [rewardPoints, setRewardPoints] = useState(quest?.rewardPoints);
 
   const [videos, setVideos] = useState<Video[]>([]);
@@ -36,7 +37,8 @@ export const EditQuestModalContent = ({ quest, onSave, onDelete, isLoading }: Mo
       title: title!,
       description: description!,
       type: type!,
-      videoId: videoId!,
+      videoId: type === 'video' ? videoId : '',
+      postUrl: type === 'post_url' ? postUrl : '',
       rewardPoints: rewardPoints!,
     });
   };
@@ -70,23 +72,30 @@ export const EditQuestModalContent = ({ quest, onSave, onDelete, isLoading }: Mo
         displayEmpty
       >
         <option value="video">Watch the video</option>
-        <option value="post_x" disabled={true}>
-          Share post on X
-        </option>
+        <option value="post_url">Share post url</option>
       </Select>
-      <Select
-        header="Video"
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
-        placeholder="I am usual input, just leave me alone"
-        onChange={(e) => setVideoId(e.target.value)}
-      >
-        {videos.map((video) => (
-          <option key={video.id} value={video.id}>
-            {video.title}
-          </option>
-        ))}
-      </Select>
+      {type === 'video' ? (
+        <Select
+          header="Video"
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-expect-error
+          placeholder="I am usual input, just leave me alone"
+          onChange={(e) => setVideoId(e.target.value)}
+        >
+          {videos.map((video) => (
+            <option key={video.id} value={video.id}>
+              {video.title}
+            </option>
+          ))}
+        </Select>
+      ) : (
+        <Input
+          header="X url"
+          placeholder="Paste your X post link here"
+          value={postUrl}
+          onChange={(e) => setPostUrl(e.target.value)}
+        />
+      )}
       <Input
         header="Reward points"
         placeholder="I am usual input, just leave me alone"
