@@ -43,7 +43,7 @@ export type Quest = {
   description?: string;
   type?: string;
   videoId?: string;
-  postUrl?: string;
+  url?: string;
   rewardPoints?: number;
 };
 

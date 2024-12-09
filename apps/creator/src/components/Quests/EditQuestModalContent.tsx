@@ -17,7 +17,7 @@ export const EditQuestModalContent = ({ quest, onSave, onDelete, isLoading }: Mo
   const [description, setDescription] = useState(quest?.description);
   const [type, setType] = useState(quest?.type || 'video');
   const [videoId, setVideoId] = useState(quest?.videoId);
-  const [postUrl, setPostUrl] = useState<string>(quest?.postUrl || '');
+  const [postUrl, setPostUrl] = useState<string>(quest?.url || '');
   const [rewardPoints, setRewardPoints] = useState(quest?.rewardPoints);
 
   const [videos, setVideos] = useState<Video[]>([]);
@@ -38,7 +38,7 @@ export const EditQuestModalContent = ({ quest, onSave, onDelete, isLoading }: Mo
       description: description!,
       type: type!,
       videoId: type === 'video' ? videoId : '',
-      postUrl: type === 'post_url' ? postUrl : '',
+      url: type === 'post_url' ? postUrl : '',
       rewardPoints: rewardPoints!,
     });
   };
