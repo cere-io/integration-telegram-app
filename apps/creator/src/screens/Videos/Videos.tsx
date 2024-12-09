@@ -78,8 +78,6 @@ export const Videos = () => {
         videos.map((video, index) => (
           <MediaListItem
             key={index}
-            locked={false}
-            loading={false}
             name={video.title}
             description={video.description}
             thumbnailUrl={video.thumbnailUrl}

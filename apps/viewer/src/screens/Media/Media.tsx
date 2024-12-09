@@ -1,21 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { MediaList, MediaListItem, Button, Title, Spinner } from '@tg-app/ui';
+import { MediaList, MediaListItem, Title, Spinner } from '@tg-app/ui';
 import { Campaign, Quest, Video } from '@tg-app/api';
-import { AnalyticsId } from '@tg-app/analytics';
 
-import { useBot, useEvents, useToken, useWallet } from '../../hooks';
+import { useBot, useEvents } from '../../hooks';
 import { VideoPlayer } from '../../components';
-import type { ActiveTab } from '../../App';
 import { getActiveCampaign } from '@integration-telegram-app/creator/src/helpers';
-import { EVENT_APP_ID } from '../../constants.ts';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { EngagementEventData } from '~/types';
 
-type MediaProps = {
-  setActiveTab: (tab: ActiveTab) => void;
-};
-
-export const Media = ({ setActiveTab }: MediaProps) => {
+export const Media = () => {
   const bot = useBot();
   const [preparingData, setPreparingData] = useState<boolean>(true);
   const [videos, setVideos] = useState<Video[]>([]);
@@ -23,10 +16,7 @@ export const Media = ({ setActiveTab }: MediaProps) => {
   const [activeQuests, setActiveQuests] = useState<Quest[]>([]);
   const [currentVideo, setCurrentVideo] = useState<Video>();
   const [completedTaskIds, setCompletedTaskIds] = useState<number[]>([]);
-  const { token, loading } = useToken();
   const eventSource = useEvents();
-  const { account } = useWallet();
-  const hasSubscribeButton = !token && !loading && !!videos.length;
 
   useEffect(() => {
     bot.getVideos().then(setVideos);
@@ -43,37 +33,40 @@ export const Media = ({ setActiveTab }: MediaProps) => {
   }, [bot]);
 
   useEffect(() => {
-    const getCompletedTasks = async () => {
-      const ready = await eventSource.isReady();
-      console.log('EventSource ready:', ready);
+    if (activeCampaign?.id) {
+      const getCompletedTasks = async () => {
+        const ready = await eventSource.isReady();
+        console.log('EventSource ready:', ready);
 
-      const { event_type, timestamp, userPubKey, appPubKey, data } = {
-        event_type: 'GET_COMPLETED_TASKS',
-        timestamp: new Date().toISOString(),
-        userPubKey: account?.publicKey,
-        appPubKey: EVENT_APP_ID,
-        data: JSON.stringify({
-          campaignId: activeCampaign?.id,
-          channelId: bot?.startParam,
-          id: '920cbd6e-3ac6-45fc-8b74-05adc5f6387f',
-          app_id: EVENT_APP_ID,
-          publicKey: account?.publicKey,
-        }),
+        const { event_type, timestamp, data } = {
+          event_type: 'GET_COMPLETED_TASKS',
+          timestamp: new Date().toISOString(),
+          data: JSON.stringify({
+            campaignId: activeCampaign?.id,
+            channelId: bot?.startParam,
+          }),
+        };
+
+        const parsedData = JSON.parse(data);
+        const event = new ActivityEvent(event_type, {
+          ...parsedData,
+          timestamp,
+        });
+
+        await eventSource.dispatchEvent(event);
       };
 
-      const parsedData = JSON.parse(data);
-      const event = new ActivityEvent(event_type, {
-        ...parsedData,
-        timestamp,
-        userPubKey,
-        appPubKey,
-      });
+      const timeoutId = setTimeout(() => {
+        setPreparingData(false);
+      }, 3000);
 
-      await eventSource.dispatchEvent(event);
-    };
+      getCompletedTasks();
 
-    getCompletedTasks();
-  }, [account?.publicKey, activeCampaign?.id, bot?.startParam, eventSource]);
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    }
+  }, [activeCampaign?.id, bot?.startParam, eventSource]);
 
   const questVideoMap = useMemo(() => {
     return activeQuests.reduce(
@@ -127,7 +120,7 @@ export const Media = ({ setActiveTab }: MediaProps) => {
   }, [eventSource]);
 
   return (
-    <div style={{ paddingBottom: hasSubscribeButton ? 62 : 0 }}>
+    <div style={{ paddingBottom: 0 }}>
       <Title weight="2" style={{ marginLeft: 16, marginTop: 16 }}>
         Library
       </Title>
@@ -149,9 +142,7 @@ export const Media = ({ setActiveTab }: MediaProps) => {
           {sortedVideos.map((video, index) => (
             <MediaListItem
               key={index}
-              locked={!token}
               completed={completedTaskIds.includes(video.id as number)}
-              loading={loading}
               name={video.title}
               description={video.description}
               thumbnailUrl={video.thumbnailUrl}
@@ -162,34 +153,7 @@ export const Media = ({ setActiveTab }: MediaProps) => {
         </MediaList>
       )}
 
-      {hasSubscribeButton && (
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            position: 'absolute',
-            left: 0,
-            right: 0,
-            bottom: 'calc(var(--safe_area_inset_bottom) + 80px)',
-          }}
-        >
-          <Button
-            mode="cta"
-            size="l"
-            className={AnalyticsId.premiumBtn}
-            onClick={() => setActiveTab({ index: 1, props: { showSubscribe: true } })}
-          >
-            ⭐ Become a Premium member!
-          </Button>
-        </div>
-      )}
-
-      <VideoPlayer
-        open={!!currentVideo}
-        video={currentVideo}
-        token={token}
-        onClose={() => setCurrentVideo(undefined)}
-      />
+      <VideoPlayer open={!!currentVideo} video={currentVideo} onClose={() => setCurrentVideo(undefined)} />
     </div>
   );
 };

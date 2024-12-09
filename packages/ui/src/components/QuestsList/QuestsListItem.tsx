@@ -9,10 +9,10 @@ export type QuestsListItemProps = Pick<CardProps, 'onClick'> & {
   rewardPoints: number;
   questType: 'video' | 'post_x';
   loading?: boolean;
-  locked?: boolean;
+  completed?: boolean;
 };
 
-export const QuestsListItem = ({ name, description, rewardPoints, questType, locked }: QuestsListItemProps) => {
+export const QuestsListItem = ({ name, description, rewardPoints, questType, completed }: QuestsListItemProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleClick = () => {
@@ -28,7 +28,7 @@ export const QuestsListItem = ({ name, description, rewardPoints, questType, loc
         readOnly
         subtitle={description}
         after={
-          <Badge className={`custom-badge ${locked ? '' : 'unlocked'}`} type="number">
+          <Badge className={`custom-badge ${completed ? 'unlocked' : ''}`} type="number">
             + {rewardPoints} Pts
           </Badge>
         }
