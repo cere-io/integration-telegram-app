@@ -25,7 +25,6 @@ export class BotApi {
         ...(this.startParam && {
           'X-Telegram-Chat': this.startParam,
         }),
-        'X-Telegram-Chat': '-1002217385177',
       },
     });
 
