@@ -17,6 +17,7 @@ export const useCereWallet = () => {
 
 export const CereWalletProvider = ({ children }: PropsWithChildren<NonNullable<unknown>>) => {
   const { initDataRaw } = useLaunchParams() || {};
+  console.log('initData: ', initDataRaw);
 
   const wallet = useMemo(() => {
     const wallet = new EmbedWallet({
@@ -36,6 +37,7 @@ export const CereWalletProvider = ({ children }: PropsWithChildren<NonNullable<u
             console.log('Cere Wallet connected');
             wallet.getUserInfo().then((user) => {
               console.log('Cere Wallet details: ', user);
+              document.getElementById('torusIframe').style.height = '0px';
             });
           });
         });
