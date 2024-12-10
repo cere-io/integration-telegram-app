@@ -129,7 +129,7 @@ export const QuestsModalContent = ({ currentUser, setActiveTab }: Props) => {
             </Text>
           </div>
           {activeQuests.length > 0 &&
-            activeQuests.map(({ title, id, videoId }) => {
+            activeQuests.map(({ title, id, videoId, rewardPoints }) => {
               const watched = completedTaskIds?.includes(Number(videoId));
               return (
                 <div key={id} className="quests-board">
@@ -149,7 +149,7 @@ export const QuestsModalContent = ({ currentUser, setActiveTab }: Props) => {
                           <CheckMarkIcon /> Done
                         </>
                       ) : (
-                        '+ 50 Pts'
+                        `+ ${rewardPoints} Pts`
                       )}
                     </Text>
                   </div>
