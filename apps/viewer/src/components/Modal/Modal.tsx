@@ -1,4 +1,5 @@
 import './Modal.css';
+import { CloseIcon } from '@tg-app/ui';
 
 type ModalProps = {
   isOpen: boolean;
@@ -11,8 +12,13 @@ export const Modal = ({ isOpen, onClose, content }: ModalProps) => {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        {content}
+      <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <button className="modal-close-button" onClick={onClose} aria-label="Close modal">
+            <CloseIcon />
+          </button>
+        </div>
+        <div className="modal-content">{content}</div>
       </div>
     </div>
   );
