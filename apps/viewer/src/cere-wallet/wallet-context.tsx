@@ -37,7 +37,7 @@ export const CereWalletProvider = ({ children }: PropsWithChildren<NonNullable<u
             console.log('Cere Wallet connected');
             wallet.getUserInfo().then((user) => {
               console.log('Cere Wallet details: ', user);
-              const walletIframe = document.getElementById('torusIframe')
+              const walletIframe = document.getElementById('torusIframe');
               if (walletIframe) {
                 walletIframe.style.height = '0px';
               }
