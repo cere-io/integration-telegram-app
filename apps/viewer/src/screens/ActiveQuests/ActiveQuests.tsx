@@ -11,7 +11,7 @@ export const ActiveQuests = () => {
   const [activeCampaign, setActiveCampaign] = useState<Campaign>();
   const [quests, setQuests] = useState<Quest[]>([]);
   const [preparingData, setPreparingData] = useState<boolean>(true);
-  const [completedTaskIds, setCompletedTaskIds] = useState<number[]>([]);
+  const [completedTaskIds, setCompletedTaskIds] = useState<number[]>([551]);
   const eventSource = useEvents();
 
   useEffect(() => {
@@ -79,17 +79,11 @@ export const ActiveQuests = () => {
 
   const sortedQuests = useMemo(() => {
     return [...quests].sort((a, b) => {
-      const aCompleted = completedTaskIds.includes(a.id as number);
-      const bCompleted = completedTaskIds.includes(b.id as number);
+      const aCompleted = completedTaskIds.includes(Number(a?.videoId));
+      const bCompleted = completedTaskIds.includes(Number(b?.videoId));
 
-      if (!aCompleted && bCompleted) return -1;
       if (aCompleted && !bCompleted) return 1;
-
-      const aHasVideo = Boolean(a.videoId);
-      const bHasVideo = Boolean(b.videoId);
-
-      if (aHasVideo && !bHasVideo) return -1;
-      if (!aHasVideo && bHasVideo) return 1;
+      if (!aCompleted && bCompleted) return -1;
 
       return (b.rewardPoints || 0) - (a.rewardPoints || 0);
     });
