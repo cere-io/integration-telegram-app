@@ -3,16 +3,26 @@ import { useBot, useEvents } from '../../hooks';
 import { useEffect, useMemo, useState } from 'react';
 import { Campaign, Quest } from '@tg-app/api';
 import { getActiveCampaign } from '@integration-telegram-app/creator/src/helpers';
-import { ActivityEvent } from '@cere-activity-sdk/events';
+import { ActivityEvent, CereWalletSigner } from '@cere-activity-sdk/events';
 import { EngagementEventData } from '~/types';
+import { useCereWallet } from '../../cere-wallet';
 
 export const ActiveQuests = () => {
   const bot = useBot();
   const [activeCampaign, setActiveCampaign] = useState<Campaign>();
   const [quests, setQuests] = useState<Quest[]>([]);
   const [preparingData, setPreparingData] = useState<boolean>(true);
-  const [completedTaskIds, setCompletedTaskIds] = useState<number[]>([]);
+  const [completedTaskIds, setCompletedTaskIds] = useState<number[]>([551]);
+  const [accountId, setAccountId] = useState<string>();
   const eventSource = useEvents();
+  const cereWallet = useCereWallet();
+
+  useEffect(() => {
+    const signer = new CereWalletSigner(cereWallet);
+    signer.isReady().then(() => {
+      setAccountId(signer.address);
+    });
+  }, [accountId, cereWallet]);
 
   useEffect(() => {
     bot.getCampaigns().then((campaigns) => {
@@ -79,17 +89,11 @@ export const ActiveQuests = () => {
 
   const sortedQuests = useMemo(() => {
     return [...quests].sort((a, b) => {
-      const aCompleted = completedTaskIds.includes(a.id as number);
-      const bCompleted = completedTaskIds.includes(b.id as number);
+      const aCompleted = completedTaskIds.includes(Number(a?.videoId));
+      const bCompleted = completedTaskIds.includes(Number(b?.videoId));
 
-      if (!aCompleted && bCompleted) return -1;
       if (aCompleted && !bCompleted) return 1;
-
-      const aHasVideo = Boolean(a.videoId);
-      const bHasVideo = Boolean(b.videoId);
-
-      if (aHasVideo && !bHasVideo) return -1;
-      if (!aHasVideo && bHasVideo) return 1;
+      if (!aCompleted && bCompleted) return -1;
 
       return (b.rewardPoints || 0) - (a.rewardPoints || 0);
     });
@@ -121,7 +125,10 @@ export const ActiveQuests = () => {
               name={quest?.title || ''}
               description={quest?.description || ''}
               rewardPoints={quest?.rewardPoints || 0}
-              questType={quest.type as 'video' | 'post_x'}
+              questType={quest.type as 'video' | 'share'}
+              postUrl={quest.url || ''}
+              accountId={accountId}
+              campaignId={activeCampaign?.id}
             />
           ))}
         </QuestsList>

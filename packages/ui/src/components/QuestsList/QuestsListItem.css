@@ -11,6 +11,10 @@
     transition: transform 0.3s ease;
 }
 
+.dark-icon > path {
+    fill: var(--tgui--button_color);
+}
+
 .arrow-icon.open {
     transform: rotate(90deg);
 }
