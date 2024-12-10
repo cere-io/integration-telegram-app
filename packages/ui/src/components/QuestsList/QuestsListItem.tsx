@@ -49,7 +49,7 @@ export const QuestsListItem = ({
         window.open(quoteTweetUrl, '_blank');
       }
     }
-  }, [miniApp, postUrl, questType]);
+  }, [accountId, campaignId, miniApp, postUrl, questType]);
 
   return (
     <Card style={{ margin: 16, display: 'block' }}>
