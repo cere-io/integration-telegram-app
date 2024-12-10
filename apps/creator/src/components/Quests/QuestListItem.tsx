@@ -14,7 +14,7 @@ export type QuestListItemProps = Pick<CardProps, 'onClick'> & {
 
 const iconByType = new Map<string, ReactNode>([
   ['video', <PlayIcon />],
-  ['post_url', <XIcon />],
+  ['share', <XIcon />],
 ]);
 
 export const QuestListItem = ({ title, description, questType, rewardPoints, onClick }: QuestListItemProps) => {

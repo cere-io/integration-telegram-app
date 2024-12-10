@@ -72,7 +72,7 @@ export const EditQuestModalContent = ({ quest, onSave, onDelete, isLoading }: Mo
         displayEmpty
       >
         <option value="video">Watch the video</option>
-        <option value="post_url">Share post url</option>
+        <option value="share">Share post url</option>
       </Select>
       {type === 'video' ? (
         <Select
