@@ -63,7 +63,9 @@ export const Quests = () => {
           mode="filled"
           size="s"
           style={{ alignItems: 'center' }}
-          onClick={() => setSelectedQuest({ title: '', description: '', type: '', videoId: '', rewardPoints: 0 })}
+          onClick={() =>
+            setSelectedQuest({ title: '', description: '', type: '', videoId: '', url: '', rewardPoints: 0 })
+          }
         >
           Add quest
         </Button>

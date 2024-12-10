@@ -1,6 +1,6 @@
 import { Badge, Card, CardProps, Text } from '@telegram-apps/telegram-ui';
 import './QuestsListItem.css';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ArrowIcon, Button } from '@tg-app/ui';
 import { useMiniApp } from '@telegram-apps/sdk-react';
 
@@ -31,9 +31,9 @@ export const QuestsListItem = ({
     }
   };
 
-  const handleRetweet = () => {
+  const handleRetweet = useCallback(() => {
     if (questType === 'share' && postUrl) {
-      const text = encodeURIComponent('#CereMedia');
+      const text = encodeURIComponent(`#CereMedia`);
       // @TODO think about how to do it generic
       const quoteTweetUrl = `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(postUrl)}`;
 
@@ -45,7 +45,7 @@ export const QuestsListItem = ({
         window.open(quoteTweetUrl, '_blank');
       }
     }
-  };
+  }, []);
 
   return (
     <Card style={{ margin: 16, display: 'block' }}>

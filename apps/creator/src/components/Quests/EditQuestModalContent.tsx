@@ -17,7 +17,7 @@ export const EditQuestModalContent = ({ quest, onSave, onDelete, isLoading }: Mo
   const [description, setDescription] = useState(quest?.description);
   const [type, setType] = useState(quest?.type || 'video');
   const [videoId, setVideoId] = useState(quest?.videoId);
-  const [postUrl, setPostUrl] = useState<string>(quest?.url || '');
+  const [url, setUrl] = useState<string>(quest?.url || '');
   const [rewardPoints, setRewardPoints] = useState(quest?.rewardPoints);
 
   const [videos, setVideos] = useState<Video[]>([]);
@@ -38,7 +38,7 @@ export const EditQuestModalContent = ({ quest, onSave, onDelete, isLoading }: Mo
       description: description!,
       type: type!,
       videoId: type === 'video' ? videoId : '',
-      url: type === 'post_url' ? postUrl : '',
+      url: type === 'share' ? url : '',
       rewardPoints: rewardPoints!,
     });
   };
@@ -92,8 +92,8 @@ export const EditQuestModalContent = ({ quest, onSave, onDelete, isLoading }: Mo
         <Input
           header="X url"
           placeholder="Paste your X post link here"
-          value={postUrl}
-          onChange={(e) => setPostUrl(e.target.value)}
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
         />
       )}
       <Input
