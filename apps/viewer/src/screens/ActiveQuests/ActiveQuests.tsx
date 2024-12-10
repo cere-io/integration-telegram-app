@@ -3,8 +3,9 @@ import { useBot, useEvents } from '../../hooks';
 import { useEffect, useMemo, useState } from 'react';
 import { Campaign, Quest } from '@tg-app/api';
 import { getActiveCampaign } from '@integration-telegram-app/creator/src/helpers';
-import { ActivityEvent } from '@cere-activity-sdk/events';
+import { ActivityEvent, CereWalletSigner } from '@cere-activity-sdk/events';
 import { EngagementEventData } from '~/types';
+import { useCereWallet } from '../../cere-wallet';
 
 export const ActiveQuests = () => {
   const bot = useBot();
@@ -12,7 +13,16 @@ export const ActiveQuests = () => {
   const [quests, setQuests] = useState<Quest[]>([]);
   const [preparingData, setPreparingData] = useState<boolean>(true);
   const [completedTaskIds, setCompletedTaskIds] = useState<number[]>([551]);
+  const [accountId, setAccountId] = useState<string>();
   const eventSource = useEvents();
+  const cereWallet = useCereWallet();
+
+  useEffect(() => {
+    const signer = new CereWalletSigner(cereWallet);
+    signer.isReady().then(() => {
+      setAccountId(signer.address);
+    });
+  }, [accountId, cereWallet]);
 
   useEffect(() => {
     bot.getCampaigns().then((campaigns) => {
@@ -117,6 +127,8 @@ export const ActiveQuests = () => {
               rewardPoints={quest?.rewardPoints || 0}
               questType={quest.type as 'video' | 'share'}
               postUrl={quest.url || ''}
+              accountId={accountId}
+              campaignId={activeCampaign?.id}
             />
           ))}
         </QuestsList>

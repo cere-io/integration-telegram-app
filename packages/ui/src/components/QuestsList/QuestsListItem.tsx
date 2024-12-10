@@ -12,6 +12,8 @@ export type QuestsListItemProps = Pick<CardProps, 'onClick'> & {
   postUrl?: string;
   loading?: boolean;
   completed?: boolean;
+  accountId?: string;
+  campaignId?: number;
 };
 
 export const QuestsListItem = ({
@@ -21,6 +23,8 @@ export const QuestsListItem = ({
   questType,
   completed,
   postUrl,
+  accountId,
+  campaignId,
 }: QuestsListItemProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const miniApp = useMiniApp();
@@ -33,7 +37,7 @@ export const QuestsListItem = ({
 
   const handleRetweet = useCallback(() => {
     if (questType === 'share' && postUrl) {
-      const text = encodeURIComponent(`#CereMedia`);
+      const text = encodeURIComponent(`${accountId}:${campaignId} #CereMedia`);
       // @TODO think about how to do it generic
       const quoteTweetUrl = `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(postUrl)}`;
 
@@ -45,7 +49,7 @@ export const QuestsListItem = ({
         window.open(quoteTweetUrl, '_blank');
       }
     }
-  }, [miniApp, postUrl, questType]);
+  }, [accountId, campaignId, miniApp, postUrl, questType]);
 
   return (
     <Card style={{ margin: 16, display: 'block' }}>
