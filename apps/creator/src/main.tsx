@@ -6,6 +6,7 @@ import Analytics from '@tg-app/analytics';
 
 import { App } from './App';
 import { APP_ENV, APP_VERSION } from './constants';
+import { CereWalletProvider } from './cere-wallet';
 
 Analytics.init();
 Reporting.init({
@@ -15,8 +16,10 @@ Reporting.init({
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <SDKProvider acceptCustomStyles debug>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
+    <CereWalletProvider>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </CereWalletProvider>
   </SDKProvider>,
 );

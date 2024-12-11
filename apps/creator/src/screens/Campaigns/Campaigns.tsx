@@ -5,6 +5,7 @@ import { Button } from '@tg-app/ui';
 import { Modal } from '../../components/Modal';
 import { CampaignListItem } from '../../components/Campaign/CampaigntListItem.tsx';
 import { EditCampaignModalContent } from '../../components/Campaign/EditCampaignModalContent.tsx';
+import './Compaigns.css';
 
 export const Campaigns = () => {
   const bot = useBot();
@@ -69,15 +70,18 @@ export const Campaigns = () => {
           Add campaign
         </Button>
       </div>
-      {campaigns.map((campaign, index) => (
-        <CampaignListItem
-          key={index}
-          title={campaign.title}
-          description={campaign.description}
-          quests={campaign.quests}
-          onClick={() => setSelectedCampaign(campaign)}
-        />
-      ))}
+      <div className="campaigns-list">
+        {campaigns.map((campaign, index) => (
+          <CampaignListItem
+            key={index}
+            title={campaign.title}
+            description={campaign.description}
+            quests={campaign.quests}
+            campaignId={campaign.id}
+            onClick={() => setSelectedCampaign(campaign)}
+          />
+        ))}
+      </div>
       {selectedCampaign && (
         <Modal
           isOpen={true}
