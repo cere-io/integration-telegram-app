@@ -119,7 +119,7 @@ export const CampaignListItem = ({ campaignId, title, description, quests, onCli
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  }, [users]);
+  }, [campaignId, title, users]);
 
   return (
     <Card style={{ width: 'auto', height: '100px', marginBottom: '1rem', padding: '1rem' }}>
