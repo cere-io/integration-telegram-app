@@ -5,16 +5,18 @@ type RequestOprions = RequestInit & {
 };
 
 export type BotOptions = {
-  startParam?: string;
+  startParam?: URLSearchParams;
 };
 
 export class BotApi {
   readonly baseUrl: URL;
-  readonly startParam?: string;
+  readonly channelId?: string;
+  readonly campaignId?: string;
 
   constructor(baseUrl: string, options: BotOptions = {}) {
     this.baseUrl = new URL('./', baseUrl);
-    this.startParam = options.startParam;
+    this.channelId = options.startParam?.get('channelId') || '';
+    this.campaignId = options.startParam?.get('campaignId') || '';
   }
 
   private async request(url: string, { allowStatus = [], ...options }: RequestOprions = {}) {
@@ -22,8 +24,8 @@ export class BotApi {
       ...options,
       headers: {
         ...options.headers,
-        ...(this.startParam && {
-          'X-Telegram-Chat': this.startParam,
+        ...(this.channelId && {
+          'X-Telegram-Chat': this.channelId,
         }),
       },
     });
