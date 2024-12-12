@@ -41,13 +41,14 @@ export type BaseTask = {
 export type VideoTask = BaseTask & {
   videoUrl: string;
   thumbnailUrl: string;
+  type?: 'videoTask';
 };
 
 export type SocialTask = BaseTask & {
   platform: string;
   tweetLink: string;
   hashtags: string[];
-  type: 'social';
+  type: 'socialTask';
   requirements: {
     platform: string;
     action: string;
@@ -59,7 +60,7 @@ export type DexTask = BaseTask & {
   platform: string;
   tradingLink: string;
   minimumAmount: number;
-  type: 'dex';
+  type: 'dexTask';
   requirements: {
     platform: string;
     pair: string;

@@ -1,20 +1,16 @@
 import { QuestsList, QuestsListItem, Title, Spinner } from '@tg-app/ui';
-import { useBot, useEvents } from '../../hooks';
+import { useEvents, useStartParam } from '../../hooks';
 import { useEffect, useMemo, useState } from 'react';
-import { Campaign, Quest } from '@tg-app/api';
-import { getActiveCampaign } from '@integration-telegram-app/creator/src/helpers';
 import { ActivityEvent, CereWalletSigner } from '@cere-activity-sdk/events';
-import { EngagementEventData } from '~/types';
+import { EngagementEventData, Quests, SocialTask } from '~/types';
 import { useCereWallet } from '../../cere-wallet';
 
 export const ActiveQuests = () => {
-  const bot = useBot();
-  const [activeCampaign, setActiveCampaign] = useState<Campaign>();
-  const [quests, setQuests] = useState<Quest[]>([]);
   const [preparingData, setPreparingData] = useState<boolean>(true);
-  const [completedTaskIds, setCompletedTaskIds] = useState<number[]>([551]);
+  const [quests, setQuests] = useState<Quests>();
   const [accountId, setAccountId] = useState<string>();
   const eventSource = useEvents();
+  const { startParam } = useStartParam();
   const cereWallet = useCereWallet();
 
   useEffect(() => {
@@ -25,57 +21,36 @@ export const ActiveQuests = () => {
   }, [accountId, cereWallet]);
 
   useEffect(() => {
-    bot.getCampaigns().then((campaigns) => {
-      const campaign = getActiveCampaign(campaigns);
-      if (campaign) {
-        setActiveCampaign(campaign);
-        setQuests(campaign.quests);
-      }
-    });
-  }, [bot]);
+    const getQuests = async () => {
+      const ready = await eventSource.isReady();
+      console.log('EventSource ready:', ready);
 
-  useEffect(() => {
-    if (activeCampaign?.id) {
-      const getCompletedTasks = async () => {
-        const ready = await eventSource.isReady();
-        console.log('EventSource ready:', ready);
-
-        const { event_type, timestamp, data } = {
-          event_type: 'GET_COMPLETED_TASKS',
-          timestamp: new Date().toISOString(),
-          data: JSON.stringify({
-            campaignId: activeCampaign?.id,
-            channelId: bot?.startParam,
-          }),
-        };
-
-        const parsedData = JSON.parse(data);
-        const event = new ActivityEvent(event_type, {
-          ...parsedData,
-          timestamp,
-        });
-
-        await eventSource.dispatchEvent(event);
+      const { event_type, timestamp, data } = {
+        event_type: 'GET_QUESTS',
+        timestamp: new Date().toISOString(),
+        data: JSON.stringify({
+          campaignId: startParam,
+        }),
       };
 
-      const timeoutId = setTimeout(() => {
-        setPreparingData(false);
-      }, 3000);
+      const parsedData = JSON.parse(data);
+      const event = new ActivityEvent(event_type, {
+        ...parsedData,
+        timestamp,
+      });
 
-      getCompletedTasks();
+      await eventSource.dispatchEvent(event);
+    };
 
-      return () => {
-        clearTimeout(timeoutId);
-      };
-    }
-  }, [activeCampaign?.id, bot?.startParam, eventSource]);
+    getQuests();
+  }, [eventSource, startParam]);
 
   useEffect(() => {
     const handleEngagementEvent = (event: any) => {
-      if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'GET_COMPLETED_TASKS') {
+      if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'GET_QUESTS') {
         const { integrationScriptResults }: EngagementEventData = event.payload;
-        const tasks: { key: string; doc_count: number }[] = (integrationScriptResults as any)[0]?.tasks || [];
-        setCompletedTaskIds(tasks.map(({ key }) => +key));
+        const quests: Quests = (integrationScriptResults as any)[0]?.quests || {};
+        setQuests(quests);
         setPreparingData(false);
       }
     };
@@ -88,16 +63,18 @@ export const ActiveQuests = () => {
   }, [eventSource]);
 
   const sortedQuests = useMemo(() => {
-    return [...quests].sort((a, b) => {
-      const aCompleted = completedTaskIds.includes(Number(a?.videoId));
-      const bCompleted = completedTaskIds.includes(Number(b?.videoId));
+    const allTasks = [
+      ...(quests?.videoTasks.map((task) => ({ ...task, type: 'videoTask' })) || []),
+      ...(quests?.socialTasks.map((task) => ({ ...task, type: 'socialTask' })) || []),
+      ...(quests?.dexTasks.map((task) => ({ ...task, type: 'dexTask' })) || []),
+    ];
+    return allTasks.sort((a, b) => {
+      if (a.completed && !b.completed) return 1;
+      if (!a.completed && b.completed) return -1;
 
-      if (aCompleted && !bCompleted) return 1;
-      if (!aCompleted && bCompleted) return -1;
-
-      return (b.rewardPoints || 0) - (a.rewardPoints || 0);
+      return (b.points || 0) - (a.points || 0);
     });
-  }, [quests, completedTaskIds]);
+  }, [quests]);
 
   return (
     <div>
@@ -118,17 +95,17 @@ export const ActiveQuests = () => {
         </div>
       ) : (
         <QuestsList>
-          {sortedQuests.map((quest) => (
+          {sortedQuests.map((quest, idx) => (
             <QuestsListItem
-              key={quest.id}
-              completed={completedTaskIds.includes(Number(quest.videoId))}
+              key={idx}
+              completed={quest.completed || false}
               name={quest?.title || ''}
               description={quest?.description || ''}
-              rewardPoints={quest?.rewardPoints || 0}
-              questType={quest.type as 'video' | 'share'}
-              postUrl={quest.url || ''}
+              rewardPoints={quest?.points || 0}
+              questType={quest.type as 'videoTask' | 'socialTask' | 'dexTask'}
+              postUrl={quest.type === 'socialTask' ? (quest as SocialTask).tweetLink : ''}
               accountId={accountId}
-              campaignId={activeCampaign?.id}
+              campaignId={startParam}
             />
           ))}
         </QuestsList>
