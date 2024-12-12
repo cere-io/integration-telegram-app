@@ -1,8 +1,3 @@
-interface SocialTask {
-  id: number;
-  params: Array<{ [key: string]: any }>;
-}
-
 interface WidgetTemplate {
   params: string;
 }
@@ -17,7 +12,7 @@ export interface Engagement {
   engagement_placement?: Array<EngagementPlacement>;
   engagement_id: number;
   engagement_reward_item: Array<any>;
-  engagement_social_task: Array<SocialTask>;
+  engagement_social_task: Array<any>;
   widget_template: WidgetTemplate;
 }
 export interface EngagementEventData {

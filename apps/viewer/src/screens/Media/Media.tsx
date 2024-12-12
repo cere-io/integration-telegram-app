@@ -49,7 +49,7 @@ export const Media = () => {
     const handleEngagementEvent = (event: any) => {
       if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'GET_QUESTS') {
         const { integrationScriptResults }: EngagementEventData = event.payload;
-        const videos: Video[] = (integrationScriptResults as any)[0]?.videos || [];
+        const videos: any = (integrationScriptResults as any)[0]?.quests?.videoTasks || [];
         setVideos(videos);
         setPreparingData(false);
       }
