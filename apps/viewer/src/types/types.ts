@@ -25,3 +25,13 @@ export interface EngagementEventData {
   integrationScriptResults: unknown;
   userProfile: unknown;
 }
+
+export type Video = {
+  id?: number;
+  videoUrl: string;
+  title: string;
+  description: string;
+  thumbnailUrl: string | null;
+  points: number;
+  completed?: boolean;
+};

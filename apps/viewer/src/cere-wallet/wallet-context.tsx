@@ -25,11 +25,18 @@ export const CereWalletProvider = ({ children }: PropsWithChildren<NonNullable<u
     });
 
     wallet
-      .init({
-        appId: 'telegram-mini-app',
-        env: APP_ENV as WalletEnvironment,
-        authMethod: { type: 'telegram-mini-app', token: `${TELEGRAM_BOT_ID}:${initDataRaw}` },
-      })
+      .init(
+        initDataRaw
+          ? {
+              appId: 'telegram-mini-app',
+              env: APP_ENV as WalletEnvironment,
+              authMethod: { type: 'telegram-mini-app', token: `${TELEGRAM_BOT_ID}:${initDataRaw}` },
+            }
+          : {
+              appId: 'viewer-app',
+              env: APP_ENV as WalletEnvironment,
+            },
+      )
       .then(() => {
         wallet.isReady.then(() => {
           console.log('Cere Wallet initialised');

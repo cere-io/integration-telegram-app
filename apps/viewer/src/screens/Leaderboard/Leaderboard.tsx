@@ -1,7 +1,7 @@
 import './Leaderboard.css';
 import { Spinner } from '@tg-app/ui';
 import { useEffect, useState } from 'react';
-import { useBot, useEvents, useWallet } from '../../hooks';
+import { useStartParam, useEvents, useWallet } from '../../hooks';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { EngagementEventData } from '../../types';
 import * as hbs from 'handlebars';
@@ -13,7 +13,7 @@ export const Leaderboard = () => {
   const [isLoading, setLoading] = useState(true);
 
   const { account } = useWallet();
-  const bot = useBot();
+  const { startParam } = useStartParam();
   const eventSource = useEvents();
 
   useEffect(() => {
@@ -28,8 +28,7 @@ export const Leaderboard = () => {
           event_type: 'GET_LEADERBOARD',
           timestamp: new Date().toISOString(),
           data: JSON.stringify({
-            campaignId: bot?.campaignId,
-            channelId: bot?.channelId,
+            campaignId: startParam,
           }),
         };
         const parsedData = JSON.parse(data);
@@ -45,7 +44,7 @@ export const Leaderboard = () => {
     };
 
     fetchData();
-  }, [account?.publicKey, bot?.campaignId, bot?.channelId, eventSource]);
+  }, [account?.publicKey, eventSource, startParam]);
 
   useEffect(() => {
     const handleEngagementEvent = (event: any) => {

@@ -6,3 +6,4 @@ export * from './useToken';
 export * from './useWalletBalance';
 export * from './useWhiteLabel';
 export * from './useEvents';
+export * from './useStartParam';

@@ -65,7 +65,7 @@ export const App = () => {
 
   return (
     <AppRoot appearance={miniApp.isDark ? 'dark' : 'light'} className="App-root" platform="ios" id="app-root">
-      <Screen setActiveTab={setActiveTab} {...activeTab.props} />
+      <Screen {...activeTab.props} />
 
       <Tabbar>
         {tabs.map(({ icon: Icon, text }, index) => (

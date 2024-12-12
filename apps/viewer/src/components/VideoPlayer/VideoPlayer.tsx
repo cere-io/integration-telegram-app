@@ -1,13 +1,12 @@
 import { Card, Modal, ModalProps } from '@tg-app/ui';
-import { Campaign, Quest, Video } from '@tg-app/api';
 import { useViewport } from '@telegram-apps/sdk-react';
 import { VideoPlayer as CerePlayer } from '@cere/media-sdk-react';
 
 import './VideoPlayer.css';
-import { useBot, useEvents, useWallet } from '../../hooks';
+import { useEvents, useStartParam, useWallet } from '../../hooks';
 import { ActivityEvent } from '@cere-activity-sdk/events';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getActiveCampaign } from '@integration-telegram-app/creator/src/helpers';
+import { useCallback } from 'react';
+import { Video } from '../../types';
 
 export type VideoPlayerProps = Pick<ModalProps, 'open'> & {
   video?: Video;
@@ -19,7 +18,7 @@ const createUrl = (video?: Video) => {
     return;
   }
 
-  const url = new URL(video.url);
+  const url = new URL(video.videoUrl);
 
   url.searchParams.set('source', 'telegram');
 
@@ -30,10 +29,7 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
   const { width = 0 } = useViewport() || {};
   const { account } = useWallet();
   const eventSource = useEvents();
-  const bot = useBot();
-
-  const [activeCampaign, setActiveCampaign] = useState<Campaign>();
-  const [activeQuests, setActiveQuests] = useState<Quest[]>([]);
+  const { startParam } = useStartParam();
 
   /**
    * TODO: Properly detect the video aspect ratio
@@ -42,41 +38,22 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
   const height = (width / 16) * 9;
   const url = createUrl(video);
 
-  useEffect(() => {
-    bot.getCampaigns().then((campaigns) => {
-      const campaign = getActiveCampaign(campaigns);
-      if (campaign) {
-        setActiveCampaign(campaign);
-        setActiveQuests(campaign.quests);
-      }
-    });
-  }, [bot]);
-
   const handleSendEvent = useCallback(
     async (eventName: string, payload?: any) => {
       const activityEventPayload = {
-        channelId: bot?.startParam,
-        videoId: video?.id,
+        campaignId: startParam,
+        videoId: video?.videoUrl,
         publicKey: account?.publicKey,
-        campaignId: activeCampaign?.id,
         ...payload,
       };
       const activityEvent = new ActivityEvent(eventName, activityEventPayload);
 
       await eventSource.dispatchEvent(activityEvent);
     },
-    [account?.publicKey, activeCampaign?.id, bot?.startParam, eventSource, video?.id],
+    [account?.publicKey, eventSource, startParam, video?.videoUrl],
   );
 
-  const videoRewardPoints = useMemo(() => {
-    if (activeQuests.length === 0) {
-      return undefined;
-    }
-    const videoQuest = activeQuests.find((q) => Number(q.videoId) === video?.id);
-    if (videoQuest) {
-      return videoQuest.rewardPoints;
-    }
-  }, [activeQuests, video?.id]);
+  const videoRewardPoints = video?.points || 0;
 
   return (
     <Modal open={open && !!video} onOpenChange={(open) => !open && onClose?.()}>
@@ -86,7 +63,7 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
         {url && (
           <CerePlayer
             hlsEnabled={false}
-            src={video!.url}
+            src={video!.videoUrl}
             type="video/mp4"
             loadingComponent={<div />}
             onFullScreenChange={(fullScreen) => {
