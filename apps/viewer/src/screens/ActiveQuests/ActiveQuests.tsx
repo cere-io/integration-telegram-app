@@ -1,24 +1,19 @@
-import { QuestsList, QuestsListItem, Title, Spinner } from '@tg-app/ui';
+import { Title, Spinner } from '@tg-app/ui';
 import { useEvents, useStartParam } from '../../hooks';
-import { useEffect, useMemo, useState } from 'react';
-import { ActivityEvent, CereWalletSigner } from '@cere-activity-sdk/events';
-import { EngagementEventData, Quests, SocialTask } from '~/types';
-import { useCereWallet } from '../../cere-wallet';
+import { useEffect, useState } from 'react';
+import { ActivityEvent } from '@cere-activity-sdk/events';
+import { EngagementEventData, Quests } from '~/types';
+import hbs from 'handlebars';
+
+hbs.registerHelper('json', (context) => JSON.stringify(context));
 
 export const ActiveQuests = () => {
   const [preparingData, setPreparingData] = useState<boolean>(true);
-  const [quests, setQuests] = useState<Quests>();
-  const [accountId, setAccountId] = useState<string>();
+  const [questsHtml, setQuestsHtml] = useState<string>('');
   const eventSource = useEvents();
   const { startParam } = useStartParam();
-  const cereWallet = useCereWallet();
 
-  useEffect(() => {
-    const signer = new CereWalletSigner(cereWallet);
-    signer.isReady().then(() => {
-      setAccountId(signer.address);
-    });
-  }, [accountId, cereWallet]);
+  console.log({ questsHtml });
 
   useEffect(() => {
     const getQuests = async () => {
@@ -48,9 +43,19 @@ export const ActiveQuests = () => {
   useEffect(() => {
     const handleEngagementEvent = (event: any) => {
       if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'GET_QUESTS') {
-        const { integrationScriptResults }: EngagementEventData = event.payload;
+        const { engagement, integrationScriptResults }: EngagementEventData = event.payload;
+        const { widget_template } = engagement;
+
         const quests: Quests = (integrationScriptResults as any)[0]?.quests || {};
-        setQuests(quests);
+        const campaignId: string = (integrationScriptResults as any)[0]?.campaignId || '';
+        const accountId: string = (integrationScriptResults as any)[0]?.accountId || '';
+
+        const compiledHTML = hbs.compile(widget_template.params || '')({
+          quests,
+          campaignId,
+          accountId,
+        });
+        setQuestsHtml(compiledHTML);
         setPreparingData(false);
       }
     };
@@ -61,20 +66,6 @@ export const ActiveQuests = () => {
       eventSource.removeEventListener('engagement', handleEngagementEvent);
     };
   }, [eventSource]);
-
-  const sortedQuests = useMemo(() => {
-    const allTasks = [
-      ...(quests?.videoTasks.map((task) => ({ ...task, type: 'videoTask' })) || []),
-      ...(quests?.socialTasks.map((task) => ({ ...task, type: 'socialTask' })) || []),
-      ...(quests?.dexTasks.map((task) => ({ ...task, type: 'dexTask' })) || []),
-    ];
-    return allTasks.sort((a, b) => {
-      if (a.completed && !b.completed) return 1;
-      if (!a.completed && b.completed) return -1;
-
-      return (b.points || 0) - (a.points || 0);
-    });
-  }, [quests]);
 
   return (
     <div>
@@ -94,21 +85,7 @@ export const ActiveQuests = () => {
           <Spinner size="m" />
         </div>
       ) : (
-        <QuestsList>
-          {sortedQuests.map((quest, idx) => (
-            <QuestsListItem
-              key={idx}
-              completed={quest.completed || false}
-              name={quest?.title || ''}
-              description={quest?.description || ''}
-              rewardPoints={quest?.points || 0}
-              questType={quest.type as 'videoTask' | 'socialTask' | 'dexTask'}
-              postUrl={quest.type === 'socialTask' ? (quest as SocialTask).tweetLink : ''}
-              accountId={accountId}
-              campaignId={startParam}
-            />
-          ))}
-        </QuestsList>
+        <iframe srcDoc={questsHtml} style={{ width: '100%', height: '100vh', border: 'none' }} title="Active Quests" />
       )}
     </div>
   );
