@@ -5,3 +5,9 @@
     height: 100px;
     text-align: center;
 }
+
+.campaigns-list {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem;
+}
