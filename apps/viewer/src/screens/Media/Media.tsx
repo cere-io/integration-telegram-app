@@ -9,6 +9,7 @@ import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
 
 export const Media = () => {
   const [videos, setVideos] = useState<Video[]>([]);
+  const [loading, setLoading] = useState(true);
   const [preparingData, setPreparingData] = useState<boolean>(true);
   const [currentVideo, setCurrentVideo] = useState<Video>();
   const eventSource = useEvents();
@@ -18,7 +19,7 @@ export const Media = () => {
   const activityStartTime = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!preparingData) {
+    if (!loading) {
       const loadTime = performance.now() - appStartTime.current;
       Reporting.message(`App loaded: ${loadTime.toFixed(2)}`, {
         level: 'info',
@@ -30,7 +31,7 @@ export const Media = () => {
         },
       });
     }
-  }, [preparingData]);
+  }, [loading]);
 
   useEffect(() => {
     const getQuests = async () => {
@@ -91,6 +92,7 @@ export const Media = () => {
         const videos: any = (integrationScriptResults as any)[0]?.quests?.videoTasks || [];
         setVideos(videos);
         setPreparingData(false);
+        setLoading(false);
       }
 
       if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'VIDEO_ENDED') {
