@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MediaList, MediaListItem, Title, Spinner } from '@tg-app/ui';
-
+import Reporting from '@tg-app/reporting';
 import { useEvents, useStartParam } from '../../hooks';
 import { VideoPlayer } from '../../components';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { EngagementEventData, Video } from '../../types';
+import { ENGAGEMENT_TIMEOUT_DURATION } from '~/constants.ts';
 
 export const Media = () => {
   const [videos, setVideos] = useState<Video[]>([]);
@@ -13,10 +14,30 @@ export const Media = () => {
   const eventSource = useEvents();
   const { startParam } = useStartParam();
 
+  const appStartTime = useRef<number>(performance.now());
+  const activityStartTime = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!preparingData) {
+      const loadTime = performance.now() - appStartTime.current;
+      Reporting.message(`App loaded: ${loadTime.toFixed(2)}`, {
+        level: 'info',
+        contexts: {
+          loadTime: {
+            duration: loadTime,
+            unit: 'ms',
+          },
+        },
+      });
+    }
+  }, [preparingData]);
+
   useEffect(() => {
     const getQuests = async () => {
       const ready = await eventSource.isReady();
       console.log('EventSource ready:', ready);
+
+      activityStartTime.current = performance.now();
 
       const { event_type, timestamp, data } = {
         event_type: 'GET_QUESTS',
@@ -46,8 +67,26 @@ export const Media = () => {
   });
 
   useEffect(() => {
+    // eslint-disable-next-line prefer-const
+    let engagementTimeout: NodeJS.Timeout;
+
     const handleEngagementEvent = (event: any) => {
+      clearTimeout(engagementTimeout);
+
       if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'GET_QUESTS') {
+        const engagementTime = performance.now() - (activityStartTime.current || 0);
+        console.log(`Media Engagement Time: ${engagementTime}ms`);
+
+        Reporting.message(`Media Engagement Loaded: ${engagementTime.toFixed(2)}`, {
+          level: 'info',
+          contexts: {
+            engagementTime: {
+              duration: engagementTime,
+              unit: 'ms',
+            },
+          },
+        });
+
         const { integrationScriptResults }: EngagementEventData = event.payload;
         const videos: any = (integrationScriptResults as any)[0]?.quests?.videoTasks || [];
         setVideos(videos);
@@ -59,9 +98,27 @@ export const Media = () => {
       }
     };
 
+    engagementTimeout = setTimeout(() => {
+      const timeoutDuration = ENGAGEMENT_TIMEOUT_DURATION;
+      console.error(`Media Engagement Timeout after ${timeoutDuration}ms`);
+
+      Reporting.message('Media Engagement Failed', {
+        level: 'error',
+        contexts: {
+          timeout: {
+            duration: timeoutDuration,
+            unit: 'ms',
+          },
+        },
+      });
+
+      setPreparingData(false);
+    }, ENGAGEMENT_TIMEOUT_DURATION);
+
     eventSource.addEventListener('engagement', handleEngagementEvent);
 
     return () => {
+      clearTimeout(engagementTimeout);
       eventSource.removeEventListener('engagement', handleEngagementEvent);
     };
   }, [eventSource]);

@@ -11,6 +11,7 @@ import {
   bindViewportCSSVars,
   useInitData,
 } from '@telegram-apps/sdk-react';
+import { CereWalletProvider } from './cere-wallet';
 
 import { Leaderboard, Media, ActiveQuests } from './screens';
 
@@ -65,20 +66,22 @@ export const App = () => {
 
   return (
     <AppRoot appearance={miniApp.isDark ? 'dark' : 'light'} className="App-root" platform="ios" id="app-root">
-      <Screen {...activeTab.props} />
+      <CereWalletProvider>
+        <Screen {...activeTab.props} />
 
-      <Tabbar>
-        {tabs.map(({ icon: Icon, text }, index) => (
-          <Tabbar.Item
-            key={index}
-            text={text}
-            selected={activeTab.index === index}
-            onClick={() => setActiveTab({ index })}
-          >
-            <Icon style={{ margin: 2, fontSize: 28 }} />
-          </Tabbar.Item>
-        ))}
-      </Tabbar>
+        <Tabbar>
+          {tabs.map(({ icon: Icon, text }, index) => (
+            <Tabbar.Item
+              key={index}
+              text={text}
+              selected={activeTab.index === index}
+              onClick={() => setActiveTab({ index })}
+            >
+              <Icon style={{ margin: 2, fontSize: 28 }} />
+            </Tabbar.Item>
+          ))}
+        </Tabbar>
+      </CereWalletProvider>
     </AppRoot>
   );
 };

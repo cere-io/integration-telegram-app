@@ -1,9 +1,11 @@
 import { Title, Spinner } from '@tg-app/ui';
 import { useEvents, useStartParam } from '../../hooks';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { EngagementEventData, Quests } from '~/types';
 import hbs from 'handlebars';
+import Reporting from '@tg-app/reporting';
+import { ENGAGEMENT_TIMEOUT_DURATION } from '~/constants.ts';
 
 hbs.registerHelper('json', (context) => JSON.stringify(context));
 
@@ -13,12 +15,14 @@ export const ActiveQuests = () => {
   const eventSource = useEvents();
   const { startParam } = useStartParam();
 
-  console.log({ questsHtml });
+  const activityStartTime = useRef<number | null>(null);
 
   useEffect(() => {
     const getQuests = async () => {
       const ready = await eventSource.isReady();
       console.log('EventSource ready:', ready);
+
+      activityStartTime.current = performance.now();
 
       const { event_type, timestamp, data } = {
         event_type: 'GET_QUESTS',
@@ -41,8 +45,25 @@ export const ActiveQuests = () => {
   }, [eventSource, startParam]);
 
   useEffect(() => {
+    // eslint-disable-next-line prefer-const
+    let engagementTimeout: NodeJS.Timeout;
     const handleEngagementEvent = (event: any) => {
+      clearTimeout(engagementTimeout);
       if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'GET_QUESTS') {
+        const engagementTime = performance.now() - (activityStartTime.current || 0);
+
+        console.log(`Active Quests Engagement Loaded: ${engagementTime}ms`);
+
+        Reporting.message(`Active Quests Engagement Loaded: ${engagementTime}`, {
+          level: 'info',
+          contexts: {
+            engagementTime: {
+              duration: engagementTime,
+              unit: 'ms',
+            },
+          },
+        });
+
         const { engagement, integrationScriptResults }: EngagementEventData = event.payload;
         const { widget_template } = engagement;
 
@@ -60,9 +81,27 @@ export const ActiveQuests = () => {
       }
     };
 
+    engagementTimeout = setTimeout(() => {
+      const timeoutDuration = ENGAGEMENT_TIMEOUT_DURATION;
+      console.error(`Active Quests Engagement Timeout after ${timeoutDuration}ms`);
+
+      Reporting.message('Active Quests Engagement Failed', {
+        level: 'error',
+        contexts: {
+          timeout: {
+            duration: timeoutDuration,
+            unit: 'ms',
+          },
+        },
+      });
+
+      setPreparingData(false);
+    }, ENGAGEMENT_TIMEOUT_DURATION);
+
     eventSource.addEventListener('engagement', handleEngagementEvent);
 
     return () => {
+      clearTimeout(engagementTimeout);
       eventSource.removeEventListener('engagement', handleEngagementEvent);
     };
   }, [eventSource]);
