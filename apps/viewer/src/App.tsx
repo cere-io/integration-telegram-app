@@ -19,9 +19,9 @@ import '@telegram-apps/telegram-ui/dist/styles.css';
 
 const tabs = [
   {
-    icon: MediaIcon,
-    screen: Media,
-    text: 'Library',
+    icon: QuestsIcon,
+    screen: ActiveQuests,
+    text: 'Active Quests',
   },
   {
     icon: LeaderboardIcon,
@@ -29,9 +29,9 @@ const tabs = [
     text: 'Leaderboard',
   },
   {
-    icon: QuestsIcon,
-    screen: ActiveQuests,
-    text: 'Active Quests',
+    icon: MediaIcon,
+    screen: Media,
+    text: 'Library',
   },
 ];
 
@@ -65,7 +65,7 @@ export const App = () => {
 
   return (
     <AppRoot appearance={miniApp.isDark ? 'dark' : 'light'} className="App-root" platform="ios" id="app-root">
-      <Screen {...activeTab.props} />
+      <Screen setActiveTab={setActiveTab} {...activeTab.props} />
 
       <Tabbar>
         {tabs.map(({ icon: Icon, text }, index) => (

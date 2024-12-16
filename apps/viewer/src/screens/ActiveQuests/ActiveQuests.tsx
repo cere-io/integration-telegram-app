@@ -6,16 +6,58 @@ import { EngagementEventData, Quests } from '~/types';
 import hbs from 'handlebars';
 import Reporting from '@tg-app/reporting';
 import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
+import { ActiveTab } from '~/App.tsx';
 
 hbs.registerHelper('json', (context) => JSON.stringify(context));
 
-export const ActiveQuests = () => {
+type ActiveQuestsProps = {
+  setActiveTab: (tab: ActiveTab) => void;
+};
+
+export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
   const [preparingData, setPreparingData] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
   const [questsHtml, setQuestsHtml] = useState<string>('');
   const eventSource = useEvents();
   const { startParam } = useStartParam();
 
+  const appStartTime = useRef<number>(performance.now());
   const activityStartTime = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!loading) {
+      const loadTime = performance.now() - appStartTime.current;
+      Reporting.message(`App loaded: ${loadTime.toFixed(2)}`, {
+        level: 'info',
+        contexts: {
+          loadTime: {
+            duration: loadTime,
+            unit: 'ms',
+          },
+        },
+      });
+    }
+  }, [loading]);
+
+  useEffect(() => {
+    const handleIframeClick = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data.type === 'VIDEO_QUEST_CLICK') {
+        setActiveTab({
+          index: 2,
+          props: {
+            videoUrl: event.data.videoUrl,
+          },
+        });
+      }
+    };
+
+    window.addEventListener('message', handleIframeClick);
+
+    return () => {
+      window.removeEventListener('message', handleIframeClick);
+    };
+  }, [setActiveTab]);
 
   useEffect(() => {
     const getQuests = async () => {
@@ -96,6 +138,7 @@ export const ActiveQuests = () => {
       });
 
       setPreparingData(false);
+      setLoading(false);
     }, ENGAGEMENT_TIMEOUT_DURATION);
 
     eventSource.addEventListener('engagement', handleEngagementEvent);

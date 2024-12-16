@@ -7,31 +7,18 @@ import { ActivityEvent } from '@cere-activity-sdk/events';
 import { EngagementEventData, Video } from '../../types';
 import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
 
-export const Media = () => {
+export type MediaTypeProps = {
+  videoUrl?: string;
+};
+
+export const Media = ({ videoUrl }: MediaTypeProps) => {
   const [videos, setVideos] = useState<Video[]>([]);
-  const [loading, setLoading] = useState(true);
   const [preparingData, setPreparingData] = useState<boolean>(true);
   const [currentVideo, setCurrentVideo] = useState<Video>();
   const eventSource = useEvents();
   const { startParam } = useStartParam();
 
-  const appStartTime = useRef<number>(performance.now());
   const activityStartTime = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (!loading) {
-      const loadTime = performance.now() - appStartTime.current;
-      Reporting.message(`App loaded: ${loadTime.toFixed(2)}`, {
-        level: 'info',
-        contexts: {
-          loadTime: {
-            duration: loadTime,
-            unit: 'ms',
-          },
-        },
-      });
-    }
-  }, [loading]);
 
   useEffect(() => {
     const getQuests = async () => {
@@ -92,7 +79,6 @@ export const Media = () => {
         const videos: any = (integrationScriptResults as any)[0]?.quests?.videoTasks || [];
         setVideos(videos);
         setPreparingData(false);
-        setLoading(false);
       }
 
       if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'VIDEO_ENDED') {
@@ -124,6 +110,15 @@ export const Media = () => {
       eventSource.removeEventListener('engagement', handleEngagementEvent);
     };
   }, [eventSource]);
+
+  useEffect(() => {
+    if (videoUrl && videos.length > 0) {
+      const video = videos.find((video) => videoUrl === video?.videoUrl);
+      if (video) {
+        setCurrentVideo(video);
+      }
+    }
+  }, [videoUrl, videos]);
 
   return (
     <div style={{ paddingBottom: 0 }}>
