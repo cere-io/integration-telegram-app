@@ -6,7 +6,7 @@ import { ActivityEvent } from '@cere-activity-sdk/events';
 import { EngagementEventData } from '../../types';
 import * as hbs from 'handlebars';
 import Reporting from '@tg-app/reporting';
-import { ENGAGEMENT_TIMEOUT_DURATION } from '~/constants.ts';
+import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
 
 hbs.registerHelper('json', (context) => JSON.stringify(context));
 

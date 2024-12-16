@@ -5,7 +5,7 @@ import { useEvents, useStartParam } from '../../hooks';
 import { VideoPlayer } from '../../components';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { EngagementEventData, Video } from '../../types';
-import { ENGAGEMENT_TIMEOUT_DURATION } from '~/constants.ts';
+import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
 
 export const Media = () => {
   const [videos, setVideos] = useState<Video[]>([]);
