@@ -99,8 +99,6 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
           },
         },
       });
-
-      setPreparingData(false);
     }, ENGAGEMENT_TIMEOUT_DURATION);
 
     eventSource.addEventListener('engagement', handleEngagementEvent);

@@ -99,8 +99,6 @@ export const Leaderboard = () => {
           },
         },
       });
-
-      setLoading(false);
     }, ENGAGEMENT_TIMEOUT_DURATION);
 
     eventSource.addEventListener('engagement', handleEngagementEvent);

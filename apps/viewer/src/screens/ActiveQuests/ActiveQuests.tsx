@@ -120,6 +120,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
         });
         setQuestsHtml(compiledHTML);
         setPreparingData(false);
+        setLoading(false);
       }
     };
 
@@ -136,9 +137,6 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
           },
         },
       });
-
-      setPreparingData(false);
-      setLoading(false);
     }, ENGAGEMENT_TIMEOUT_DURATION);
 
     eventSource.addEventListener('engagement', handleEngagementEvent);
