@@ -60,10 +60,9 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
   }, [setActiveTab]);
 
   useEffect(() => {
-    const getQuests = async () => {
-      const ready = await eventSource.isReady();
-      console.log('EventSource ready:', ready);
+    if (!eventSource) return;
 
+    const getQuests = async () => {
       activityStartTime.current = performance.now();
 
       const { event_type, timestamp, data } = {
@@ -89,6 +88,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
   useEffect(() => {
     // eslint-disable-next-line prefer-const
     let engagementTimeout: NodeJS.Timeout;
+    if (!eventSource) return;
     const handleEngagementEvent = (event: any) => {
       clearTimeout(engagementTimeout);
       if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'GET_QUESTS') {

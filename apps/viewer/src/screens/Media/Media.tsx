@@ -22,8 +22,7 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
 
   useEffect(() => {
     const getQuests = async () => {
-      const ready = await eventSource.isReady();
-      console.log('EventSource ready:', ready);
+      if (!eventSource) return;
 
       activityStartTime.current = performance.now();
 
@@ -57,6 +56,8 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
   useEffect(() => {
     // eslint-disable-next-line prefer-const
     let engagementTimeout: NodeJS.Timeout;
+
+    if (!eventSource) return;
 
     const handleEngagementEvent = (event: any) => {
       clearTimeout(engagementTimeout);

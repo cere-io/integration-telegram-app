@@ -8,6 +8,7 @@ import Analytics from '@tg-app/analytics';
 import { App } from './App';
 import { APP_ENV, APP_VERSION, TELEGRAM_APP_URL, TONCONNECT_MANIFEST_URL } from './constants';
 import { CereWalletProvider } from './cere-wallet';
+import { EventsProvider } from './providers';
 
 Analytics.init();
 Reporting.init({
@@ -24,9 +25,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       }}
     >
       <CereWalletProvider>
-        <ErrorBoundary>
-          <App />
-        </ErrorBoundary>
+        <EventsProvider>
+          <ErrorBoundary>
+            <App />
+          </ErrorBoundary>
+        </EventsProvider>
       </CereWalletProvider>
     </TonConnectUIProvider>
   </SDKProvider>,
