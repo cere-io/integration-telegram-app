@@ -40,6 +40,7 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
 
   const handleSendEvent = useCallback(
     async (eventName: string, payload?: any) => {
+      if (!eventSource) return;
       const activityEventPayload = {
         campaignId: startParam,
         videoId: video?.videoUrl,
