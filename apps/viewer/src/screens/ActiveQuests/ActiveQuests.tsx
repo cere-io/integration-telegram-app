@@ -7,6 +7,7 @@ import hbs from 'handlebars';
 import Reporting from '@tg-app/reporting';
 import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
 import { ActiveTab } from '~/App.tsx';
+import { useMiniApp } from '@telegram-apps/sdk-react';
 
 hbs.registerHelper('json', (context) => JSON.stringify(context));
 
@@ -15,6 +16,8 @@ type ActiveQuestsProps = {
 };
 
 export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
+  const miniApp = useMiniApp();
+
   const [preparingData, setPreparingData] = useState<boolean>(true);
   const [loading, setLoading] = useState(true);
   const [questsHtml, setQuestsHtml] = useState<string>('');
@@ -70,6 +73,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
         timestamp: new Date().toISOString(),
         data: JSON.stringify({
           campaignId: startParam,
+          theme: miniApp.isDark ? 'dark' : 'light',
         }),
       };
 
@@ -83,7 +87,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     };
 
     getQuests();
-  }, [eventSource, startParam]);
+  }, [eventSource, miniApp.isDark, startParam]);
 
   useEffect(() => {
     // eslint-disable-next-line prefer-const

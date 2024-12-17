@@ -7,10 +7,15 @@ import { EngagementEventData } from '../../types';
 import * as hbs from 'handlebars';
 import Reporting from '@tg-app/reporting';
 import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
+import { ActiveTab } from '~/App.tsx';
 
 hbs.registerHelper('json', (context) => JSON.stringify(context));
 
-export const Leaderboard = () => {
+type LeaderboardProps = {
+  setActiveTab: (tab: ActiveTab) => void;
+};
+
+export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   const [leaderboardHtml, setLeaderboardHtml] = useState<string>('');
   const [isLoading, setLoading] = useState(true);
 
@@ -103,6 +108,25 @@ export const Leaderboard = () => {
       eventSource.removeEventListener('engagement', handleEngagementEvent);
     };
   }, [eventSource]);
+
+  useEffect(() => {
+    const handleIframeClick = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data.type === 'LEADERBOARD_ROW_CLICK') {
+        navigator.clipboard.writeText(event.data.publicKey);
+      }
+      if (event.data.type === 'QUEST_CLICKED') {
+        setActiveTab({
+          index: 0,
+        });
+      }
+    };
+    window.addEventListener('message', handleIframeClick);
+
+    return () => {
+      window.removeEventListener('message', handleIframeClick);
+    };
+  }, [setActiveTab]);
 
   return (
     <div className="leaderboard">
