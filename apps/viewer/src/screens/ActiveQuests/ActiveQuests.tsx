@@ -2,7 +2,7 @@ import { Title, Spinner } from '@tg-app/ui';
 import { useEvents, useStartParam } from '../../hooks';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityEvent } from '@cere-activity-sdk/events';
-import { EngagementEventData, Quests } from '~/types';
+import { EngagementEventData } from '~/types';
 import hbs from 'handlebars';
 import Reporting from '@tg-app/reporting';
 import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
@@ -109,15 +109,8 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
         const { engagement, integrationScriptResults }: EngagementEventData = event.payload;
         const { widget_template } = engagement;
 
-        const quests: Quests = (integrationScriptResults as any)[0]?.quests || {};
-        const campaignId: string = (integrationScriptResults as any)[0]?.campaignId || '';
-        const accountId: string = (integrationScriptResults as any)[0]?.accountId || '';
+        const compiledHTML = hbs.compile(widget_template.params || '')({ data: integrationScriptResults });
 
-        const compiledHTML = hbs.compile(widget_template.params || '')({
-          quests,
-          campaignId,
-          accountId,
-        });
         setQuestsHtml(compiledHTML);
         setPreparingData(false);
         setLoading(false);

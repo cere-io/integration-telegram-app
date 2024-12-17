@@ -74,12 +74,7 @@ export const Leaderboard = () => {
 
         const { engagement, integrationScriptResults }: EngagementEventData = event.payload;
         const { widget_template } = engagement;
-        const users: { user: string; points: number }[] = (integrationScriptResults as any)[0]?.users || [];
-        const userPublicKey: string = (integrationScriptResults as any)[0]?.userPublicKey || null;
-        const compiledHTML = hbs.compile(widget_template.params || '')({
-          users,
-          userPublicKey,
-        });
+        const compiledHTML = hbs.compile(widget_template.params || '')({ data: integrationScriptResults });
         setLeaderboardHtml(compiledHTML);
 
         setLoading(false);
