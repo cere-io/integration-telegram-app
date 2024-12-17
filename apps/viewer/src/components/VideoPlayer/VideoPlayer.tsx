@@ -3,7 +3,7 @@ import { useViewport } from '@telegram-apps/sdk-react';
 import { VideoPlayer as CerePlayer } from '@cere/media-sdk-react';
 
 import './VideoPlayer.css';
-import { useEvents, useStartParam, useWallet } from '../../hooks';
+import { useEvents, useStartParam } from '../../hooks';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { useCallback } from 'react';
 import { Video } from '../../types';
@@ -27,7 +27,6 @@ const createUrl = (video?: Video) => {
 
 export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) => {
   const { width = 0 } = useViewport() || {};
-  const { account } = useWallet();
   const eventSource = useEvents();
   const { startParam } = useStartParam();
 
@@ -44,14 +43,13 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
       const activityEventPayload = {
         campaignId: startParam,
         videoId: video?.videoUrl,
-        publicKey: account?.publicKey,
         ...payload,
       };
       const activityEvent = new ActivityEvent(eventName, activityEventPayload);
 
       await eventSource.dispatchEvent(activityEvent);
     },
-    [account?.publicKey, eventSource, startParam, video?.videoUrl],
+    [eventSource, startParam, video?.videoUrl],
   );
 
   const videoRewardPoints = video?.points || 0;

@@ -1,7 +1,7 @@
 import './Leaderboard.css';
 import { Spinner } from '@tg-app/ui';
 import { useEffect, useRef, useState } from 'react';
-import { useStartParam, useEvents, useWallet } from '../../hooks';
+import { useStartParam, useEvents } from '../../hooks';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { EngagementEventData } from '../../types';
 import * as hbs from 'handlebars';
@@ -14,7 +14,6 @@ export const Leaderboard = () => {
   const [leaderboardHtml, setLeaderboardHtml] = useState<string>('');
   const [isLoading, setLoading] = useState(true);
 
-  const { account } = useWallet();
   const { startParam } = useStartParam();
   const eventSource = useEvents();
 
@@ -49,7 +48,7 @@ export const Leaderboard = () => {
     };
 
     fetchData();
-  }, [account?.publicKey, eventSource, startParam]);
+  }, [eventSource, startParam]);
 
   useEffect(() => {
     // eslint-disable-next-line prefer-const
