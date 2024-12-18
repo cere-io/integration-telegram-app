@@ -42,24 +42,26 @@ export const CereWalletProvider = ({ children }: PropsWithChildren<NonNullable<u
       )
       .then(() => {
         wallet.isReady.then(() => {
-          const endTime = performance.now();
-          const initialisationTime = endTime - startTime;
-          console.log(`Cere Wallet initialisation time: ${initialisationTime.toFixed(2)} ms`);
-          Reporting.message(`Cere Wallet Initialised: ${initialisationTime.toFixed(2)}`, {
-            level: 'info',
-            tags: {
-              environment: APP_ENV as WalletEnvironment,
-              wallet: 'Cere Wallet',
-            },
-            context: {
-              performance: {
-                initialisationTime: `${initialisationTime.toFixed(2)}`,
-              },
-            },
-          });
           console.log('Cere Wallet initialised');
           wallet.connect().then(() => {
             console.log('Cere Wallet connected');
+
+            const endTime = performance.now();
+            const initialisationTime = endTime - startTime;
+            console.log(`Cere Wallet initialisation time: ${initialisationTime.toFixed(2)} ms`);
+            Reporting.message(`Cere Wallet Initialised: ${initialisationTime.toFixed(2)}`, {
+              level: 'info',
+              tags: {
+                environment: APP_ENV as WalletEnvironment,
+                wallet: 'Cere Wallet',
+              },
+              context: {
+                performance: {
+                  initialisationTime: `${initialisationTime.toFixed(2)}`,
+                },
+              },
+            });
+
             wallet.getUserInfo().then((user) => {
               console.log('Cere Wallet details: ', user);
               const walletIframe = document.getElementById('torusIframe');
