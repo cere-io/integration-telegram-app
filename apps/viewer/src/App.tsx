@@ -12,7 +12,7 @@ import {
   useInitData,
 } from '@telegram-apps/sdk-react';
 
-import { Leaderboard, Media, ActiveQuests } from './screens';
+import { Leaderboard, Media, ActiveQuests, WelcomeScreen } from './screens';
 
 import { AppRoot } from '@telegram-apps/telegram-ui';
 import '@telegram-apps/telegram-ui/dist/styles.css';
@@ -47,6 +47,8 @@ export const App = () => {
   const { user } = useInitData() || {};
 
   const [activeTab, setActiveTab] = useState<ActiveTab>({ index: 0 });
+  const [isWelcomeScreenVisible, setWelcomeScreenVisible] = useState(true);
+
   const Screen = tabs[activeTab.index].screen;
 
   useEffect(() => {
@@ -65,20 +67,26 @@ export const App = () => {
 
   return (
     <AppRoot appearance={miniApp.isDark ? 'dark' : 'light'} className="App-root" platform="ios" id="app-root">
-      <Screen setActiveTab={setActiveTab} {...activeTab.props} />
+      {isWelcomeScreenVisible ? (
+        <WelcomeScreen onStart={() => setWelcomeScreenVisible(false)} />
+      ) : (
+        <>
+          <Screen setActiveTab={setActiveTab} {...activeTab.props} />
 
-      <Tabbar>
-        {tabs.map(({ icon: Icon, text }, index) => (
-          <Tabbar.Item
-            key={index}
-            text={text}
-            selected={activeTab.index === index}
-            onClick={() => setActiveTab({ index })}
-          >
-            <Icon style={{ margin: 2, fontSize: 28 }} />
-          </Tabbar.Item>
-        ))}
-      </Tabbar>
+          <Tabbar>
+            {tabs.map(({ icon: Icon, text }, index) => (
+              <Tabbar.Item
+                key={index}
+                text={text}
+                selected={activeTab.index === index}
+                onClick={() => setActiveTab({ index })}
+              >
+                <Icon style={{ margin: 2, fontSize: 28 }} />
+              </Tabbar.Item>
+            ))}
+          </Tabbar>
+        </>
+      )}
     </AppRoot>
   );
 };

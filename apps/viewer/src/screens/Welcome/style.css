@@ -1,0 +1,79 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: linear-gradient(to bottom right, #1e3a8a, #4c1d95, #000000);
+    height: 100vh;
+    padding: 20px 0 10px;
+    font-family: sans-serif;
+}
+
+.content-wrapper {
+    width: 90%;
+    height: 95%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.cere-title {
+    color: #a855f7;
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+    font-weight: 700;
+    margin-bottom: 0;
+}
+
+.description {
+    color: rgb(209 213 219/ 1);
+    font-size: 1.125rem;
+    line-height: 1.75rem;
+    margin-top: 0.25rem;
+}
+
+.top-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.checkbox-container {
+    display: flex;
+    gap: 10px;
+    color: #ffffff;
+    div {
+        color: #F5FAFC33;
+    }
+}
+
+.privacy-text {
+    color: #ffffff;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+}
+
+.privacy-link {
+    display: block;
+    color: #a855f7;
+}
+
+.cta-button-container {
+    margin-top: 12px;
+}
+
+.cta-button {
+    border-radius: 8px;
+    background: linear-gradient(to right, #3b82f6, #8b5cf6);
+}
+
+.cta-text {
+    display: flex;
+    align-items: center;
+    background: linear-gradient(to right, #3b82f6, #8b5cf6);
+    color: white;
+}
+
+.cta-button:hover .cta-text {
+    background: linear-gradient(to right, #2563eb, #6d28d9);
+}

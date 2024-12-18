@@ -9,7 +9,6 @@
       body {
         margin: 0;
         background-color: var(--tg-bg-color);
-        height: var(--tg-viewport-stable-height);
         overflow: auto;
         box-sizing: border-box;
         padding-bottom: 50px;
@@ -23,3 +22,93 @@
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
+<script>
+  sdk.transform(async (params) => {
+    console.log('Params >>> : ', JSON.stringify(params));
+
+    const queryResult = params.queryData[0]; // Get the first query result
+    const userPublicKey = params.event.account_id; // Extract the user's public key
+
+    try {
+      const activeCampaign = JSON.parse(params.campaign.formData);
+      if (!activeCampaign) {
+        throw new Error('No active campaign found.'); // Throw an error if no active campaign is found
+      }
+
+      const videoTasks = activeCampaign.quests.videoTasks || [];
+      const socialTasks = activeCampaign.quests.socialTasks || [];
+      const dexTasks = activeCampaign.quests.dexTasks || [];
+
+      // Create a map of rewards for video tasks
+      const videoRewards = videoTasks.reduce((acc, { videoUrl, points }) => {
+        acc[videoUrl] = points; // Map video URL to reward points
+        return acc;
+      }, {});
+
+      console.log('Video rewards: ', videoRewards);
+
+      // Process Elasticsearch data for users
+      const esData = queryResult.aggregations.unique_users.buckets || [];
+      const userRewards = esData.map((user) => {
+        // Deduplicate videos watched by the user
+        const uniqueVideos = [...new Set(user.watched_videos.buckets.map((video) => video.key))];
+
+        // Calculate total reward points for the user
+        const totalPoints = uniqueVideos.reduce((sum, videoUrl) => {
+          return sum + (videoRewards[videoUrl] || 0); // Add reward points or 0 if the video is not part of active quests
+        }, 0);
+
+        return {
+          user: user.key, // User's identifier
+          points: totalPoints, // Total reward points
+          watchedVideos: uniqueVideos, // List of watched videos
+        };
+      });
+
+      console.log('User rewards: ', userRewards);
+
+      // Sort users by points in descending order
+      const sortedUsers = userRewards.sort((a, b) => b.points - a.points);
+      console.log('Sorted users: ', sortedUsers);
+
+      // Find the current user
+      const currentUser = sortedUsers.find((user) => user.user === userPublicKey) || {
+        user: userPublicKey,
+        points: 0,
+        watchedVideos: [],
+      };
+
+      // Add tasks with "completed" field to the current user
+      currentUser.quests = {
+        videoTasks: videoTasks.map(({ videoUrl, points, ...task }) => ({
+          ...task,
+          videoUrl,
+          points,
+          completed: currentUser.watchedVideos.includes(videoUrl), // Mark as completed if the video was watched
+        })),
+        socialTasks: socialTasks.map((task) => ({
+          ...task,
+          completed: false, // Add logic here to determine if the social task is completed
+        })),
+        dexTasks: dexTasks.map((task) => ({
+          ...task,
+          completed: false, // Add logic here to determine if the dex task is completed
+        })),
+      };
+
+      // Ensure the current user is included in the sorted list
+      if (!sortedUsers.some((user) => user.user === currentUser.user)) {
+        sortedUsers.push(currentUser);
+      }
+
+      return {
+        users: sortedUsers, // Leaderboard of users
+        userPublicKey, // Include the public key for context
+        eventType: params.event.event_type,
+      };
+    } catch (error) {
+      console.error('Error in transform:', error.message); // Log any errors
+      return { error: error.message }; // Return the error message
+    }
+  });
+</script>
