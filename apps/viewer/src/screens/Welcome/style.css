@@ -60,12 +60,13 @@
 
 .cta-button-container {
     margin-top: 12px;
+    width: 90vw;
 }
 
 .cta-button {
     border-radius: 8px;
     background: linear-gradient(to right, #2563eb, #6d28d9);
-
+    width: 100%;
 }
 
 .cta-text {

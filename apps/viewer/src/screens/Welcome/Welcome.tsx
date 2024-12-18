@@ -11,13 +11,16 @@ type WelcomeScreenProps = {
 
 export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
-  const [isNewWallet, setIsNewWallet] = useState<boolean | null>(null);
+  const [isNewWallet, setIsNewWallet] = useState<boolean | null>(false);
   const wallet = useCereWallet();
 
   useEffect(() => {
     const fetchUserInfo = async () => {
       const userInfo = await wallet.getUserInfo();
       setIsNewWallet(userInfo.isNewWallet);
+      if (!userInfo.isNewUser) {
+        setPrivacyAccepted(true);
+      }
     };
 
     fetchUserInfo();
@@ -37,7 +40,7 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
           <Slider />
         </div>
         <div className="bottom-container">
-          {!isNewWallet && (
+          {isNewWallet && (
             <div className="checkbox-container">
               <Checkbox checked={privacyAccepted} onChange={handleCheckboxChange} title="Title" />
               <Text className="privacy-text">
