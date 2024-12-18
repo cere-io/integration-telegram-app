@@ -21,3 +21,4 @@ export { default as CampaignIcon } from './CampaignIcon.svg?react';
 export { default as QuestsIcon } from './QuestsIcon.svg?react';
 export { default as ArrowIcon } from './ArrowIcon.svg?react';
 export { default as CloseIcon } from './CloseIcon.svg?react';
+export { default as CereIcon } from './CereIcon.svg?react';

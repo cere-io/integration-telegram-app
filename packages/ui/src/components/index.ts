@@ -40,6 +40,9 @@ export {
   Radio,
   Select,
   Multiselect,
+  Checkbox,
+  type CheckboxProps,
+  type PlaceholderProps,
 } from '@telegram-apps/telegram-ui';
 
 export * from './MediaList';
