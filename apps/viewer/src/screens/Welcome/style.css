@@ -64,16 +64,16 @@
 
 .cta-button {
     border-radius: 8px;
-    background: linear-gradient(to right, #3b82f6, #8b5cf6);
+    background: linear-gradient(to right, #2563eb, #6d28d9);
+
 }
 
 .cta-text {
     display: flex;
     align-items: center;
-    background: linear-gradient(to right, #3b82f6, #8b5cf6);
     color: white;
 }
 
-.cta-button:hover .cta-text {
-    background: linear-gradient(to right, #2563eb, #6d28d9);
+.cta-button:hover  {
+    background: linear-gradient(to right, #3b82f6, #8b5cf6);
 }
