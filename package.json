@@ -11,7 +11,8 @@
     "analyze": "vite-bundle-visualizer"
   },
   "dependencies": {
-    "@cere-activity-sdk/events": "^0.0.2",
+    "@cere-activity-sdk/events": "^0.0.3",
+    "@cere-activity-sdk/signers": "^0.0.3",
     "@cere/embed-wallet": "^0.22.2",
     "@cere/media-sdk-react": "^1.6.0-rc.11",
     "@telegram-apps/sdk-react": "^1.1.3",
