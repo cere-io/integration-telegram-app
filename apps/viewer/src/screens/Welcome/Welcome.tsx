@@ -37,7 +37,7 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
         stretched
         size="l"
         mode="cta"
-        disabled={(isNewWallet ?? false) && !privacyAccepted}
+        disabled={(isNewWallet ?? false) && !privacyAccepted && !walletConnected}
         onClick={onStart}
         className="cta-button"
       >
