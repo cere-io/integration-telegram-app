@@ -8,7 +8,7 @@ export type QuestsListItemProps = Pick<CardProps, 'onClick'> & {
   name: string;
   description: string;
   rewardPoints: number;
-  questType: 'video' | 'share';
+  questType: 'videoTask' | 'socialTask' | 'dexTask';
   postUrl?: string;
   loading?: boolean;
   completed?: boolean;
@@ -30,13 +30,13 @@ export const QuestsListItem = ({
   const miniApp = useMiniApp();
 
   const handleClick = () => {
-    if (questType === 'share') {
+    if (questType === 'socialTask') {
       setIsOpen((prev) => !prev);
     }
   };
 
   const handleRetweet = useCallback(() => {
-    if (questType === 'share' && postUrl) {
+    if (questType === 'socialTask' && postUrl) {
       const text = encodeURIComponent(`${accountId}:${campaignId} #CereMedia`);
       // @TODO think about how to do it generic
       const quoteTweetUrl = `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(postUrl)}`;
@@ -63,7 +63,7 @@ export const QuestsListItem = ({
           </Badge>
         }
       >
-        {questType === 'share' && (
+        {questType === 'socialTask' && (
           <ArrowIcon
             className={`arrow-icon ${isOpen ? 'open' : ''} ${miniApp.isDark ? '' : 'dark-icon'}`}
             style={{ marginRight: '12px' }}
@@ -71,7 +71,7 @@ export const QuestsListItem = ({
         )}
         {name}
       </Card.Cell>
-      {questType === 'share' && isOpen && (
+      {questType === 'socialTask' && isOpen && (
         <div style={{ padding: '16px' }}>
           <div
             style={{

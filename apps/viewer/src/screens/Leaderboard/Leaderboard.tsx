@@ -1,74 +1,43 @@
 import './Leaderboard.css';
 import { Spinner } from '@tg-app/ui';
-import { useEffect, useState } from 'react';
-import { ActiveTab } from '../../App.tsx';
-import { useBot, useEvents, useWallet } from '../../hooks';
+import { useEffect, useRef, useState } from 'react';
+import { useStartParam, useEvents } from '../../hooks';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { EngagementEventData } from '../../types';
 import * as hbs from 'handlebars';
-import { Modal } from '../../components/Modal';
-import { QuestsModalContent } from '../../components/Leaderboard/QuestsModalContent';
-import { Campaign } from '@tg-app/api';
-import { getActiveCampaign } from '@integration-telegram-app/creator/src/helpers';
+import Reporting from '@tg-app/reporting';
+import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
+import { ActiveTab } from '~/App.tsx';
+
+hbs.registerHelper('json', (context) => JSON.stringify(context));
 
 type LeaderboardProps = {
   setActiveTab: (tab: ActiveTab) => void;
 };
 
-hbs.registerHelper('json', (context) => JSON.stringify(context));
-
 export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   const [leaderboardHtml, setLeaderboardHtml] = useState<string>('');
   const [isLoading, setLoading] = useState(true);
-  const [currentUserData, setCurrentUserData] = useState<{ publicKey: string; score: number }>();
-  const [isModalOpen, setModalOpen] = useState(false);
-  const [modalContent, setModalContent] = useState<React.ReactNode>(null);
-  const [activeCampaign, setActiveCampaign] = useState<Campaign>();
 
-  const { account } = useWallet();
-  const bot = useBot();
+  const { startParam } = useStartParam();
   const eventSource = useEvents();
 
-  useEffect(() => {
-    bot.getCampaigns().then((campaigns) => {
-      const campaign = getActiveCampaign(campaigns);
-      if (campaign) {
-        setActiveCampaign(campaign);
-      }
-    });
-  }, [bot]);
-
-  useEffect(() => {
-    const handleIframeClick = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-      if (event.data.type === 'GET_QUEST_BOARD' && currentUserData) {
-        setModalContent(<QuestsModalContent currentUser={currentUserData} setActiveTab={setActiveTab} />);
-        setModalOpen(true);
-      }
-    };
-
-    window.addEventListener('message', handleIframeClick);
-
-    return () => {
-      window.removeEventListener('message', handleIframeClick);
-    };
-  }, [currentUserData, setActiveTab]);
+  const activityStartTime = useRef<number | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
 
-        const ready = await eventSource.isReady();
-        console.log('EventSource ready:', ready);
-        if (!activeCampaign?.id) return;
+        if (!eventSource) return;
+
+        activityStartTime.current = performance.now();
 
         const { event_type, timestamp, data } = {
           event_type: 'GET_LEADERBOARD',
           timestamp: new Date().toISOString(),
           data: JSON.stringify({
-            campaignId: activeCampaign?.id,
-            channelId: bot?.startParam,
+            campaignId: startParam,
           }),
         };
         const parsedData = JSON.parse(data);
@@ -84,41 +53,80 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
     };
 
     fetchData();
-  }, [account?.publicKey, activeCampaign, bot?.startParam, eventSource]);
+  }, [eventSource, startParam]);
 
   useEffect(() => {
+    // eslint-disable-next-line prefer-const
+    let engagementTimeout: NodeJS.Timeout;
+
+    if (!eventSource) return;
+
     const handleEngagementEvent = (event: any) => {
+      clearTimeout(engagementTimeout);
       if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'GET_LEADERBOARD') {
+        const engagementTime = performance.now() - (activityStartTime.current || 0);
+        console.log(`Leaderboard Engagement Time: ${engagementTime}ms`);
+
+        Reporting.message(`Leaderboard Engagement Loaded: ${engagementTime}`, {
+          level: 'info',
+          contexts: {
+            engagementTime: {
+              duration: engagementTime,
+              unit: 'ms',
+            },
+          },
+        });
+
         const { engagement, integrationScriptResults }: EngagementEventData = event.payload;
         const { widget_template } = engagement;
-        const users: { user: string; points: number }[] = (integrationScriptResults as any)[0]?.users || [];
-        const userPublicKey: string = (integrationScriptResults as any)[0]?.userPublicKey || null;
-        const newData =
-          users?.map(({ user, points }) => ({
-            publicKey: user,
-            score: points,
-          })) || [];
-        const compiledHTML = hbs.compile(widget_template.params || '')({
-          users,
-          userPublicKey,
-        });
+        const compiledHTML = hbs.compile(widget_template.params || '')({ data: integrationScriptResults });
         setLeaderboardHtml(compiledHTML);
-
-        const currentUser = newData.find((u) => u.publicKey === userPublicKey);
-        if (currentUser) {
-          setCurrentUserData(currentUser);
-        }
 
         setLoading(false);
       }
     };
 
+    engagementTimeout = setTimeout(() => {
+      const timeoutDuration = ENGAGEMENT_TIMEOUT_DURATION;
+      console.error(`Leaderboard Engagement Timeout after ${timeoutDuration}ms`);
+
+      Reporting.message('Leaderboard Engagement Failed', {
+        level: 'error',
+        contexts: {
+          timeout: {
+            duration: timeoutDuration,
+            unit: 'ms',
+          },
+        },
+      });
+    }, ENGAGEMENT_TIMEOUT_DURATION);
+
     eventSource.addEventListener('engagement', handleEngagementEvent);
 
     return () => {
+      clearTimeout(engagementTimeout);
       eventSource.removeEventListener('engagement', handleEngagementEvent);
     };
   }, [eventSource]);
+
+  useEffect(() => {
+    const handleIframeClick = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data.type === 'LEADERBOARD_ROW_CLICK') {
+        navigator.clipboard.writeText(event.data.publicKey);
+      }
+      if (event.data.type === 'QUEST_CLICKED') {
+        setActiveTab({
+          index: 0,
+        });
+      }
+    };
+    window.addEventListener('message', handleIframeClick);
+
+    return () => {
+      window.removeEventListener('message', handleIframeClick);
+    };
+  }, [setActiveTab]);
 
   return (
     <div className="leaderboard">
@@ -141,7 +149,6 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           title="Leaderboard"
         />
       )}
-      <Modal isOpen={isModalOpen} onClose={() => setModalOpen(false)} content={modalContent} />
     </div>
   );
 };

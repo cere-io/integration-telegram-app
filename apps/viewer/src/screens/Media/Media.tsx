@@ -1,109 +1,84 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MediaList, MediaListItem, Title, Spinner } from '@tg-app/ui';
-import { Campaign, Quest, Video } from '@tg-app/api';
-
-import { useBot, useEvents } from '../../hooks';
+import Reporting from '@tg-app/reporting';
+import { useEvents, useStartParam } from '../../hooks';
 import { VideoPlayer } from '../../components';
-import { getActiveCampaign } from '@integration-telegram-app/creator/src/helpers';
 import { ActivityEvent } from '@cere-activity-sdk/events';
-import { EngagementEventData } from '~/types';
+import { EngagementEventData, Video } from '../../types';
+import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
 
-export const Media = () => {
-  const bot = useBot();
-  const [preparingData, setPreparingData] = useState<boolean>(true);
+export type MediaTypeProps = {
+  videoUrl?: string;
+};
+
+export const Media = ({ videoUrl }: MediaTypeProps) => {
   const [videos, setVideos] = useState<Video[]>([]);
-  const [activeCampaign, setActiveCampaign] = useState<Campaign>();
-  const [activeQuests, setActiveQuests] = useState<Quest[]>([]);
+  const [preparingData, setPreparingData] = useState<boolean>(true);
   const [currentVideo, setCurrentVideo] = useState<Video>();
-  const [completedTaskIds, setCompletedTaskIds] = useState<number[]>([]);
   const eventSource = useEvents();
+  const { startParam } = useStartParam();
+
+  const activityStartTime = useRef<number | null>(null);
 
   useEffect(() => {
-    bot.getVideos().then(setVideos);
-  }, [bot]);
+    const getQuests = async () => {
+      if (!eventSource) return;
+
+      activityStartTime.current = performance.now();
+
+      const { event_type, timestamp, data } = {
+        event_type: 'GET_QUESTS',
+        timestamp: new Date().toISOString(),
+        data: JSON.stringify({
+          campaignId: startParam,
+        }),
+      };
+
+      const parsedData = JSON.parse(data);
+      const event = new ActivityEvent(event_type, {
+        ...parsedData,
+        timestamp,
+      });
+
+      await eventSource.dispatchEvent(event);
+    };
+
+    getQuests();
+  }, [eventSource, startParam]);
+
+  const sortedVideos = videos.sort((a, b) => {
+    const completedA = a.completed ?? false;
+    const completedB = b.completed ?? false;
+
+    return Number(completedA) - Number(completedB);
+  });
 
   useEffect(() => {
-    bot.getCampaigns().then((campaigns) => {
-      const campaign = getActiveCampaign(campaigns);
-      if (campaign) {
-        setActiveCampaign(campaign);
-        setActiveQuests(campaign.quests);
-      }
-    });
-  }, [bot]);
+    // eslint-disable-next-line prefer-const
+    let engagementTimeout: NodeJS.Timeout;
 
-  useEffect(() => {
-    if (activeCampaign?.id) {
-      const getCompletedTasks = async () => {
-        const ready = await eventSource.isReady();
-        console.log('EventSource ready:', ready);
+    if (!eventSource) return;
 
-        const { event_type, timestamp, data } = {
-          event_type: 'GET_COMPLETED_TASKS',
-          timestamp: new Date().toISOString(),
-          data: JSON.stringify({
-            campaignId: activeCampaign?.id,
-            channelId: bot?.startParam,
-          }),
-        };
+    const handleEngagementEvent = (event: any) => {
+      clearTimeout(engagementTimeout);
 
-        const parsedData = JSON.parse(data);
-        const event = new ActivityEvent(event_type, {
-          ...parsedData,
-          timestamp,
+      if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'GET_QUESTS') {
+        const engagementTime = performance.now() - (activityStartTime.current || 0);
+        console.log(`Media Engagement Time: ${engagementTime}ms`);
+
+        Reporting.message(`Media Engagement Loaded: ${engagementTime.toFixed(2)}`, {
+          level: 'info',
+          contexts: {
+            engagementTime: {
+              duration: engagementTime,
+              unit: 'ms',
+            },
+          },
         });
 
-        await eventSource.dispatchEvent(event);
-      };
-
-      const timeoutId = setTimeout(() => {
-        setPreparingData(false);
-      }, 3000);
-
-      getCompletedTasks();
-
-      return () => {
-        clearTimeout(timeoutId);
-      };
-    }
-  }, [activeCampaign?.id, bot?.startParam, eventSource]);
-
-  const questVideoMap = useMemo(() => {
-    return activeQuests.reduce(
-      (acc, quest) => {
-        if (quest.videoId) {
-          acc[quest.videoId] = quest.rewardPoints as number;
-        }
-        return acc;
-      },
-      {} as Record<string, number>,
-    );
-  }, [activeQuests]);
-
-  const sortedVideos = useMemo(() => {
-    return [...videos].sort((a, b) => {
-      const aCompleted = completedTaskIds.includes(a.id as number);
-      const bCompleted = completedTaskIds.includes(b.id as number);
-
-      const aInCampaign = questVideoMap[a.id as number];
-      const bInCampaign = questVideoMap[b.id as number];
-
-      if (!aCompleted && bCompleted && aInCampaign) return -1;
-      if (aCompleted && !bCompleted) return 1;
-
-      if (aInCampaign && !bInCampaign) return -1;
-      if (!aInCampaign && bInCampaign) return 1;
-
-      return 0;
-    });
-  }, [videos, completedTaskIds, questVideoMap]);
-
-  useEffect(() => {
-    const handleEngagementEvent = (event: any) => {
-      if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'GET_COMPLETED_TASKS') {
         const { integrationScriptResults }: EngagementEventData = event.payload;
-        const tasks: { key: string; doc_count: number }[] = (integrationScriptResults as any)[0]?.tasks || [];
-        setCompletedTaskIds(tasks.map(({ key }) => +key));
+        const videos: any = (integrationScriptResults as any)[0]?.quests?.videoTasks || [];
+        setVideos(videos);
         setPreparingData(false);
       }
 
@@ -112,12 +87,37 @@ export const Media = () => {
       }
     };
 
+    engagementTimeout = setTimeout(() => {
+      const timeoutDuration = ENGAGEMENT_TIMEOUT_DURATION;
+      console.error(`Media Engagement Timeout after ${timeoutDuration}ms`);
+
+      Reporting.message('Media Engagement Failed', {
+        level: 'error',
+        contexts: {
+          timeout: {
+            duration: timeoutDuration,
+            unit: 'ms',
+          },
+        },
+      });
+    }, ENGAGEMENT_TIMEOUT_DURATION);
+
     eventSource.addEventListener('engagement', handleEngagementEvent);
 
     return () => {
+      clearTimeout(engagementTimeout);
       eventSource.removeEventListener('engagement', handleEngagementEvent);
     };
   }, [eventSource]);
+
+  useEffect(() => {
+    if (videoUrl && videos.length > 0) {
+      const video = videos.find((video) => videoUrl === video?.videoUrl);
+      if (video) {
+        setCurrentVideo(video);
+      }
+    }
+  }, [videoUrl, videos]);
 
   return (
     <div style={{ paddingBottom: 0 }}>
@@ -142,18 +142,20 @@ export const Media = () => {
           {sortedVideos.map((video, index) => (
             <MediaListItem
               key={index}
-              completed={completedTaskIds.includes(video.id as number)}
+              completed={video?.completed || false}
               name={video.title}
               description={video.description}
               thumbnailUrl={video.thumbnailUrl}
               onClick={() => setCurrentVideo(video)}
-              rewardPoints={questVideoMap[video.id as number] || undefined}
+              rewardPoints={video.points}
             />
           ))}
         </MediaList>
       )}
 
-      <VideoPlayer open={!!currentVideo} video={currentVideo} onClose={() => setCurrentVideo(undefined)} />
+      {!!currentVideo && (
+        <VideoPlayer open={!!currentVideo} video={currentVideo} onClose={() => setCurrentVideo(undefined)} />
+      )}
     </div>
   );
 };

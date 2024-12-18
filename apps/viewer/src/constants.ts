@@ -12,3 +12,5 @@ export const DEFAULT_START_PARAM = import.meta.env.VITE_DEFAULT_START_PARAM || u
 export const EVENT_APP_ID = import.meta.env.VITE_EVENT_APP_ID;
 export const EVENT_DISPATCH_URL = import.meta.env.VITE_EVENT_DISPATCH_URL;
 export const EVENT_LISTEN_URL = import.meta.env.VITE_EVENT_LISTEN_URL;
+
+export const ENGAGEMENT_TIMEOUT_DURATION = 3000;

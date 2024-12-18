@@ -1,16 +1,10 @@
-import { useMemo } from 'react';
-import { CereWalletSigner, EventSource } from '@cere-activity-sdk/events';
-import { EVENT_APP_ID, EVENT_DISPATCH_URL, EVENT_LISTEN_URL } from '../constants.ts';
-import { useCereWallet } from '../cere-wallet';
+import { useContext } from 'react';
+import { EventsContext } from '../providers';
 
 export const useEvents = () => {
-  const cereWallet = useCereWallet();
-
-  return useMemo(() => {
-    return new EventSource(new CereWalletSigner(cereWallet), {
-      appId: EVENT_APP_ID,
-      dispatchUrl: EVENT_DISPATCH_URL,
-      listenUrl: EVENT_LISTEN_URL,
-    });
-  }, [cereWallet]);
+  const context = useContext(EventsContext);
+  if (!context) {
+    throw new Error('useEvents must be used within an EventsProvider');
+  }
+  return context.eventSource;
 };

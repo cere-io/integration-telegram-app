@@ -1,5 +1,6 @@
 .custom-badge {
     background: linear-gradient(90deg, #6864F4 9.44%, #AC55F2 65.64%, #EB4799 100%);
+    white-space: nowrap;
 }
 
 .custom-badge.unlocked {

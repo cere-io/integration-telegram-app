@@ -1,103 +1,148 @@
-import { QuestsList, QuestsListItem, Title, Spinner } from '@tg-app/ui';
-import { useBot, useEvents } from '../../hooks';
-import { useEffect, useMemo, useState } from 'react';
-import { Campaign, Quest } from '@tg-app/api';
-import { getActiveCampaign } from '@integration-telegram-app/creator/src/helpers';
-import { ActivityEvent, CereWalletSigner } from '@cere-activity-sdk/events';
+import { Title, Spinner } from '@tg-app/ui';
+import { useEvents, useStartParam } from '../../hooks';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityEvent } from '@cere-activity-sdk/events';
 import { EngagementEventData } from '~/types';
-import { useCereWallet } from '../../cere-wallet';
+import hbs from 'handlebars';
+import Reporting from '@tg-app/reporting';
+import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
+import { ActiveTab } from '~/App.tsx';
+import { useMiniApp } from '@telegram-apps/sdk-react';
 
-export const ActiveQuests = () => {
-  const bot = useBot();
-  const [activeCampaign, setActiveCampaign] = useState<Campaign>();
-  const [quests, setQuests] = useState<Quest[]>([]);
+hbs.registerHelper('json', (context) => JSON.stringify(context));
+
+type ActiveQuestsProps = {
+  setActiveTab: (tab: ActiveTab) => void;
+};
+
+export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
+  const miniApp = useMiniApp();
+
   const [preparingData, setPreparingData] = useState<boolean>(true);
-  const [completedTaskIds, setCompletedTaskIds] = useState<number[]>([551]);
-  const [accountId, setAccountId] = useState<string>();
+  const [loading, setLoading] = useState(true);
+  const [questsHtml, setQuestsHtml] = useState<string>('');
   const eventSource = useEvents();
-  const cereWallet = useCereWallet();
+  const { startParam } = useStartParam();
+
+  const appStartTime = useRef<number>(performance.now());
+  const activityStartTime = useRef<number | null>(null);
 
   useEffect(() => {
-    const signer = new CereWalletSigner(cereWallet);
-    signer.isReady().then(() => {
-      setAccountId(signer.address);
-    });
-  }, [accountId, cereWallet]);
-
-  useEffect(() => {
-    bot.getCampaigns().then((campaigns) => {
-      const campaign = getActiveCampaign(campaigns);
-      if (campaign) {
-        setActiveCampaign(campaign);
-        setQuests(campaign.quests);
-      }
-    });
-  }, [bot]);
-
-  useEffect(() => {
-    if (activeCampaign?.id) {
-      const getCompletedTasks = async () => {
-        const ready = await eventSource.isReady();
-        console.log('EventSource ready:', ready);
-
-        const { event_type, timestamp, data } = {
-          event_type: 'GET_COMPLETED_TASKS',
-          timestamp: new Date().toISOString(),
-          data: JSON.stringify({
-            campaignId: activeCampaign?.id,
-            channelId: bot?.startParam,
-          }),
-        };
-
-        const parsedData = JSON.parse(data);
-        const event = new ActivityEvent(event_type, {
-          ...parsedData,
-          timestamp,
-        });
-
-        await eventSource.dispatchEvent(event);
-      };
-
-      const timeoutId = setTimeout(() => {
-        setPreparingData(false);
-      }, 3000);
-
-      getCompletedTasks();
-
-      return () => {
-        clearTimeout(timeoutId);
-      };
+    if (!loading) {
+      const loadTime = performance.now() - appStartTime.current;
+      Reporting.message(`App loaded: ${loadTime.toFixed(2)}`, {
+        level: 'info',
+        contexts: {
+          loadTime: {
+            duration: loadTime,
+            unit: 'ms',
+          },
+        },
+      });
     }
-  }, [activeCampaign?.id, bot?.startParam, eventSource]);
+  }, [loading]);
 
   useEffect(() => {
-    const handleEngagementEvent = (event: any) => {
-      if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'GET_COMPLETED_TASKS') {
-        const { integrationScriptResults }: EngagementEventData = event.payload;
-        const tasks: { key: string; doc_count: number }[] = (integrationScriptResults as any)[0]?.tasks || [];
-        setCompletedTaskIds(tasks.map(({ key }) => +key));
-        setPreparingData(false);
+    const handleIframeClick = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data.type === 'VIDEO_QUEST_CLICK') {
+        setActiveTab({
+          index: 2,
+          props: {
+            videoUrl: event.data.videoUrl,
+          },
+        });
       }
     };
+
+    window.addEventListener('message', handleIframeClick);
+
+    return () => {
+      window.removeEventListener('message', handleIframeClick);
+    };
+  }, [setActiveTab]);
+
+  useEffect(() => {
+    if (!eventSource) return;
+
+    const getQuests = async () => {
+      activityStartTime.current = performance.now();
+
+      const { event_type, timestamp, data } = {
+        event_type: 'GET_QUESTS',
+        timestamp: new Date().toISOString(),
+        data: JSON.stringify({
+          campaignId: startParam,
+          theme: miniApp.isDark ? 'dark' : 'light',
+        }),
+      };
+
+      const parsedData = JSON.parse(data);
+      const event = new ActivityEvent(event_type, {
+        ...parsedData,
+        timestamp,
+      });
+
+      await eventSource.dispatchEvent(event);
+    };
+
+    getQuests();
+  }, [eventSource, miniApp.isDark, startParam]);
+
+  useEffect(() => {
+    // eslint-disable-next-line prefer-const
+    let engagementTimeout: NodeJS.Timeout;
+    if (!eventSource) return;
+    const handleEngagementEvent = (event: any) => {
+      clearTimeout(engagementTimeout);
+      if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'GET_QUESTS') {
+        const engagementTime = performance.now() - (activityStartTime.current || 0);
+
+        console.log(`Active Quests Engagement Loaded: ${engagementTime}ms`);
+
+        Reporting.message(`Active Quests Engagement Loaded: ${engagementTime}`, {
+          level: 'info',
+          contexts: {
+            engagementTime: {
+              duration: engagementTime,
+              unit: 'ms',
+            },
+          },
+        });
+
+        const { engagement, integrationScriptResults }: EngagementEventData = event.payload;
+        const { widget_template } = engagement;
+
+        const compiledHTML = hbs.compile(widget_template.params || '')({ data: integrationScriptResults });
+
+        setQuestsHtml(compiledHTML);
+        setPreparingData(false);
+        setLoading(false);
+      }
+    };
+
+    engagementTimeout = setTimeout(() => {
+      const timeoutDuration = ENGAGEMENT_TIMEOUT_DURATION;
+      console.error(`Active Quests Engagement Timeout after ${timeoutDuration}ms`);
+
+      Reporting.message('Active Quests Engagement Failed', {
+        level: 'error',
+        contexts: {
+          timeout: {
+            duration: timeoutDuration,
+            unit: 'ms',
+          },
+        },
+      });
+    }, ENGAGEMENT_TIMEOUT_DURATION);
 
     eventSource.addEventListener('engagement', handleEngagementEvent);
 
     return () => {
+      clearTimeout(engagementTimeout);
       eventSource.removeEventListener('engagement', handleEngagementEvent);
     };
   }, [eventSource]);
-
-  const sortedQuests = useMemo(() => {
-    return [...quests].sort((a, b) => {
-      const aCompleted = completedTaskIds.includes(Number(a?.videoId));
-      const bCompleted = completedTaskIds.includes(Number(b?.videoId));
-
-      if (aCompleted && !bCompleted) return 1;
-      if (!aCompleted && bCompleted) return -1;
-
-      return (b.rewardPoints || 0) - (a.rewardPoints || 0);
-    });
-  }, [quests, completedTaskIds]);
 
   return (
     <div>
@@ -117,21 +162,7 @@ export const ActiveQuests = () => {
           <Spinner size="m" />
         </div>
       ) : (
-        <QuestsList>
-          {sortedQuests.map((quest) => (
-            <QuestsListItem
-              key={quest.id}
-              completed={completedTaskIds.includes(Number(quest.videoId))}
-              name={quest?.title || ''}
-              description={quest?.description || ''}
-              rewardPoints={quest?.rewardPoints || 0}
-              questType={quest.type as 'video' | 'share'}
-              postUrl={quest.url || ''}
-              accountId={accountId}
-              campaignId={activeCampaign?.id}
-            />
-          ))}
-        </QuestsList>
+        <iframe srcDoc={questsHtml} style={{ width: '100%', height: '100vh', border: 'none' }} title="Active Quests" />
       )}
     </div>
   );
