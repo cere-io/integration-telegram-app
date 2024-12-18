@@ -1,4 +1,4 @@
-import { CereIcon, Checkbox, Text, Button, Spinner } from '@tg-app/ui';
+import { CereIcon, Checkbox, Text, Button } from '@tg-app/ui';
 import './style.css';
 import { Slider } from './components';
 import { useEffect, useMemo, useState } from 'react';
@@ -51,7 +51,7 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
       >
         <Text className="cta-text">
           Start Exploring
-          {isWalletReady ? <ChevronRight /> : <Spinner size="s" color="white" />}
+          <ChevronRight />
         </Text>
       </Button>
     );

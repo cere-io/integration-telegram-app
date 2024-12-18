@@ -14,13 +14,12 @@
     height: 240px;
     display: flex;
     justify-content: center;
-    align-items: flex-end;
+    align-items: center;
     font-size: 24px;
     font-weight: bold;
     color: white;
     background: linear-gradient(to top, #a855f7, transparent);
     border-radius: 15px;
-
 }
 
 .content {
@@ -42,7 +41,7 @@
 
 .description {
     font-size: 1rem;
-    color: rgb(209 213 219);
+    color: #ffffff;
     font-weight: 100;
 }
 
@@ -58,7 +57,7 @@
 
 .arrow {
     position: absolute;
-    top: 50%;
+    bottom: 10%;
     transform: translateY(-50%);
     background: rgba(0, 0, 0, 0.5);
     color: white;
