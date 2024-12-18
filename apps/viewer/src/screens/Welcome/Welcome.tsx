@@ -1,4 +1,4 @@
-import { CereIcon, Checkbox, Text, Button } from '@tg-app/ui';
+import { CereIcon, Checkbox, Text, Button, Spinner } from '@tg-app/ui';
 import './style.css';
 import { Slider } from './components';
 import { useEffect, useState } from 'react';
@@ -11,14 +11,14 @@ type WelcomeScreenProps = {
 
 export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
-  const [isNewWallet, setIsNewWallet] = useState<boolean | null>(false);
+  const [isNewWallet, setIsNewWallet] = useState<boolean | null>(null);
   const wallet = useCereWallet();
 
   useEffect(() => {
     const fetchUserInfo = async () => {
       const userInfo = await wallet.getUserInfo();
       setIsNewWallet(userInfo.isNewWallet);
-      if (!userInfo.isNewUser) {
+      if (!userInfo.isNewWallet) {
         setPrivacyAccepted(true);
       }
     };
@@ -52,10 +52,17 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
             </div>
           )}
           <div className="cta-button-container">
-            <Button stretched size="l" mode="cta" disabled={!privacyAccepted} onClick={onStart} className="cta-button">
+            <Button
+              stretched
+              size="l"
+              mode="cta"
+              disabled={(isNewWallet ?? false) && !privacyAccepted}
+              onClick={onStart}
+              className="cta-button"
+            >
               <Text className="cta-text">
                 Start Exploring
-                <ChevronRight />
+                {isNewWallet === null ? <Spinner size="s" color="white" /> : <ChevronRight />}
               </Text>
             </Button>
           </div>

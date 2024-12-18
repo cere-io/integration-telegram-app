@@ -9,4 +9,5 @@ body .App-root {
   --tgui--font_weight--accent2: 500;
   --tgui--text--secondaty_color: #707579;
   --tgui--outline: #fff;
+  --tgui--hint_color: #fff;
 }
