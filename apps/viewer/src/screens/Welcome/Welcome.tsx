@@ -12,18 +12,25 @@ type WelcomeScreenProps = {
 export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [isNewWallet, setIsNewWallet] = useState<boolean | null>(null);
+  const [isWalletReady, setIsWalletReady] = useState(false);
   const wallet = useCereWallet();
 
   useEffect(() => {
-    const fetchUserInfo = async () => {
-      const userInfo = await wallet.getUserInfo();
-      setIsNewWallet(userInfo.isNewWallet);
-      if (!userInfo.isNewWallet) {
-        setPrivacyAccepted(true);
+    const initializeWallet = async () => {
+      try {
+        await wallet.isReady;
+        setIsWalletReady(true);
+
+        const userInfo = await wallet.getUserInfo();
+        setIsNewWallet(userInfo.isNewWallet);
+        if (!userInfo.isNewWallet) {
+          setPrivacyAccepted(true);
+        }
+      } catch (error) {
+        console.error('Wallet initialization error:', error);
       }
     };
-
-    fetchUserInfo();
+    initializeWallet();
   }, [wallet]);
 
   const handleCheckboxChange = () => {
@@ -31,23 +38,24 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
   };
 
   const renderButton = useMemo(() => {
-    const walletConnected = isNewWallet !== null;
+    const isButtonDisabled = (isNewWallet ?? false) && !privacyAccepted;
+
     return (
       <Button
         stretched
         size="l"
         mode="cta"
-        disabled={(isNewWallet ?? false) && !privacyAccepted && !walletConnected}
+        disabled={!isWalletReady || isButtonDisabled}
         onClick={onStart}
         className="cta-button"
       >
         <Text className="cta-text">
           Start Exploring
-          {!walletConnected ? <Spinner size="s" color="white" /> : <ChevronRight />}
+          {isWalletReady ? <ChevronRight /> : <Spinner size="s" color="white" />}
         </Text>
       </Button>
     );
-  }, [isNewWallet, onStart, privacyAccepted]);
+  }, [isWalletReady, isNewWallet, onStart, privacyAccepted]);
 
   return (
     <div className="container">
