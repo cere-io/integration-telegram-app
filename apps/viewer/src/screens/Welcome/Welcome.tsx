@@ -66,7 +66,7 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
         <div className="bottom-container">
           {!privacyAccepted && (
             <div className="checkbox-container">
-              <Checkbox checked={tempPrivacyAccepted} onChange={handleCheckboxChange} title="Title" />
+              <Checkbox checked={tempPrivacyAccepted} onChange={handleCheckboxChange} title="Title" color="white" />
               <Text className="privacy-text">
                 I agree to Cere Media's data processing for personalized content and rewards.
                 <a href="https://www.cere.network/privacy-policy" className="privacy-link">
