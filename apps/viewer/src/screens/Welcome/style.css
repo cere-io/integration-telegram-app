@@ -3,7 +3,7 @@
     flex-direction: column;
     align-items: center;
     background: linear-gradient(to bottom right, #1e3a8a, #4c1d95, #000000);
-    height: 97vh;
+    height: 100%;
     padding: 20px 0 20px;
     font-family: sans-serif;
 }
