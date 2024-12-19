@@ -129,7 +129,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   }, [setActiveTab]);
 
   return (
-    <div className="leaderboard">
+    <div className="leaderboard" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {isLoading ? (
         <div
           style={{
@@ -137,7 +137,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            height: 'calc(100vh - 60px)',
+            flex: 1,
           }}
         >
           <Spinner size="l" />
@@ -145,7 +145,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
       ) : (
         <iframe
           srcDoc={leaderboardHtml}
-          style={{ width: '100%', height: '100%', border: 'none' }}
+          style={{ width: '100%', height: 'calc(100vh - 100px)', border: 'none' }}
           title="Leaderboard"
         />
       )}
