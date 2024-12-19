@@ -1,9 +1,8 @@
 import { CereIcon, Checkbox, Text, Button } from '@tg-app/ui';
 import './style.css';
 import { Slider } from './components';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
-import { useCereWallet } from '../../cere-wallet';
 
 type WelcomeScreenProps = {
   onStart?: () => void;
@@ -11,42 +10,40 @@ type WelcomeScreenProps = {
 
 export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
-  const [isNewWallet, setIsNewWallet] = useState<boolean | null>(null);
-  const [isWalletReady, setIsWalletReady] = useState(false);
-  const wallet = useCereWallet();
+  const [tempPrivacyAccepted, setTempPrivacyAccepted] = useState(false);
 
   useEffect(() => {
-    const initializeWallet = async () => {
-      try {
-        await wallet.isReady;
-        setIsWalletReady(true);
+    const savedPrivacyAccepted = localStorage.getItem('privacyAccepted') === 'true';
+    setPrivacyAccepted(savedPrivacyAccepted);
+    setTempPrivacyAccepted(savedPrivacyAccepted);
+  }, []);
 
-        const userInfo = await wallet.getUserInfo();
-        setIsNewWallet(userInfo.isNewWallet);
-        if (!userInfo.isNewWallet) {
-          setPrivacyAccepted(true);
-        }
-      } catch (error) {
-        console.error('Wallet initialization error:', error);
-      }
-    };
-    initializeWallet();
-  }, [wallet]);
+  const handleCheckboxChange = useCallback(() => {
+    setTempPrivacyAccepted((prev) => !prev);
+  }, []);
 
-  const handleCheckboxChange = () => {
-    setPrivacyAccepted((prevState) => !prevState);
-  };
+  const handleButtonClick = useCallback(() => {
+    if (onStart) {
+      onStart();
+    }
+    setPrivacyAccepted(tempPrivacyAccepted);
+    if (tempPrivacyAccepted) {
+      localStorage.setItem('privacyAccepted', 'true');
+    } else {
+      localStorage.removeItem('privacyAccepted');
+    }
+  }, [onStart, tempPrivacyAccepted]);
 
   const renderButton = useMemo(() => {
-    const isButtonDisabled = (isNewWallet ?? false) && !privacyAccepted;
+    const isButtonDisabled = !tempPrivacyAccepted;
 
     return (
       <Button
         stretched
         size="l"
         mode="cta"
-        disabled={!isWalletReady || isButtonDisabled}
-        onClick={onStart}
+        disabled={isButtonDisabled}
+        onClick={handleButtonClick}
         className="cta-button"
       >
         <Text className="cta-text">
@@ -55,7 +52,7 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
         </Text>
       </Button>
     );
-  }, [isWalletReady, isNewWallet, onStart, privacyAccepted]);
+  }, [tempPrivacyAccepted, handleButtonClick]);
 
   return (
     <div className="container">
@@ -67,9 +64,9 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
           <Slider />
         </div>
         <div className="bottom-container">
-          {isNewWallet && (
+          {!privacyAccepted && (
             <div className="checkbox-container">
-              <Checkbox checked={privacyAccepted} onChange={handleCheckboxChange} title="Title" />
+              <Checkbox checked={tempPrivacyAccepted} onChange={handleCheckboxChange} title="Title" />
               <Text className="privacy-text">
                 I agree to Cere Media's data processing for personalized content and rewards.
                 <a href="https://www.cere.network/privacy-policy" className="privacy-link">
