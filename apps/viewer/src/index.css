@@ -1,4 +1,6 @@
-
+:root {
+  --safe_area_inset_bottom: calc(100vh - var(--tg-viewport-stable-height, 100vh))
+}
 
 body .App-root {
   --tgui--accent_text_color: #9244E0;

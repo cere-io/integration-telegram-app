@@ -78,14 +78,7 @@ export const App = () => {
           <WelcomeScreen onStart={() => setWelcomeScreenVisible(false)} />
         ) : (
           <>
-            <div
-              style={{
-                flex: 1,
-                overflowY: 'auto',
-              }}
-            >
-              <Screen setActiveTab={setActiveTab} {...activeTab.props} />
-            </div>
+            <Screen setActiveTab={setActiveTab} {...activeTab.props} />
 
             <Tabbar>
               {tabs.map(({ icon: Icon, text }, index) => (
