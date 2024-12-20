@@ -8,15 +8,16 @@ import * as hbs from 'handlebars';
 import Reporting from '@tg-app/reporting';
 import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
 import { ActiveTab } from '~/App.tsx';
+import { useMiniApp } from '@telegram-apps/sdk-react';
 
 hbs.registerHelper('json', (context) => JSON.stringify(context));
 
 type LeaderboardProps = {
   setActiveTab: (tab: ActiveTab) => void;
-  tabbarHeight?: number;
 };
 
-export const Leaderboard = ({ setActiveTab, tabbarHeight }: LeaderboardProps) => {
+export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
+  const miniApp = useMiniApp();
   const [leaderboardHtml, setLeaderboardHtml] = useState<string>('');
   const [isLoading, setLoading] = useState(true);
 
@@ -24,8 +25,6 @@ export const Leaderboard = ({ setActiveTab, tabbarHeight }: LeaderboardProps) =>
   const eventSource = useEvents();
 
   const activityStartTime = useRef<number | null>(null);
-
-  console.log({ tabbarHeight });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -40,7 +39,8 @@ export const Leaderboard = ({ setActiveTab, tabbarHeight }: LeaderboardProps) =>
           event_type: 'GET_LEADERBOARD',
           timestamp: new Date().toISOString(),
           data: JSON.stringify({
-            campaignId: startParam,
+            campaign_id: startParam,
+            theme: miniApp.isDark ? 'dark' : 'light',
           }),
         };
         const parsedData = JSON.parse(data);

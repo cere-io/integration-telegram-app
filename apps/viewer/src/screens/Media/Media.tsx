@@ -30,7 +30,7 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
         event_type: 'GET_QUESTS',
         timestamp: new Date().toISOString(),
         data: JSON.stringify({
-          campaignId: startParam,
+          campaign_id: startParam,
         }),
       };
 
