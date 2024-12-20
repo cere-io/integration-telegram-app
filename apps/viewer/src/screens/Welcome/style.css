@@ -6,6 +6,7 @@
     height: 100%;
     padding: 20px 0 20px;
     font-family: sans-serif;
+    z-index: 1000000;
 }
 
 .content-wrapper {

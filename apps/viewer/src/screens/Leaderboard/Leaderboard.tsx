@@ -13,9 +13,10 @@ hbs.registerHelper('json', (context) => JSON.stringify(context));
 
 type LeaderboardProps = {
   setActiveTab: (tab: ActiveTab) => void;
+  tabbarHeight?: number;
 };
 
-export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
+export const Leaderboard = ({ setActiveTab, tabbarHeight }: LeaderboardProps) => {
   const [leaderboardHtml, setLeaderboardHtml] = useState<string>('');
   const [isLoading, setLoading] = useState(true);
 
@@ -23,6 +24,8 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   const eventSource = useEvents();
 
   const activityStartTime = useRef<number | null>(null);
+
+  console.log({ tabbarHeight });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -145,7 +148,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
       ) : (
         <iframe
           srcDoc={leaderboardHtml}
-          style={{ width: '100%', height: 'calc(100vh - 100px)', border: 'none' }}
+          style={{ width: '100%', height: 'calc(100vh - 50px)', border: 'none' }}
           title="Leaderboard"
         />
       )}

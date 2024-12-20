@@ -80,16 +80,17 @@ export const App = () => {
           <>
             <Screen setActiveTab={setActiveTab} {...activeTab.props} />
 
-            <Tabbar>
+            <Tabbar
+              style={{
+                paddingBottom: 'env(safe-area-inset-bottom)',
+              }}
+            >
               {tabs.map(({ icon: Icon, text }, index) => (
                 <Tabbar.Item
                   key={index}
                   text={text}
                   selected={activeTab.index === index}
                   onClick={() => setActiveTab({ index })}
-                  style={{
-                    paddingBottom: 'env(safe-area-inset-bottom)',
-                  }}
                 >
                   <Icon style={{ margin: 2, fontSize: 28 }} />
                 </Tabbar.Item>
