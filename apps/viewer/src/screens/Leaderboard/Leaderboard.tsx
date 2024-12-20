@@ -13,9 +13,10 @@ hbs.registerHelper('json', (context) => JSON.stringify(context));
 
 type LeaderboardProps = {
   setActiveTab: (tab: ActiveTab) => void;
+  tabbarHeight?: number;
 };
 
-export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
+export const Leaderboard = ({ setActiveTab, tabbarHeight }: LeaderboardProps) => {
   const [leaderboardHtml, setLeaderboardHtml] = useState<string>('');
   const [isLoading, setLoading] = useState(true);
 
@@ -23,6 +24,8 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   const eventSource = useEvents();
 
   const activityStartTime = useRef<number | null>(null);
+
+  console.log({ tabbarHeight });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -129,7 +132,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   }, [setActiveTab]);
 
   return (
-    <div className="leaderboard">
+    <div className="leaderboard" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {isLoading ? (
         <div
           style={{
@@ -137,7 +140,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            height: 'calc(100vh - 60px)',
+            flex: 1,
           }}
         >
           <Spinner size="l" />
@@ -145,7 +148,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
       ) : (
         <iframe
           srcDoc={leaderboardHtml}
-          style={{ width: '100%', height: '100%', border: 'none' }}
+          style={{ width: '100%', height: 'calc(100vh - 50px)', border: 'none' }}
           title="Leaderboard"
         />
       )}

@@ -1,6 +1,16 @@
-:root {
-  --safe_area_inset_bottom: calc(100vh - var(--tg-viewport-stable-height, 100vh))
-}
+/*:root {*/
+/*  --safe_area_inset_bottom: calc(100vh - var(--tg-viewport-stable-height, 100vh))*/
+/*}*/
+
+/*html,*/
+/*body {*/
+/*  height: var(--app-height);*/
+/*  overflow: hidden;*/
+/*}*/
+
+/*#root {*/
+/*  height: 100%;*/
+/*}*/
 
 body .App-root {
   --tgui--accent_text_color: #9244E0;
@@ -10,4 +20,15 @@ body .App-root {
   --tgui--text--secondaty_color: #707579;
   --tgui--outline: #fff;
   --tgui--hint_color: #fff;
+}
+
+#app-root {
+  min-height: var(--tg-viewport-stable-height);
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: var(--tg-viewport-stable-height);
 }
