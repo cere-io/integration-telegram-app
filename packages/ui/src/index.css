@@ -1,16 +1,6 @@
-/*:root {*/
-/*  --safe_area_inset_bottom: calc(100vh - var(--tg-viewport-stable-height, 100vh))*/
-/*}*/
-
-/*html,*/
-/*body {*/
-/*  height: var(--app-height);*/
-/*  overflow: hidden;*/
-/*}*/
-
-/*#root {*/
-/*  height: 100%;*/
-/*}*/
+:root {
+  --tgui--outline: #fff;
+}
 
 body .App-root {
   --tgui--accent_text_color: #9244E0;

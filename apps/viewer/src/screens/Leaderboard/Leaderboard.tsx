@@ -85,7 +85,7 @@ export const Leaderboard = ({ setActiveTab, tabbarHeight }: LeaderboardProps) =>
         const compiledHTML = hbs.compile(widget_template.params || '')({ data: integrationScriptResults });
         setLeaderboardHtml(compiledHTML);
 
-        setLoading(false);
+        setTimeout(() => setLoading(false), 0);
       }
     };
 

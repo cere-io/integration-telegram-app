@@ -116,8 +116,10 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
         const compiledHTML = hbs.compile(widget_template.params || '')({ data: integrationScriptResults });
 
         setQuestsHtml(compiledHTML);
-        setPreparingData(false);
-        setLoading(false);
+        setTimeout(() => {
+          setPreparingData(false);
+          setLoading(false);
+        }, 0);
       }
     };
 

@@ -46,6 +46,11 @@ export const CereWalletProvider = ({ children }: PropsWithChildren<NonNullable<u
           wallet.connect().then(() => {
             console.log('Cere Wallet connected');
 
+            const walletIframe = document.getElementById('torusIframe');
+            if (walletIframe) {
+              walletIframe.style.height = '0px';
+            }
+
             const endTime = performance.now();
             const initialisationTime = endTime - startTime;
             console.log(`Cere Wallet initialisation time: ${initialisationTime.toFixed(2)} ms`);
@@ -64,10 +69,6 @@ export const CereWalletProvider = ({ children }: PropsWithChildren<NonNullable<u
 
             wallet.getUserInfo().then((user) => {
               console.log('Cere Wallet details: ', user);
-              const walletIframe = document.getElementById('torusIframe');
-              if (walletIframe) {
-                walletIframe.style.height = '0px';
-              }
             });
           });
         });
