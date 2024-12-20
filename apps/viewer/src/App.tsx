@@ -82,7 +82,7 @@ export const App = () => {
 
             <Tabbar
               style={{
-                paddingBottom: 'env(safe-area-inset-bottom)',
+                paddingBottom: 'calc(env(safe-area-inset-bottom) + 8px)',
               }}
             >
               {tabs.map(({ icon: Icon, text }, index) => (
