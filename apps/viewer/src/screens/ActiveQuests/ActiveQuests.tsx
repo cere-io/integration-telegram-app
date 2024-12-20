@@ -145,7 +145,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
   }, [eventSource]);
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Title weight="2" style={{ marginLeft: 16, marginTop: 16 }}>
         Yours weekly tasks
       </Title>
@@ -156,13 +156,21 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            height: 'calc(100vh - 60px)',
+            flex: 1,
           }}
         >
           <Spinner size="m" />
         </div>
       ) : (
-        <iframe srcDoc={questsHtml} style={{ width: '100%', height: '100vh', border: 'none' }} title="Active Quests" />
+        <iframe
+          srcDoc={questsHtml}
+          style={{
+            width: '100%',
+            height: 'calc(100vh - 100px)',
+            border: 'none',
+          }}
+          title="Active Quests"
+        />
       )}
     </div>
   );

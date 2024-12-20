@@ -67,26 +67,38 @@ export const App = () => {
 
   return (
     <AppRoot appearance={miniApp.isDark ? 'dark' : 'light'} className="App-root" platform="ios" id="app-root">
-      {isWelcomeScreenVisible ? (
-        <WelcomeScreen onStart={() => setWelcomeScreenVisible(false)} />
-      ) : (
-        <>
-          <Screen setActiveTab={setActiveTab} {...activeTab.props} />
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100vh',
+        }}
+      >
+        {isWelcomeScreenVisible ? (
+          <WelcomeScreen onStart={() => setWelcomeScreenVisible(false)} />
+        ) : (
+          <>
+            <Screen setActiveTab={setActiveTab} {...activeTab.props} />
 
-          <Tabbar>
-            {tabs.map(({ icon: Icon, text }, index) => (
-              <Tabbar.Item
-                key={index}
-                text={text}
-                selected={activeTab.index === index}
-                onClick={() => setActiveTab({ index })}
-              >
-                <Icon style={{ margin: 2, fontSize: 28 }} />
-              </Tabbar.Item>
-            ))}
-          </Tabbar>
-        </>
-      )}
+            <Tabbar
+              style={{
+                paddingBottom: 'calc(env(safe-area-inset-bottom) + 13px)',
+              }}
+            >
+              {tabs.map(({ icon: Icon, text }, index) => (
+                <Tabbar.Item
+                  key={index}
+                  text={text}
+                  selected={activeTab.index === index}
+                  onClick={() => setActiveTab({ index })}
+                >
+                  <Icon style={{ margin: 2, fontSize: 28 }} />
+                </Tabbar.Item>
+              ))}
+            </Tabbar>
+          </>
+        )}
+      </div>
     </AppRoot>
   );
 };
