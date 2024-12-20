@@ -39,7 +39,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           event_type: 'GET_LEADERBOARD',
           timestamp: new Date().toISOString(),
           data: JSON.stringify({
-            campaign_id: startParam,
+            campaignId: startParam,
             theme: miniApp.isDark ? 'dark' : 'light',
           }),
         };

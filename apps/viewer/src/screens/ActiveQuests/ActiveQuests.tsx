@@ -72,7 +72,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
         event_type: 'GET_QUESTS',
         timestamp: new Date().toISOString(),
         data: JSON.stringify({
-          campaign_id: startParam,
+          campaignId: startParam,
           theme: miniApp.isDark ? 'dark' : 'light',
         }),
       };
