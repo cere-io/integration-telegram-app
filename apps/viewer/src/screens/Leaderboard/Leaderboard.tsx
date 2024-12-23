@@ -143,12 +143,12 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
             flex: 1,
           }}
         >
-          <Spinner size="l" />
+          <Spinner size="m" />
         </div>
       ) : (
         <iframe
           srcDoc={leaderboardHtml}
-          style={{ width: '100%', height: 'calc(100vh - 50px)', border: 'none' }}
+          style={{ width: '100%', height: 'calc(100vh - 75px)', border: 'none' }}
           title="Leaderboard"
         />
       )}

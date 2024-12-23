@@ -168,7 +168,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
           srcDoc={questsHtml}
           style={{
             width: '100%',
-            height: 'calc(100vh - 100px)',
+            height: 'calc(100vh - 110px)',
             border: 'none',
           }}
           title="Active Quests"
