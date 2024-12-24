@@ -1,5 +1,5 @@
 import './Leaderboard.css';
-import { Spinner } from '@tg-app/ui';
+import { Snackbar, Spinner, truncateText } from '@tg-app/ui';
 import { useEffect, useRef, useState } from 'react';
 import { useStartParam, useEvents } from '../../hooks';
 import { ActivityEvent } from '@cere-activity-sdk/events';
@@ -9,6 +9,7 @@ import Reporting from '@tg-app/reporting';
 import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
 import { ActiveTab } from '~/App.tsx';
 import { useMiniApp } from '@telegram-apps/sdk-react';
+import { ClipboardCheck } from 'lucide-react';
 
 hbs.registerHelper('json', (context) => JSON.stringify(context));
 
@@ -20,6 +21,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   const miniApp = useMiniApp();
   const [leaderboardHtml, setLeaderboardHtml] = useState<string>('');
   const [isLoading, setLoading] = useState(true);
+  const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
 
   const { startParam } = useStartParam();
   const eventSource = useEvents();
@@ -117,6 +119,9 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
       if (event.origin !== window.location.origin) return;
       if (event.data.type === 'LEADERBOARD_ROW_CLICK') {
         navigator.clipboard.writeText(event.data.publicKey);
+        setSnackbarMessage(
+          `Public key ${truncateText({ text: event.data.publicKey, maxLength: 12 })} copied to clipboard successfully!`,
+        );
       }
       if (event.data.type === 'QUEST_CLICKED') {
         setActiveTab({
@@ -151,6 +156,14 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           style={{ width: '100%', height: 'calc(100vh - 75px)', border: 'none' }}
           title="Leaderboard"
         />
+      )}
+      {snackbarMessage && (
+        <Snackbar onClose={() => setSnackbarMessage(null)} duration={5000}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+            <ClipboardCheck />
+            {snackbarMessage}
+          </div>
+        </Snackbar>
       )}
     </div>
   );
