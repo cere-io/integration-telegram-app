@@ -120,7 +120,7 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
   }, [videoUrl, videos]);
 
   return (
-    <div style={{ paddingBottom: 0 }}>
+    <div style={{ paddingBottom: 65 }}>
       <Title weight="2" style={{ marginLeft: 16, marginTop: 16 }}>
         Library
       </Title>

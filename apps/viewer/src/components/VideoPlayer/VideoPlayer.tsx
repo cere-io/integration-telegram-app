@@ -26,7 +26,8 @@ const createUrl = (video?: Video) => {
 };
 
 export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) => {
-  const { width = 0 } = useViewport() || {};
+  const viewport = useViewport();
+  const { width = 0 } = viewport || {};
   const eventSource = useEvents();
   const { startParam } = useStartParam();
 
@@ -36,6 +37,12 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
    */
   const height = (width / 16) * 9;
   const url = createUrl(video);
+
+  const handleTelegramFullscreen = (isFullscreen: boolean) => {
+    if (!viewport?.isExpanded && isFullscreen) {
+      viewport?.expand();
+    }
+  };
 
   const handleSendEvent = useCallback(
     async (eventName: string, payload?: any) => {
@@ -67,7 +74,7 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
             loadingComponent={<div />}
             onFullScreenChange={(fullScreen) => {
               console.log('onFullScreenChange', fullScreen);
-
+              handleTelegramFullscreen(fullScreen);
               if (fullScreen) {
                 document.body.setAttribute('data-video-fullscreen', '1');
               } else {

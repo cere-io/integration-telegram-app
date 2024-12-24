@@ -8,15 +8,16 @@ import * as hbs from 'handlebars';
 import Reporting from '@tg-app/reporting';
 import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
 import { ActiveTab } from '~/App.tsx';
+import { useMiniApp } from '@telegram-apps/sdk-react';
 
 hbs.registerHelper('json', (context) => JSON.stringify(context));
 
 type LeaderboardProps = {
   setActiveTab: (tab: ActiveTab) => void;
-  tabbarHeight?: number;
 };
 
-export const Leaderboard = ({ setActiveTab, tabbarHeight }: LeaderboardProps) => {
+export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
+  const miniApp = useMiniApp();
   const [leaderboardHtml, setLeaderboardHtml] = useState<string>('');
   const [isLoading, setLoading] = useState(true);
 
@@ -24,8 +25,6 @@ export const Leaderboard = ({ setActiveTab, tabbarHeight }: LeaderboardProps) =>
   const eventSource = useEvents();
 
   const activityStartTime = useRef<number | null>(null);
-
-  console.log({ tabbarHeight });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -41,6 +40,7 @@ export const Leaderboard = ({ setActiveTab, tabbarHeight }: LeaderboardProps) =>
           timestamp: new Date().toISOString(),
           data: JSON.stringify({
             campaignId: startParam,
+            theme: miniApp.isDark ? 'dark' : 'light',
           }),
         };
         const parsedData = JSON.parse(data);
@@ -56,7 +56,7 @@ export const Leaderboard = ({ setActiveTab, tabbarHeight }: LeaderboardProps) =>
     };
 
     fetchData();
-  }, [eventSource, startParam]);
+  }, [eventSource, miniApp.isDark, startParam]);
 
   useEffect(() => {
     // eslint-disable-next-line prefer-const
@@ -143,12 +143,12 @@ export const Leaderboard = ({ setActiveTab, tabbarHeight }: LeaderboardProps) =>
             flex: 1,
           }}
         >
-          <Spinner size="l" />
+          <Spinner size="m" />
         </div>
       ) : (
         <iframe
           srcDoc={leaderboardHtml}
-          style={{ width: '100%', height: 'calc(100vh - 50px)', border: 'none' }}
+          style={{ width: '100%', height: 'calc(100vh - 75px)', border: 'none' }}
           title="Leaderboard"
         />
       )}
