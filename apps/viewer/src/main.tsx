@@ -1,3 +1,6 @@
+window.addEventListener('error', (event) => {
+  console.error('Error:', event.message, 'Source:', event.filename, 'Line:', event.lineno);
+});
 import './mockEnv';
 import ReactDOM from 'react-dom/client';
 import { SDKProvider } from '@telegram-apps/sdk-react';
