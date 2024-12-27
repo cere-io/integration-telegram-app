@@ -43,6 +43,8 @@ export {
   Checkbox,
   type CheckboxProps,
   type PlaceholderProps,
+  Snackbar,
+  type SnackbarProps,
 } from '@telegram-apps/telegram-ui';
 
 export * from './MediaList';
