@@ -66,7 +66,7 @@ export const App = () => {
   );
 
   return (
-    <AppRoot appearance={miniApp.isDark ? 'dark' : 'light'} className="App-root" platform="ios" id="app-root">
+    <AppRoot appearance={miniApp.isDark ? 'dark' : 'light'} className="App-root" platform="base" id="app-root">
       <div
         style={{
           display: 'flex',
