@@ -1,5 +1,4 @@
 import { Card, Modal, ModalProps } from '@tg-app/ui';
-import { useViewport } from '@telegram-apps/sdk-react';
 import { VideoPlayer as CerePlayer } from '@cere/media-sdk-react';
 
 import './VideoPlayer.css';
@@ -7,6 +6,7 @@ import { useEvents, useStartParam } from '../../hooks';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { useCallback } from 'react';
 import { Video } from '../../types';
+import { useWebApp, useExpand } from '@vkruglikov/react-telegram-web-app';
 
 export type VideoPlayerProps = Pick<ModalProps, 'open'> & {
   video?: Video;
@@ -26,8 +26,11 @@ const createUrl = (video?: Video) => {
 };
 
 export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) => {
-  const viewport = useViewport();
-  const { width = 0 } = viewport || {};
+  const miniApp = useWebApp();
+  const [isExpanded, expand] = useExpand();
+
+  const width = miniApp.viewportWidth || window.innerWidth;
+
   const eventSource = useEvents();
   const { startParam } = useStartParam();
 
@@ -39,8 +42,8 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
   const url = createUrl(video);
 
   const handleTelegramFullscreen = (isFullscreen: boolean) => {
-    if (!viewport?.isExpanded && isFullscreen) {
-      viewport?.expand();
+    if (!isExpanded && isFullscreen) {
+      expand?.();
     }
   };
 

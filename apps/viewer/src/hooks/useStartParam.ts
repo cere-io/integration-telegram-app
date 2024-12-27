@@ -1,8 +1,8 @@
 import { DEFAULT_START_PARAM } from '../constants.ts';
-import { useInitData } from '@telegram-apps/sdk-react';
+import { useInitData } from '@vkruglikov/react-telegram-web-app';
 
 export const useStartParam = () => {
-  const { startParam = DEFAULT_START_PARAM } = useInitData() || {};
+  const [initDataUnsafe] = useInitData() || {};
 
-  return { startParam };
+  return { startParam: initDataUnsafe?.start_param || DEFAULT_START_PARAM };
 };
