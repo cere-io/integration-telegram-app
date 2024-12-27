@@ -16,7 +16,7 @@ Reporting.init({
 });
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <SDKProvider acceptCustomStyles>
+  <SDKProvider acceptCustomStyles debug>
     <CereWalletProvider>
       <EventsProvider>
         <ErrorBoundary>
