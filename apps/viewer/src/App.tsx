@@ -66,7 +66,12 @@ export const App = () => {
   );
 
   return (
-    <AppRoot appearance={miniApp.isDark ? 'dark' : 'light'} className="App-root" platform="ios" id="app-root">
+    <AppRoot
+      appearance={miniApp.isDark ? 'dark' : 'light'}
+      className="App-root"
+      platform={window.location.hostname === 'web.telegram.org' ? 'base' : 'ios'}
+      id="app-root"
+    >
       <div
         style={{
           display: 'flex',
