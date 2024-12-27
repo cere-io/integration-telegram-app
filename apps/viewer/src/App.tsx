@@ -69,6 +69,11 @@ export const App = () => {
     [user],
   );
 
+  useEffect(() => {
+    console.log('finalPlatform', finalPlatform);
+    window.parent.postMessage({ platform: finalPlatform }, '*');
+  }, [finalPlatform]);
+
   return (
     <AppRoot appearance={miniApp.isDark ? 'dark' : 'light'} className="App-root" platform={finalPlatform} id="app-root">
       <div
