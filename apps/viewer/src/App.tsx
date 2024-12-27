@@ -69,10 +69,15 @@ export const App = () => {
     [user],
   );
 
-  useEffect(() => {
-    console.log('finalPlatform', finalPlatform);
-    window.parent.postMessage({ platform: finalPlatform }, '*');
-  }, [finalPlatform]);
+  window.addEventListener('message', (event) => {
+    if (event.origin !== 'https://telegram-viewer-app.dev.cere.io') {
+      console.error('Invalid origin');
+      return;
+    }
+
+    const data = event.data;
+    console.log('Received data:', data);
+  });
 
   return (
     <AppRoot appearance={miniApp.isDark ? 'dark' : 'light'} className="App-root" platform={finalPlatform} id="app-root">
