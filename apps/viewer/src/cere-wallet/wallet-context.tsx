@@ -1,6 +1,5 @@
 import { createContext, PropsWithChildren, useContext, useMemo } from 'react';
 import { EmbedWallet, WalletEnvironment } from '@cere/embed-wallet';
-import { useLaunchParams } from '@telegram-apps/sdk-react';
 import { APP_ENV, TELEGRAM_BOT_ID } from '../constants.ts';
 import Reporting from '@tg-app/reporting';
 
@@ -17,7 +16,9 @@ export const useCereWallet = () => {
 };
 
 export const CereWalletProvider = ({ children }: PropsWithChildren<NonNullable<unknown>>) => {
-  const { initDataRaw } = useLaunchParams() || {};
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-expect-error
+  const initDataRaw = window.Telegram?.WebApp?.initData || '';
   console.log('initData: ', initDataRaw);
 
   const wallet = useMemo(() => {
