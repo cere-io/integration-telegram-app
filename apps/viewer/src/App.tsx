@@ -49,6 +49,10 @@ export const App = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>({ index: 0 });
   const [isWelcomeScreenVisible, setWelcomeScreenVisible] = useState(true);
 
+  const platform = window.location.hostname === 'web.telegram.org' ? 'base' : 'ios';
+
+  const finalPlatform = platform === 'ios' || platform === 'base' ? platform : 'base';
+
   const Screen = tabs[activeTab.index].screen;
 
   useEffect(() => {
@@ -66,12 +70,7 @@ export const App = () => {
   );
 
   return (
-    <AppRoot
-      appearance={miniApp.isDark ? 'dark' : 'light'}
-      className="App-root"
-      platform={window.location.hostname === 'web.telegram.org' ? 'base' : 'ios'}
-      id="app-root"
-    >
+    <AppRoot appearance={miniApp.isDark ? 'dark' : 'light'} className="App-root" platform={finalPlatform} id="app-root">
       <div
         style={{
           display: 'flex',
