@@ -65,7 +65,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
     };
 
     fetchData();
-  }, [eventSource, miniApp.isDark, startParam]);
+  }, [eventSource, startParam, theme]);
 
   useEffect(() => {
     // eslint-disable-next-line prefer-const
