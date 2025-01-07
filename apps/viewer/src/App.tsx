@@ -41,10 +41,8 @@ export const App = () => {
   useEffect(() => {
     const themeParams = miniApp.themeParams;
     const isDarkTheme = themeParams?.bg_color && themeParams.bg_color === '#000000'; // Пример проверки
-    setTheme(!isDarkTheme ? 'dark' : 'light');
+    setTheme(isDarkTheme ? 'dark' : 'light');
   }, [miniApp.themeParams]);
-
-  console.log('theme', theme);
 
   const [activeTab, setActiveTab] = useState<ActiveTab>({ index: 0 });
   const [isWelcomeScreenVisible, setWelcomeScreenVisible] = useState(true);
@@ -57,7 +55,7 @@ export const App = () => {
   );
 
   return (
-    <AppRoot appearance={miniApp.isDark ? 'dark' : 'light'} className="App-root" platform="ios" id="app-root">
+    <AppRoot appearance={theme} className="App-root" platform="ios" id="app-root">
       <div
         style={{
           display: 'flex',
