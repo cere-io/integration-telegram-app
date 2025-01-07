@@ -34,8 +34,17 @@ export type ActiveTab = {
 
 export const App = () => {
   const miniApp = useWebApp();
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [initDataUnsafe] = useInitData() || {};
   const user = initDataUnsafe?.user;
+
+  useEffect(() => {
+    const themeParams = miniApp.themeParams;
+    const isDarkTheme = themeParams?.bg_color && themeParams.bg_color === '#000000'; // Пример проверки
+    setTheme(!isDarkTheme ? 'dark' : 'light');
+  }, [miniApp.themeParams]);
+
+  console.log('theme', theme);
 
   const [activeTab, setActiveTab] = useState<ActiveTab>({ index: 0 });
   const [isWelcomeScreenVisible, setWelcomeScreenVisible] = useState(true);

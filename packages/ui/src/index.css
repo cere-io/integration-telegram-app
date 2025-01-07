@@ -8,8 +8,8 @@ body .App-root {
   --tgui--button_color: #9244E0;
   --tgui--font_weight--accent2: 500;
   --tgui--text--secondaty_color: #707579;
-  --tgui--outline: #fff;
-  --tgui--hint_color: #fff;
+  --tgui--outline: #707579;
+  --tgui--hint_color: #707579;
 }
 
 #app-root {
