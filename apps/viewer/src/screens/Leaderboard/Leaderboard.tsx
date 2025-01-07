@@ -123,6 +123,14 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           `Public key ${truncateText({ text: event.data.publicKey, maxLength: 12 })} copied to clipboard successfully!`,
         );
       }
+      if (event.data.type === 'VIDEO_QUEST_CLICK') {
+        setActiveTab({
+          index: 2,
+          props: {
+            videoUrl: event.data.videoUrl,
+          },
+        });
+      }
       if (event.data.type === 'QUEST_CLICKED') {
         setActiveTab({
           index: 0,
