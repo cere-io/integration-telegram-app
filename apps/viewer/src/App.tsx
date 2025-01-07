@@ -40,7 +40,7 @@ export const App = () => {
 
   useEffect(() => {
     const themeParams = miniApp.themeParams;
-    const isDarkTheme = themeParams?.bg_color && themeParams.bg_color === '#000000'; // Пример проверки
+    const isDarkTheme = themeParams?.bg_color && themeParams.bg_color === '#000000';
     setTheme(isDarkTheme ? 'dark' : 'light');
   }, [miniApp.themeParams]);
 

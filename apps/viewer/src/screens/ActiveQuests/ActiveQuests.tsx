@@ -21,11 +21,18 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
   const [preparingData, setPreparingData] = useState<boolean>(true);
   const [loading, setLoading] = useState(true);
   const [questsHtml, setQuestsHtml] = useState<string>('');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const eventSource = useEvents();
   const { startParam } = useStartParam();
 
   const appStartTime = useRef<number>(performance.now());
   const activityStartTime = useRef<number | null>(null);
+
+  useEffect(() => {
+    const themeParams = miniApp.themeParams;
+    const isDarkTheme = themeParams?.bg_color && themeParams.bg_color === '#000000';
+    setTheme(isDarkTheme ? 'dark' : 'light');
+  }, [miniApp.themeParams]);
 
   useEffect(() => {
     if (!loading) {
@@ -73,7 +80,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
         timestamp: new Date().toISOString(),
         data: JSON.stringify({
           campaignId: startParam,
-          theme: miniApp.isDark ? 'dark' : 'light',
+          theme,
         }),
       };
 
@@ -87,7 +94,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     };
 
     getQuests();
-  }, [eventSource, miniApp.isDark, startParam]);
+  }, [eventSource, startParam, theme]);
 
   useEffect(() => {
     // eslint-disable-next-line prefer-const

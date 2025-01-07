@@ -21,12 +21,19 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   const miniApp = useWebApp();
   const [leaderboardHtml, setLeaderboardHtml] = useState<string>('');
   const [isLoading, setLoading] = useState(true);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
 
   const { startParam } = useStartParam();
   const eventSource = useEvents();
 
   const activityStartTime = useRef<number | null>(null);
+
+  useEffect(() => {
+    const themeParams = miniApp.themeParams;
+    const isDarkTheme = themeParams?.bg_color && themeParams.bg_color === '#000000';
+    setTheme(isDarkTheme ? 'dark' : 'light');
+  }, [miniApp.themeParams]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,7 +49,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           timestamp: new Date().toISOString(),
           data: JSON.stringify({
             campaignId: startParam,
-            theme: miniApp.isDark ? 'dark' : 'light',
+            theme,
           }),
         };
         const parsedData = JSON.parse(data);
