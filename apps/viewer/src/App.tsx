@@ -41,7 +41,7 @@ export const App = () => {
     const handleThemeChange = () => {
       console.log('themeParams:', miniApp.themeParams);
       const themeParams = miniApp.themeParams;
-      const isDarkTheme = themeParams?.is_dark;
+      const isDarkTheme = themeParams?.bg_color === '#18222d';
       setTheme(isDarkTheme ? 'dark' : 'light');
     };
     miniApp.onEvent('themeChanged', handleThemeChange);
