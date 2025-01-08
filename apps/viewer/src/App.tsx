@@ -2,12 +2,11 @@ import './index.css';
 import { useEffect, useState } from 'react';
 import { AppRoot, Tabbar, MediaIcon, LeaderboardIcon, QuestsIcon } from '@tg-app/ui';
 import Reporting from '@tg-app/reporting';
-import { useInitData } from '@vkruglikov/react-telegram-web-app';
+import { useInitData, useThemeParams } from '@vkruglikov/react-telegram-web-app';
 
 import { Leaderboard, Media, ActiveQuests, WelcomeScreen } from './screens';
 
 import '@telegram-apps/telegram-ui/dist/styles.css';
-import { useTheme } from './hooks';
 
 const tabs = [
   {
@@ -34,9 +33,8 @@ export type ActiveTab = {
 
 export const App = () => {
   const [initDataUnsafe] = useInitData() || {};
+  const [theme] = useThemeParams();
   const user = initDataUnsafe?.user;
-
-  const theme = useTheme();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>({ index: 0 });
   const [isWelcomeScreenVisible, setWelcomeScreenVisible] = useState(true);

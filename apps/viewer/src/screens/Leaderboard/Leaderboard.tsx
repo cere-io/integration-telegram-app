@@ -1,7 +1,7 @@
 import './Leaderboard.css';
 import { Snackbar, Spinner, truncateText } from '@tg-app/ui';
 import { useEffect, useRef, useState } from 'react';
-import { useStartParam, useEvents, useTheme } from '../../hooks';
+import { useStartParam, useEvents } from '../../hooks';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { EngagementEventData } from '../../types';
 import * as hbs from 'handlebars';
@@ -9,6 +9,7 @@ import Reporting from '@tg-app/reporting';
 import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
 import { ActiveTab } from '~/App.tsx';
 import { ClipboardCheck } from 'lucide-react';
+import { useThemeParams } from '@vkruglikov/react-telegram-web-app';
 
 hbs.registerHelper('json', (context) => JSON.stringify(context));
 
@@ -21,7 +22,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   const [isLoading, setLoading] = useState(true);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
 
-  const theme = useTheme();
+  const [theme] = useThemeParams();
   const { startParam } = useStartParam();
   const eventSource = useEvents();
 
