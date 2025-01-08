@@ -2,11 +2,12 @@ import './index.css';
 import { useEffect, useState } from 'react';
 import { AppRoot, Tabbar, MediaIcon, LeaderboardIcon, QuestsIcon } from '@tg-app/ui';
 import Reporting from '@tg-app/reporting';
-import { useInitData, useWebApp } from '@vkruglikov/react-telegram-web-app';
+import { useInitData } from '@vkruglikov/react-telegram-web-app';
 
 import { Leaderboard, Media, ActiveQuests, WelcomeScreen } from './screens';
 
 import '@telegram-apps/telegram-ui/dist/styles.css';
+import { useTheme } from './hooks';
 
 const tabs = [
   {
@@ -32,24 +33,10 @@ export type ActiveTab = {
 };
 
 export const App = () => {
-  const miniApp = useWebApp();
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [initDataUnsafe] = useInitData() || {};
   const user = initDataUnsafe?.user;
 
-  useEffect(() => {
-    const handleThemeChange = () => {
-      console.log('themeParams:', miniApp.themeParams);
-      const themeParams = miniApp.themeParams;
-      const isDarkTheme = themeParams?.bg_color === '#18222d';
-      setTheme(isDarkTheme ? 'dark' : 'light');
-    };
-    miniApp.onEvent('themeChanged', handleThemeChange);
-    handleThemeChange();
-    return () => {
-      miniApp.offEvent('themeChanged', handleThemeChange);
-    };
-  }, [miniApp]);
+  const theme = useTheme();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>({ index: 0 });
   const [isWelcomeScreenVisible, setWelcomeScreenVisible] = useState(true);

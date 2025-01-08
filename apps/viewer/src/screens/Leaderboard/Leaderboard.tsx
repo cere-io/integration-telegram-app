@@ -1,14 +1,13 @@
 import './Leaderboard.css';
 import { Snackbar, Spinner, truncateText } from '@tg-app/ui';
 import { useEffect, useRef, useState } from 'react';
-import { useStartParam, useEvents } from '../../hooks';
+import { useStartParam, useEvents, useTheme } from '../../hooks';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { EngagementEventData } from '../../types';
 import * as hbs from 'handlebars';
 import Reporting from '@tg-app/reporting';
 import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
 import { ActiveTab } from '~/App.tsx';
-import { useWebApp } from '@vkruglikov/react-telegram-web-app';
 import { ClipboardCheck } from 'lucide-react';
 
 hbs.registerHelper('json', (context) => JSON.stringify(context));
@@ -18,22 +17,15 @@ type LeaderboardProps = {
 };
 
 export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
-  const miniApp = useWebApp();
   const [leaderboardHtml, setLeaderboardHtml] = useState<string>('');
   const [isLoading, setLoading] = useState(true);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
 
+  const theme = useTheme();
   const { startParam } = useStartParam();
   const eventSource = useEvents();
 
   const activityStartTime = useRef<number | null>(null);
-
-  useEffect(() => {
-    const themeParams = miniApp.themeParams;
-    const isDarkTheme = themeParams?.bg_color && themeParams.bg_color === '#000000';
-    setTheme(isDarkTheme ? 'dark' : 'light');
-  }, [miniApp.themeParams]);
 
   useEffect(() => {
     const fetchData = async () => {

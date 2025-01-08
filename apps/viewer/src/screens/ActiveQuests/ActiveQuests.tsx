@@ -1,5 +1,5 @@
 import { Title, Spinner } from '@tg-app/ui';
-import { useEvents, useStartParam } from '../../hooks';
+import { useEvents, useStartParam, useTheme } from '../../hooks';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { EngagementEventData } from '~/types';
@@ -7,7 +7,6 @@ import hbs from 'handlebars';
 import Reporting from '@tg-app/reporting';
 import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
 import { ActiveTab } from '~/App.tsx';
-import { useWebApp } from '@vkruglikov/react-telegram-web-app';
 
 hbs.registerHelper('json', (context) => JSON.stringify(context));
 
@@ -16,23 +15,16 @@ type ActiveQuestsProps = {
 };
 
 export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
-  const miniApp = useWebApp();
-
   const [preparingData, setPreparingData] = useState<boolean>(true);
   const [loading, setLoading] = useState(true);
   const [questsHtml, setQuestsHtml] = useState<string>('');
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const eventSource = useEvents();
   const { startParam } = useStartParam();
 
+  const theme = useTheme();
+
   const appStartTime = useRef<number>(performance.now());
   const activityStartTime = useRef<number | null>(null);
-
-  useEffect(() => {
-    const themeParams = miniApp.themeParams;
-    const isDarkTheme = themeParams?.bg_color && themeParams.bg_color === '#000000';
-    setTheme(isDarkTheme ? 'dark' : 'light');
-  }, [miniApp.themeParams]);
 
   useEffect(() => {
     if (!loading) {
