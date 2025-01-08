@@ -39,6 +39,7 @@ export const App = () => {
 
   useEffect(() => {
     const handleThemeChange = () => {
+      console.log('themeParams:', miniApp.themeParams);
       const themeParams = miniApp.themeParams;
       const isDarkTheme = themeParams?.is_dark;
       setTheme(isDarkTheme ? 'dark' : 'light');
