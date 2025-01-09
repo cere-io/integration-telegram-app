@@ -1,6 +1,4 @@
-import './mockEnv';
 import ReactDOM from 'react-dom/client';
-import { SDKProvider } from '@telegram-apps/sdk-react';
 import Reporting, { ErrorBoundary } from '@tg-app/reporting';
 import Analytics from '@tg-app/analytics';
 
@@ -8,6 +6,7 @@ import { App } from './App';
 import { APP_ENV, APP_VERSION } from './constants';
 import { CereWalletProvider } from './cere-wallet';
 import { EventsProvider } from './providers';
+import { WebAppProvider } from '@vkruglikov/react-telegram-web-app';
 
 Analytics.init();
 Reporting.init({
@@ -16,7 +15,11 @@ Reporting.init({
 });
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <SDKProvider acceptCustomStyles debug>
+  <WebAppProvider
+    options={{
+      smoothButtonsTransition: true,
+    }}
+  >
     <CereWalletProvider>
       <EventsProvider>
         <ErrorBoundary>
@@ -24,5 +27,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         </ErrorBoundary>
       </EventsProvider>
     </CereWalletProvider>
-  </SDKProvider>,
+  </WebAppProvider>,
 );

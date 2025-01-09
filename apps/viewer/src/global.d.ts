@@ -15,3 +15,15 @@ interface ImportMetaEnv {
   readonly VITE_TELEGRAM_BOT_URL: string;
   readonly VITE_TELEGRAM_APP_URL: `${string}://${string}`;
 }
+
+declare global {
+  interface Window {
+    Telegram: {
+      WebApp: {
+        initData: string;
+        initDataUnsafe?: Record<string, unknown>;
+        [key: string]: any;
+      };
+    };
+  }
+}

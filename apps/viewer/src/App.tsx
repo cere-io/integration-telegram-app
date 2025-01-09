@@ -1,20 +1,11 @@
 import './index.css';
 import { useEffect, useState } from 'react';
-import { Tabbar, MediaIcon, LeaderboardIcon, QuestsIcon } from '@tg-app/ui';
+import { AppRoot, Tabbar, MediaIcon, LeaderboardIcon, QuestsIcon } from '@tg-app/ui';
 import Reporting from '@tg-app/reporting';
-import {
-  bindMiniAppCSSVars,
-  useMiniApp,
-  useThemeParams,
-  useViewport,
-  bindThemeParamsCSSVars,
-  bindViewportCSSVars,
-  useInitData,
-} from '@telegram-apps/sdk-react';
+import { useInitData, useThemeParams } from '@vkruglikov/react-telegram-web-app';
 
 import { Leaderboard, Media, ActiveQuests, WelcomeScreen } from './screens';
 
-import { AppRoot } from '@telegram-apps/telegram-ui';
 import '@telegram-apps/telegram-ui/dist/styles.css';
 
 const tabs = [
@@ -41,24 +32,14 @@ export type ActiveTab = {
 };
 
 export const App = () => {
-  const miniApp = useMiniApp();
-  const themeParams = useThemeParams();
-  const viewport = useViewport();
-  const { user } = useInitData() || {};
+  const [initDataUnsafe] = useInitData() || {};
+  const [theme] = useThemeParams();
+  const user = initDataUnsafe?.user;
 
   const [activeTab, setActiveTab] = useState<ActiveTab>({ index: 0 });
   const [isWelcomeScreenVisible, setWelcomeScreenVisible] = useState(true);
 
   const Screen = tabs[activeTab.index].screen;
-
-  useEffect(() => {
-    bindMiniAppCSSVars(miniApp, themeParams);
-    bindThemeParamsCSSVars(themeParams);
-
-    if (viewport) {
-      bindViewportCSSVars(viewport);
-    }
-  }, [miniApp, themeParams, viewport]);
 
   useEffect(
     () => (!user ? Reporting.clearUser() : Reporting.setUser({ id: user.id.toString(), username: user.username })),
@@ -66,7 +47,7 @@ export const App = () => {
   );
 
   return (
-    <AppRoot appearance={miniApp.isDark ? 'dark' : 'light'} className="App-root" platform="ios" id="app-root">
+    <AppRoot appearance={theme} className="App-root" platform="ios" id="app-root">
       <div
         style={{
           display: 'flex',

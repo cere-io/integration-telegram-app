@@ -45,6 +45,8 @@ export {
   type PlaceholderProps,
   Snackbar,
   type SnackbarProps,
+  AppRoot,
+  type AppRootProps,
 } from '@telegram-apps/telegram-ui';
 
 export * from './MediaList';

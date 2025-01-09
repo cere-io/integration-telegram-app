@@ -8,8 +8,8 @@ import * as hbs from 'handlebars';
 import Reporting from '@tg-app/reporting';
 import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
 import { ActiveTab } from '~/App.tsx';
-import { useMiniApp } from '@telegram-apps/sdk-react';
 import { ClipboardCheck } from 'lucide-react';
+import { useThemeParams } from '@vkruglikov/react-telegram-web-app';
 
 hbs.registerHelper('json', (context) => JSON.stringify(context));
 
@@ -18,11 +18,11 @@ type LeaderboardProps = {
 };
 
 export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
-  const miniApp = useMiniApp();
   const [leaderboardHtml, setLeaderboardHtml] = useState<string>('');
   const [isLoading, setLoading] = useState(true);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
 
+  const [theme] = useThemeParams();
   const { startParam } = useStartParam();
   const eventSource = useEvents();
 
@@ -42,7 +42,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           timestamp: new Date().toISOString(),
           data: JSON.stringify({
             campaignId: startParam,
-            theme: miniApp.isDark ? 'dark' : 'light',
+            theme,
           }),
         };
         const parsedData = JSON.parse(data);
@@ -58,7 +58,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
     };
 
     fetchData();
-  }, [eventSource, miniApp.isDark, startParam]);
+  }, [eventSource, startParam, theme]);
 
   useEffect(() => {
     // eslint-disable-next-line prefer-const

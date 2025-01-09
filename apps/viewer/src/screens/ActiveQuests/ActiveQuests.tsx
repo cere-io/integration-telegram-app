@@ -7,7 +7,7 @@ import hbs from 'handlebars';
 import Reporting from '@tg-app/reporting';
 import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
 import { ActiveTab } from '~/App.tsx';
-import { useMiniApp } from '@telegram-apps/sdk-react';
+import { useThemeParams } from '@vkruglikov/react-telegram-web-app';
 
 hbs.registerHelper('json', (context) => JSON.stringify(context));
 
@@ -16,13 +16,13 @@ type ActiveQuestsProps = {
 };
 
 export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
-  const miniApp = useMiniApp();
-
   const [preparingData, setPreparingData] = useState<boolean>(true);
   const [loading, setLoading] = useState(true);
   const [questsHtml, setQuestsHtml] = useState<string>('');
   const eventSource = useEvents();
   const { startParam } = useStartParam();
+
+  const [theme] = useThemeParams();
 
   const appStartTime = useRef<number>(performance.now());
   const activityStartTime = useRef<number | null>(null);
@@ -73,7 +73,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
         timestamp: new Date().toISOString(),
         data: JSON.stringify({
           campaignId: startParam,
-          theme: miniApp.isDark ? 'dark' : 'light',
+          theme,
         }),
       };
 
@@ -87,7 +87,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     };
 
     getQuests();
-  }, [eventSource, miniApp.isDark, startParam]);
+  }, [eventSource, startParam, theme]);
 
   useEffect(() => {
     // eslint-disable-next-line prefer-const
