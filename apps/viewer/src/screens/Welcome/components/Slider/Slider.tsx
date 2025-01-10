@@ -1,25 +1,28 @@
 import { useEffect, useState } from 'react';
-import { ChevronRight, ChevronLeft, Play, Trophy, Gift } from 'lucide-react';
+import { ChevronRight, ChevronLeft } from 'lucide-react';
+import rewardsIcon from '../../icons/7265170.png';
+import expertInsights from '../../icons/Expert-Insights-Icon.webp';
+import nlp from '../../icons/nlp-natural-language-processing.png';
 import './style.css';
 
 const slides = [
   {
     id: 1,
-    icon: Play,
-    title: 'Discover Content',
-    description: 'Explore a world of captivating videos tailored just for you.',
-  },
-  {
-    id: 2,
-    icon: Trophy,
+    icon: rewardsIcon,
     title: 'Earn Rewards',
     description: 'Complete challenges and climb to the top of our leaderboard.',
   },
   {
+    id: 2,
+    icon: expertInsights,
+    title: 'Exclusive Expert Insights',
+    description: 'Get insider knowledge on the hottest projects and tech through expert-created explainers.',
+  },
+  {
     id: 3,
-    icon: Gift,
-    title: 'Unlock Perks',
-    description: 'Redeem your points for exclusive content and amazing prizes.',
+    icon: nlp,
+    title: 'Coming soon: AI NLP',
+    description: 'Intelligent rewards for positive community engagement and participation',
   },
 ];
 
@@ -56,7 +59,7 @@ export const Slider = () => {
             >
               <div className="content" style={{ padding: '10px' }}>
                 <span className="icon">
-                  <Icon />
+                  <img style={{ width: '30px', height: '30px' }} src={Icon} alt="" />
                 </span>
                 {slide.title}
                 <p className="description">{slide.description}</p>

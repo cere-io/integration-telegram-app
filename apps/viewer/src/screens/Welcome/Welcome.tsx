@@ -1,4 +1,4 @@
-import { CereIcon, Checkbox, Text, Button } from '@tg-app/ui';
+import { Checkbox, Text, Button } from '@tg-app/ui';
 import './style.css';
 import { Slider } from './components';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -47,7 +47,7 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
         className="cta-button"
       >
         <Text className="cta-text">
-          Start Exploring
+          Start Earning
           <ChevronRight />
         </Text>
       </Button>
@@ -58,9 +58,12 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
     <div className="container">
       <div className="content-wrapper">
         <div className="top-container">
-          <CereIcon />
-          <h1 className="cere-title">Cere Media</h1>
-          <p className="description">Your entertainment journey begins</p>
+          <h1 className="cere-title" style={{ marginBottom: '60px' }}>
+            Sit back, Enjoy, and Earn!
+          </h1>
+          <p className="description" style={{ textAlign: 'center' }}>
+            Watch exclusive project explainers for unique insights and get rewarded in top-project tokens!
+          </p>
           <Slider />
         </div>
         <div className="bottom-container">

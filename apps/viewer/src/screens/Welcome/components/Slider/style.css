@@ -26,6 +26,7 @@
     opacity: 0;
     transform: translateY(20px);
     transition: opacity 0.8s ease, transform 0.8s ease;
+    font-size: 1.15rem;
 }
 
 .slide.active .content {
