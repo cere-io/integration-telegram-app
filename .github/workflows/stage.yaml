@@ -18,7 +18,7 @@ jobs:
       install_packages_command: 'cp .env.stage .env; npm ci'
       build_command: 'npm run build'
       path_to_static_files_to_upload: 'dist'
-      aws_account_id: ${{ vars.STG_CORE_AWS_ACCOUNT_ID }}
-      s3_bucket_name: 'telegram-apps-stg.core-stage.aws.cere.io'
+      aws_account_id: ${{ vars.STG_NETWORK_AWS_ACCOUNT_ID }}
+      s3_bucket_name: 'telegram-miniapps-stage.cere.io'
     secrets:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN_READ }}
