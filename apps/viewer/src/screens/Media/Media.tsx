@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MediaList, MediaListItem, Title, Spinner } from '@tg-app/ui';
+import { MediaList, MediaListItem, Title, Spinner, Text } from '@tg-app/ui';
 import Reporting from '@tg-app/reporting';
 import { useEvents, useStartParam } from '../../hooks';
 import { VideoPlayer } from '../../components';
@@ -124,6 +124,10 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
       <Title weight="2" style={{ marginLeft: 16, marginTop: 16 }}>
         Library
       </Title>
+      <Text Component="div" style={{ margin: '16px 16px 0 16px', color: 'rgb(113, 118, 132)' }}>
+        Explore our growing collection of community videos and earn rewards for watching! Each video watched brings you
+        closer to unlocking exclusive prizes!
+      </Text>
 
       {preparingData ? (
         <div
