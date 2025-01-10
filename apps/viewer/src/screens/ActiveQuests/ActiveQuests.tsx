@@ -1,4 +1,4 @@
-import { Title, Spinner } from '@tg-app/ui';
+import { Spinner } from '@tg-app/ui';
 import { useEvents, useStartParam } from '../../hooks';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityEvent } from '@cere-activity-sdk/events';
@@ -148,9 +148,6 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <Title weight="2" style={{ marginLeft: 16, marginTop: 16 }}>
-        Yours weekly tasks
-      </Title>
       {preparingData ? (
         <div
           style={{
@@ -168,7 +165,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
           srcDoc={questsHtml}
           style={{
             width: '100%',
-            height: 'calc(100vh - 110px)',
+            height: 'calc(100vh - 74px)',
             border: 'none',
           }}
           title="Active Quests"
