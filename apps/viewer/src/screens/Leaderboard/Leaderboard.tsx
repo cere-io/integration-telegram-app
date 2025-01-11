@@ -42,6 +42,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           timestamp: new Date().toISOString(),
           data: JSON.stringify({
             campaignId: startParam,
+            campaign_id: startParam,
             theme,
           }),
         };

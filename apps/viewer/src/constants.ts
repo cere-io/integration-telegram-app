@@ -14,3 +14,7 @@ export const EVENT_DISPATCH_URL = import.meta.env.VITE_EVENT_DISPATCH_URL;
 export const EVENT_LISTEN_URL = import.meta.env.VITE_EVENT_LISTEN_URL;
 
 export const ENGAGEMENT_TIMEOUT_DURATION = 3000;
+
+export const DATA_SERVICE_PUBLIC_KEY = import.meta.env.VITE_DATA_SERVICE_PUBLIC_KEY;
+export const APP_PUBLIC_KEY = import.meta.env.VITE_APP_PUBLIC_KEY;
+export const AGENT_SERVICE_REGISTRY_URL = import.meta.env.VITE_AGENT_SERVICE_REGISTRY_URL;
