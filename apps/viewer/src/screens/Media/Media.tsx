@@ -140,6 +140,7 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
           }}
         >
           <Spinner size="m" />
+          This is taking a bit longer than expected
         </div>
       ) : (
         <MediaList>

@@ -1,4 +1,4 @@
-import { Spinner } from '@tg-app/ui';
+import { Loader } from '@tg-app/ui';
 import { useEvents, useStartParam } from '../../hooks';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityEvent } from '@cere-activity-sdk/events';
@@ -149,17 +149,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {preparingData ? (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flex: 1,
-          }}
-        >
-          <Spinner size="m" />
-        </div>
+        <Loader size="m" />
       ) : (
         <iframe
           srcDoc={questsHtml}
