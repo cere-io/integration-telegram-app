@@ -31,6 +31,7 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
         timestamp: new Date().toISOString(),
         data: JSON.stringify({
           campaignId: startParam,
+          campaign_id: startParam,
         }),
       };
 
