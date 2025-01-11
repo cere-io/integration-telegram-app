@@ -23,7 +23,7 @@ export class AgentServiceRegistry {
     return response;
   }
 
-  async saveEdek(edek: Edek, authorization: string): Promise<Edek> {
+  async saveEdek(edek: Edek, authorization: string): Promise<Edek | undefined> {
     const response = await this.request('/access-registry/edek', {
       method: 'POST',
       headers: {
@@ -37,7 +37,7 @@ export class AgentServiceRegistry {
     return responseBody.data;
   }
 
-  async getEdek(userPubKey: string, dataServicePubKey: string, authorization: string): Promise<Edek> {
+  async getEdek(userPubKey: string, dataServicePubKey: string, authorization: string): Promise<Edek | undefined> {
     const response = await this.request(
       `/access-registry/edek?userPubKey=${userPubKey}&dataServicePubKey=${dataServicePubKey}`,
       {
