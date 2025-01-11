@@ -1,0 +1,12 @@
+{
+  "name": "@tg-app/agent-service-registry",
+  "version": "0.0.0",
+  "private": true,
+  "sideEffects": false,
+  "types": "./src",
+  "exports": {
+    "import": "./src"
+  },
+  "dependencies": {},
+  "scripts": {}
+}
