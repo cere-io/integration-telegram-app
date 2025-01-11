@@ -41,7 +41,7 @@ export const EventsProvider: FC<EventsProviderProps> = ({ children }) => {
         await cipher.isReady();
 
         const authorization = await signer.sign('authorization');
-        const userPubKey = signer.address;
+        const userPubKey = signer.publicKey;
         const dataServiceEdek = await agentServiceRegistry.getEdek(userPubKey, DATA_SERVICE_PUBLIC_KEY, authorization);
         if (!dataServiceEdek) {
           console.log('Data service EDEK not found');
