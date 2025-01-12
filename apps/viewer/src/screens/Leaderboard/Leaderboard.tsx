@@ -1,5 +1,5 @@
 import './Leaderboard.css';
-import { Snackbar, Spinner, truncateText } from '@tg-app/ui';
+import { Snackbar, Loader, truncateText } from '@tg-app/ui';
 import { useEffect, useRef, useState } from 'react';
 import { useStartParam, useEvents } from '../../hooks';
 import { ActivityEvent } from '@cere-activity-sdk/events';
@@ -147,17 +147,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   return (
     <div className="leaderboard" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {isLoading ? (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flex: 1,
-          }}
-        >
-          <Spinner size="m" />
-        </div>
+        <Loader size="m" />
       ) : (
         <iframe
           srcDoc={leaderboardHtml}

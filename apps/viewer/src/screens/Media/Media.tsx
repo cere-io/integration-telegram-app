@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MediaList, MediaListItem, Title, Spinner, Text } from '@tg-app/ui';
+import { MediaList, MediaListItem, Title, Text, Loader } from '@tg-app/ui';
 import Reporting from '@tg-app/reporting';
 import { useEvents, useStartParam } from '../../hooks';
 import { VideoPlayer } from '../../components';
@@ -130,18 +130,7 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
       </Text>
 
       {preparingData ? (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: 'calc(100vh - 60px)',
-          }}
-        >
-          <Spinner size="m" />
-          This is taking a bit longer than expected
-        </div>
+        <Loader size="m" />
       ) : (
         <MediaList>
           {sortedVideos.map((video, index) => (
