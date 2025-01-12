@@ -130,7 +130,7 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
       </Text>
 
       {preparingData ? (
-        <Loader size="m" />
+        <Loader size="m" style={{ marginTop: '50%' }} />
       ) : (
         <MediaList>
           {sortedVideos.map((video, index) => (
