@@ -44,9 +44,9 @@ export const CereWalletProvider = ({ children }: PropsWithChildren<NonNullable<u
                   ed25519_signRaw: {
                     title: 'Activity signing activity',
                     description: 'Allow the application to sign your activity before storing it into your data wallet.',
-                  }
+                  },
                 },
-              }
+              },
             },
       )
       .then(() => {
