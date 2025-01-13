@@ -52,6 +52,7 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
       if (!eventSource) return;
       const activityEventPayload = {
         campaignId: startParam,
+        campaign_id: startParam,
         videoId: video?.videoUrl,
         ...payload,
       };

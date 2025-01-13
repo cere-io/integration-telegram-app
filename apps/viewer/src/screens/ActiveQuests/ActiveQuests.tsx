@@ -73,6 +73,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
         timestamp: new Date().toISOString(),
         data: JSON.stringify({
           campaignId: startParam,
+          campaign_id: startParam,
           theme,
         }),
       };
