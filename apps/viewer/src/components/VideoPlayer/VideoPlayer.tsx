@@ -73,7 +73,7 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
         {url && (
           <CerePlayer
             hlsEnabled={false}
-            src={video!.videoUrl}
+            src={url}
             type="video/mp4"
             loadingComponent={<div />}
             onFullScreenChange={(fullScreen) => {
