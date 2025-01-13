@@ -5,7 +5,7 @@ export const useStartParam = () => {
   const [initDataUnsafe] = useInitData() || {};
   let startParam = initDataUnsafe?.start_param;
   if (!startParam) {
-    startParam = new URLSearchParams(window.location.search).get('campaignId');
+    startParam = new URLSearchParams(window.location.search).get('campaignId') || DEFAULT_START_PARAM;
   }
-  return { startParam: startParam || DEFAULT_START_PARAM };
+  return { startParam: startParam };
 };
