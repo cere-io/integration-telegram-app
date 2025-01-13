@@ -37,16 +37,8 @@ export const CereWalletProvider = ({ children }: PropsWithChildren<NonNullable<u
               authMethod: { type: 'telegram-mini-app', token: `${TELEGRAM_BOT_ID}:${initDataRaw}` },
             }
           : {
-              appId: 'qa',
+              appId: 'viewer-app',
               env: APP_ENV as WalletEnvironment,
-              connectOptions: {
-                permissions: {
-                  ed25519_signRaw: {
-                    title: 'Activity signing activity',
-                    description: 'Allow the application to sign your activity before storing it into your data wallet.',
-                  },
-                },
-              },
             },
       )
       .then(() => {
