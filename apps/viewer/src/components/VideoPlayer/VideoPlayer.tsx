@@ -2,7 +2,7 @@ import { Card, Modal, ModalProps } from '@tg-app/ui';
 import { VideoPlayer as CerePlayer } from '@cere/media-sdk-react';
 
 import './VideoPlayer.css';
-import { useEvents, useStartParam } from '../../hooks';
+import { useEvents, useStartParam, useVideoTimeTracking } from '../../hooks';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { useCallback } from 'react';
 import { Video } from '../../types';
@@ -65,6 +65,14 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
 
   const videoRewardPoints = video?.points || 0;
 
+  const onThresholdReached = () => {
+    handleSendEvent('VIDEO_WATCHED', {
+      ...(videoRewardPoints && { rewardPoints: videoRewardPoints, type: 'video' }),
+    });
+  };
+
+  const handleTimeUpdate = useVideoTimeTracking(onThresholdReached, 0.8);
+
   return (
     <Modal open={open && !!video} onOpenChange={(open) => !open && onClose?.()}>
       <Modal.Header>Media Player</Modal.Header>
@@ -89,14 +97,7 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
               autoPlay: true,
               style: `width: ${width}px; height: ${height}px;` as any,
             }}
-            onPlay={() => handleSendEvent('VIDEO_PLAY')}
-            onPause={() => handleSendEvent('VIDEO_PAUSE')}
-            onSeek={(currentTime) => handleSendEvent('VIDEO_SEEK', { currentTime })}
-            onEnd={() =>
-              handleSendEvent('VIDEO_ENDED', {
-                ...(videoRewardPoints && { rewardPoints: videoRewardPoints, type: 'video' }),
-              })
-            }
+            onTimeUpdate={handleTimeUpdate}
           />
         )}
 
