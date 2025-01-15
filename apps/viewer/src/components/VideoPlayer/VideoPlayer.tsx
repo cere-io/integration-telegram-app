@@ -63,12 +63,8 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
     [eventSource, startParam, video?.videoUrl],
   );
 
-  const videoRewardPoints = video?.points || 0;
-
   const onThresholdReached = () => {
-    handleSendEvent('VIDEO_WATCHED', {
-      ...(videoRewardPoints && { rewardPoints: videoRewardPoints, type: 'video' }),
-    });
+    handleSendEvent('VIDEO_WATCHED');
   };
 
   const handleTimeUpdate = useVideoTimeTracking(onThresholdReached, 0.8);
