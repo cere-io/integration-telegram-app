@@ -94,6 +94,7 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
               style: `width: ${width}px; height: ${height}px;` as any,
             }}
             onTimeUpdate={handleTimeUpdate}
+            onPlay={() => handleSendEvent('VIDEO_PLAY')}
           />
         )}
 
