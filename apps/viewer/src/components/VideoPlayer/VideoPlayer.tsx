@@ -7,7 +7,7 @@ import { ActivityEvent } from '@cere-activity-sdk/events';
 import { useCallback } from 'react';
 import { Video } from '../../types';
 import { useWebApp, useExpand } from '@vkruglikov/react-telegram-web-app';
-import { VIDEO_THRESHOLD } from '~/constants.ts';
+import { VIDEO_THRESHOLD } from '../../constants.ts';
 
 export type VideoPlayerProps = Pick<ModalProps, 'open'> & {
   video?: Video;
