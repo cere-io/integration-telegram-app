@@ -2,12 +2,12 @@ import { Card, Modal, ModalProps } from '@tg-app/ui';
 import { VideoPlayer as CerePlayer } from '@cere/media-sdk-react';
 
 import './VideoPlayer.css';
-import { useEvents, useStartParam, useVideoTimeTracking } from '../../hooks';
+import { SegmentEvent, useEvents, useStartParam, useVideoSegmentTracker } from '../../hooks';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { useCallback } from 'react';
 import { Video } from '../../types';
 import { useWebApp, useExpand } from '@vkruglikov/react-telegram-web-app';
-import { VIDEO_THRESHOLD } from '../../constants.ts';
+import { VIDEO_SEGMENT_LENGTH } from '../../constants.ts';
 
 export type VideoPlayerProps = Pick<ModalProps, 'open'> & {
   video?: Video;
@@ -34,7 +34,6 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
 
   const eventSource = useEvents();
   const { startParam } = useStartParam();
-
   /**
    * TODO: Properly detect the video aspect ratio
    * TODO: Apply aspect ratio using CSS
@@ -64,11 +63,23 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
     [eventSource, startParam, video?.videoUrl],
   );
 
-  const onThresholdReached = () => {
-    handleSendEvent('VIDEO_WATCHED');
-  };
+  const onSegmentWatched = useCallback(
+    (event: SegmentEvent) => {
+      handleSendEvent('SEGMENT_WATCHED', event);
+    },
+    [handleSendEvent],
+  );
 
-  const handleTimeUpdate = useVideoTimeTracking(onThresholdReached, VIDEO_THRESHOLD);
+  const trackSegment = useVideoSegmentTracker({
+    videoUrl: url!,
+    segmentLength: VIDEO_SEGMENT_LENGTH,
+    onSegmentWatched,
+  });
+
+  const handleTimeUpdate = (currentTime: number, duration: number) => {
+    console.log('currentTime', currentTime);
+    trackSegment(currentTime, duration || 0);
+  };
 
   return (
     <Modal open={open && !!video} onOpenChange={(open) => !open && onClose?.()}>
