@@ -12,19 +12,6 @@ interface UseVideoSegmentTrackerProps {
   onSegmentWatched: (eventData: SegmentEvent) => void;
 }
 
-/**
- * Hook for tracking video playback in segments.
- *
- * @param videoUrl - The URL of the video being tracked.
- * @param segmentLength - The length of each segment in seconds.
- * @param onSegmentWatched - Function that is called when a new segment is watched.
- *
- * @returns A function to be called on video time updates.
- * This function accepts:
- * - currentTime (the current playback time),
- * - videoLength (the total video length).
- */
-
 export const useVideoSegmentTracker = ({ videoUrl, segmentLength, onSegmentWatched }: UseVideoSegmentTrackerProps) => {
   const watchedSegments = useRef<Set<number>>(new Set());
   const previousSegmentId = useRef<number | null>(null);
@@ -35,9 +22,10 @@ export const useVideoSegmentTracker = ({ videoUrl, segmentLength, onSegmentWatch
 
       const currentSegmentId = Math.floor(currentTime / segmentLength);
       const totalSegments = Math.ceil(videoLength / segmentLength);
+      const lastSegmentEndTime = (totalSegments - 1) * segmentLength;
 
-      if (currentSegmentId === 0 && currentTime > 0 && !watchedSegments.current.has(currentSegmentId)) {
-        console.log('First segment watched');
+      if (currentSegmentId === 0 && !watchedSegments.current.has(currentSegmentId)) {
+        console.log('First segment watched'); // @TODO remove log after testing
         watchedSegments.current.add(currentSegmentId);
 
         onSegmentWatched({
@@ -47,8 +35,10 @@ export const useVideoSegmentTracker = ({ videoUrl, segmentLength, onSegmentWatch
         });
 
         previousSegmentId.current = currentSegmentId;
-      } else {
-        if (!watchedSegments.current.has(currentSegmentId) && previousSegmentId.current === currentSegmentId - 1) {
+      } else if (!watchedSegments.current.has(currentSegmentId)) {
+        if (previousSegmentId.current === currentSegmentId - 1) {
+          console.log(`Segment ${currentSegmentId} watched`); // @TODO remove log after testing
+
           watchedSegments.current.add(currentSegmentId);
 
           onSegmentWatched({
@@ -62,15 +52,18 @@ export const useVideoSegmentTracker = ({ videoUrl, segmentLength, onSegmentWatch
       }
 
       if (currentSegmentId === totalSegments - 1 && !watchedSegments.current.has(currentSegmentId)) {
-        watchedSegments.current.add(currentSegmentId);
+        if (currentTime >= lastSegmentEndTime) {
+          console.log('Last segment watched'); // @TODO remove log after testing
+          watchedSegments.current.add(currentSegmentId);
 
-        onSegmentWatched({
-          segmentId: currentSegmentId,
-          segmentLength,
-          videoLength,
-        });
+          onSegmentWatched({
+            segmentId: currentSegmentId,
+            segmentLength,
+            videoLength,
+          });
 
-        previousSegmentId.current = currentSegmentId;
+          previousSegmentId.current = currentSegmentId;
+        }
       }
     },
     [videoUrl, segmentLength, onSegmentWatched],
