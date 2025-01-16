@@ -58,6 +58,8 @@ export const App = () => {
         const { engagement, integrationScriptResults }: EngagementEventData = event.payload;
         const { widget_template } = engagement;
 
+        (integrationScriptResults as Array<any>)[0].duration = 10000;
+
         const compiledHTML = hbs.compile(widget_template.params || '')({
           data: integrationScriptResults,
         });
@@ -86,7 +88,8 @@ export const App = () => {
             srcDoc={notificationHtml}
             style={{
               zIndex: '1000',
-              position: 'absolute',
+              position: 'fixed',
+              right: 0,
               width: '100%',
               border: 'none',
             }}
