@@ -10,7 +10,6 @@ interface UseVideoSegmentTrackerProps {
   videoUrl: string;
   segmentLength: number;
   onSegmentWatched: (eventData: SegmentEvent) => void;
-  startSegmentId?: number;
 }
 
 /**
@@ -19,7 +18,6 @@ interface UseVideoSegmentTrackerProps {
  * @param videoUrl - The URL of the video being tracked.
  * @param segmentLength - The length of each segment in seconds.
  * @param onSegmentWatched - Function that is called when a new segment is watched.
- * @param startSegmentId - Optionally specify the starting segmentId from which to begin segment tracking.
  *
  * @returns A function to be called on video time updates.
  * This function accepts:
@@ -27,12 +25,7 @@ interface UseVideoSegmentTrackerProps {
  * - videoLength (the total video length).
  */
 
-export const useVideoSegmentTracker = ({
-  videoUrl,
-  segmentLength,
-  onSegmentWatched,
-  startSegmentId = 0,
-}: UseVideoSegmentTrackerProps) => {
+export const useVideoSegmentTracker = ({ videoUrl, segmentLength, onSegmentWatched }: UseVideoSegmentTrackerProps) => {
   const watchedSegments = useRef<Set<number>>(new Set());
   const previousSegmentId = useRef<number | null>(null);
 
@@ -40,10 +33,11 @@ export const useVideoSegmentTracker = ({
     (currentTime: number, videoLength: number) => {
       if (!videoUrl) return;
 
-      const currentSegmentId = Math.floor((currentTime + startSegmentId * segmentLength) / segmentLength);
+      const currentSegmentId = Math.floor(currentTime / segmentLength);
       const totalSegments = Math.ceil(videoLength / segmentLength);
 
-      if (currentSegmentId === startSegmentId && currentTime > 0 && !watchedSegments.current.has(currentSegmentId)) {
+      if (currentSegmentId === 0 && currentTime > 0 && !watchedSegments.current.has(currentSegmentId)) {
+        console.log('First segment watched');
         watchedSegments.current.add(currentSegmentId);
 
         onSegmentWatched({
@@ -79,6 +73,6 @@ export const useVideoSegmentTracker = ({
         previousSegmentId.current = currentSegmentId;
       }
     },
-    [videoUrl, segmentLength, onSegmentWatched, startSegmentId],
+    [videoUrl, segmentLength, onSegmentWatched],
   );
 };
