@@ -4,9 +4,11 @@ import { AppRoot, Tabbar, MediaIcon, LeaderboardIcon, QuestsIcon } from '@tg-app
 import Reporting from '@tg-app/reporting';
 import { useInitData, useThemeParams } from '@vkruglikov/react-telegram-web-app';
 
-import { Leaderboard, Media, ActiveQuests, WelcomeScreen } from './screens';
+import { Leaderboard, Media, ActiveQuests, WelcomeScreen, EngagementEventData } from './screens';
 
 import '@telegram-apps/telegram-ui/dist/styles.css';
+import { useEvents } from './hooks';
+import hbs from 'handlebars';
 
 const tabs = [
   {
@@ -34,10 +36,12 @@ export type ActiveTab = {
 export const App = () => {
   const [initDataUnsafe] = useInitData() || {};
   const [theme] = useThemeParams();
+  const eventSource = useEvents();
   const user = initDataUnsafe?.user;
 
   const [activeTab, setActiveTab] = useState<ActiveTab>({ index: 0 });
   const [isWelcomeScreenVisible, setWelcomeScreenVisible] = useState(true);
+  const [notificationHtml, setNotificationHtml] = useState<string>('');
 
   const Screen = tabs[activeTab.index].screen;
 
@@ -45,6 +49,30 @@ export const App = () => {
     () => (!user ? Reporting.clearUser() : Reporting.setUser({ id: user.id.toString(), username: user.username })),
     [user],
   );
+
+  useEffect(() => {
+    if (!eventSource) return;
+
+    const handleNotificationEvent = (event: any) => {
+      if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'VIDEO_WATCHED') {
+        const { engagement, integrationScriptResults }: EngagementEventData = event.payload;
+        const { widget_template } = engagement;
+
+        (integrationScriptResults as Array<any>)[0].duration = 10000;
+
+        const compiledHTML = hbs.compile(widget_template.params || '')({
+          data: integrationScriptResults,
+        });
+
+        setNotificationHtml(compiledHTML);
+      }
+    };
+    eventSource.addEventListener('engagement', handleNotificationEvent);
+
+    return () => {
+      eventSource.removeEventListener('engagement', handleNotificationEvent);
+    };
+  }, [eventSource]);
 
   return (
     <AppRoot appearance={theme} className="App-root" platform="ios" id="app-root">
@@ -55,6 +83,19 @@ export const App = () => {
           height: '100vh',
         }}
       >
+        {notificationHtml && (
+          <iframe
+            srcDoc={notificationHtml}
+            style={{
+              zIndex: '1000',
+              position: 'fixed',
+              right: 0,
+              width: '100%',
+              border: 'none',
+            }}
+            title="Notification"
+          />
+        )}
         {isWelcomeScreenVisible ? (
           <WelcomeScreen onStart={() => setWelcomeScreenVisible(false)} />
         ) : (

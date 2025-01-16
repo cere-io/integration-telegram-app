@@ -7,6 +7,7 @@ import { ActivityEvent } from '@cere-activity-sdk/events';
 import { useCallback } from 'react';
 import { Video } from '../../types';
 import { useWebApp, useExpand } from '@vkruglikov/react-telegram-web-app';
+import { VIDEO_THRESHOLD } from '../../constants.ts';
 
 export type VideoPlayerProps = Pick<ModalProps, 'open'> & {
   video?: Video;
@@ -67,7 +68,7 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
     handleSendEvent('VIDEO_WATCHED');
   };
 
-  const handleTimeUpdate = useVideoTimeTracking(onThresholdReached, 0.8);
+  const handleTimeUpdate = useVideoTimeTracking(onThresholdReached, VIDEO_THRESHOLD);
 
   return (
     <Modal open={open && !!video} onOpenChange={(open) => !open && onClose?.()}>

@@ -83,8 +83,13 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
         setPreparingData(false);
       }
 
-      if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'VIDEO_ENDED') {
-        console.log('Get_Notification');
+      if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'VIDEO_WATCHED') {
+        const { integrationScriptResults }: EngagementEventData = event.payload;
+        const watchedVideoUrl = (integrationScriptResults as any)[0].videoUrl;
+
+        setVideos((prevVideos) =>
+          prevVideos.map((video) => (video.videoUrl === watchedVideoUrl ? { ...video, completed: true } : video)),
+        );
       }
     };
 
@@ -109,7 +114,7 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
       clearTimeout(engagementTimeout);
       eventSource.removeEventListener('engagement', handleEngagementEvent);
     };
-  }, [eventSource]);
+  }, [eventSource, videos]);
 
   useEffect(() => {
     if (videoUrl && videos.length > 0) {
