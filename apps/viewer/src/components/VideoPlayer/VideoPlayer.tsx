@@ -77,7 +77,6 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
   });
 
   const handleTimeUpdate = (currentTime: number, duration: number) => {
-    console.log('currentTime', currentTime);
     trackSegment(currentTime, duration || 0);
   };
 
