@@ -4,7 +4,7 @@ import { VideoPlayer as CerePlayer } from '@cere/media-sdk-react';
 import './VideoPlayer.css';
 import { SegmentEvent, useEvents, useStartParam, useVideoSegmentTracker } from '../../hooks';
 import { ActivityEvent } from '@cere-activity-sdk/events';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Video } from '../../types';
 import { useWebApp, useExpand } from '@vkruglikov/react-telegram-web-app';
 import { VIDEO_SEGMENT_LENGTH } from '../../constants.ts';
@@ -29,6 +29,7 @@ const createUrl = (video?: Video) => {
 export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) => {
   const miniApp = useWebApp();
   const [isExpanded, expand] = useExpand();
+  const [currentVideoTime, setCurrentVideoTime] = useState<number>(0);
 
   const width = miniApp.viewportWidth || window.innerWidth;
 
@@ -40,6 +41,16 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
    */
   const height = (width / 16) * 9;
   const url = createUrl(video);
+
+  const getInitialTime = useCallback(() => {
+    if (!video?.lastWatchedSegment || !VIDEO_SEGMENT_LENGTH) return 0;
+    return video.lastWatchedSegment * VIDEO_SEGMENT_LENGTH;
+  }, [video?.lastWatchedSegment]);
+
+  useEffect(() => {
+    const initialTime = getInitialTime();
+    setCurrentVideoTime(initialTime);
+  }, [getInitialTime]);
 
   const handleTelegramFullscreen = (isFullscreen: boolean) => {
     if (!isExpanded && isFullscreen) {
@@ -91,6 +102,7 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
             src={url}
             type="video/mp4"
             loadingComponent={<div />}
+            currentTime={currentVideoTime}
             onFullScreenChange={(fullScreen) => {
               console.log('onFullScreenChange', fullScreen);
               handleTelegramFullscreen(fullScreen);
@@ -106,6 +118,7 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
             }}
             onTimeUpdate={handleTimeUpdate}
             onPlay={() => handleSendEvent('VIDEO_PLAY')}
+            onEnd={() => handleSendEvent('VIDEO_ENDED')}
           />
         )}
 

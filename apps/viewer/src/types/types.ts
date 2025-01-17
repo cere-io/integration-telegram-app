@@ -29,6 +29,7 @@ export type Video = {
   thumbnailUrl: string | null;
   points: number;
   completed?: boolean;
+  lastWatchedSegment?: number;
 };
 
 export type BaseTask = {
