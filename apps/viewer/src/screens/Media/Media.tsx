@@ -83,7 +83,10 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
         setPreparingData(false);
       }
 
-      if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'VIDEO_WATCHED') {
+      if (
+        (event?.payload && event.payload.integrationScriptResults[0].eventType === 'SEGMENT_WATCHED') ||
+        (event?.payload && event.payload.integrationScriptResults[0].eventType === 'X_REPOST')
+      ) {
         const { integrationScriptResults }: EngagementEventData = event.payload;
         const watchedVideoUrl = (integrationScriptResults as any)[0].videoUrl;
 
