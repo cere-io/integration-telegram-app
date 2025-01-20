@@ -15,7 +15,7 @@
     "@cere-activity-sdk/signers": "^0.1.5",
     "@cere-activity-sdk/ciphers": "^0.1.5",
     "@cere/embed-wallet": "^0.23.2",
-    "@cere/media-sdk-react": "^1.6.0-rc.15",
+    "@cere/media-sdk-react": "^1.6.0-rc.16",
     "@vkruglikov/react-telegram-web-app": "^2.1.9",
     "handlebars": "^4.7.8",
     "lucide-react": "^0.468.0"
