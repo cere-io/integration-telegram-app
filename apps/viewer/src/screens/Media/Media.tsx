@@ -88,10 +88,10 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
         (event?.payload && event.payload.integrationScriptResults[0].eventType === 'X_REPOST')
       ) {
         const { integrationScriptResults }: EngagementEventData = event.payload;
-        const watchedVideoUrl = (integrationScriptResults as any)[0].videoUrl;
+        const questId = (integrationScriptResults as any)[0].questId;
 
         setVideos((prevVideos) =>
-          prevVideos.map((video) => (video.videoUrl === watchedVideoUrl ? { ...video, completed: true } : video)),
+          prevVideos.map((video) => (video.videoUrl === questId ? { ...video, completed: true } : video)),
         );
       }
     };
