@@ -78,6 +78,7 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
   const onSegmentWatched = useCallback(
     (event: SegmentEvent) => {
       handleSendEvent('SEGMENT_WATCHED', event);
+      Analytics.trackEvent(AnalyticsId.videoSegmentWatched, event);
     },
     [handleSendEvent],
   );
@@ -118,8 +119,6 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
               style: `width: ${width}px; height: ${height}px;` as any,
             }}
             onTimeUpdate={handleTimeUpdate}
-            onPlay={() => handleSendEvent('VIDEO_PLAY')}
-            onEnd={() => handleSendEvent('VIDEO_ENDED')}
             onPlay={() => {
               handleSendEvent('VIDEO_PLAY');
               Analytics.trackEvent(AnalyticsId.videoPlay, {
