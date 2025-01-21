@@ -147,6 +147,39 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     };
   }, [eventSource]);
 
+  useEffect(() => {
+    const handleIframeClick = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data.type === 'SOCIAL_QUEST_CLICKED') {
+        if (!eventSource) return;
+
+        const { event_type, timestamp, data } = {
+          event_type: 'X_REPOST_STARTED',
+          timestamp: new Date().toISOString(),
+          data: JSON.stringify({
+            campaignId: campaignId,
+            campaign_id: campaignId,
+            tweet_id_original: event.data.tweetId,
+            theme,
+          }),
+        };
+        const parsedData = JSON.parse(data);
+
+        const activityEvent = new ActivityEvent(event_type, {
+          ...parsedData,
+          timestamp,
+        });
+
+        void eventSource.dispatchEvent(activityEvent);
+      }
+    };
+    window.addEventListener('message', handleIframeClick);
+
+    return () => {
+      window.removeEventListener('message', handleIframeClick);
+    };
+  }, [eventSource, startParam, theme]);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {preparingData ? (
