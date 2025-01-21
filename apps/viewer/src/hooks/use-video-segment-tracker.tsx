@@ -14,56 +14,44 @@ interface UseVideoSegmentTrackerProps {
 
 export const useVideoSegmentTracker = ({ videoUrl, segmentLength, onSegmentWatched }: UseVideoSegmentTrackerProps) => {
   const watchedSegments = useRef<Set<number>>(new Set());
-  const previousSegmentId = useRef<number | null>(null);
+  const videoEnded = useRef(false); // Флаг для отслеживания завершения видео
 
   return useCallback(
     (currentTime: number, videoLength: number) => {
-      if (!videoUrl) return;
+      if (!videoUrl || videoEnded.current) return;
 
       const currentSegmentId = Math.floor(currentTime / segmentLength);
       const totalSegments = Math.ceil(videoLength / segmentLength);
+
+      if (currentTime >= videoLength) {
+        console.log('Video ended, stopping segment tracking.');
+        videoEnded.current = true;
+        return;
+      }
+
+      if (watchedSegments.current.has(currentSegmentId)) return;
+
+      console.log(`Segment ${currentSegmentId} watched`);
+      watchedSegments.current.add(currentSegmentId);
+      onSegmentWatched({
+        segmentId: currentSegmentId,
+        segmentLength,
+        videoLength,
+      });
+
       const lastSegmentEndTime = (totalSegments - 1) * segmentLength;
-
-      if (currentSegmentId === 0 && !watchedSegments.current.has(currentSegmentId)) {
-        console.log('First segment watched'); // @TODO remove log after testing
+      if (
+        currentSegmentId === totalSegments - 1 &&
+        currentTime >= lastSegmentEndTime &&
+        !watchedSegments.current.has(currentSegmentId)
+      ) {
+        console.log('Last segment watched');
         watchedSegments.current.add(currentSegmentId);
-
         onSegmentWatched({
           segmentId: currentSegmentId,
           segmentLength,
           videoLength,
         });
-
-        previousSegmentId.current = currentSegmentId;
-      } else if (!watchedSegments.current.has(currentSegmentId)) {
-        if (previousSegmentId.current === currentSegmentId - 1) {
-          console.log(`Segment ${currentSegmentId} watched`); // @TODO remove log after testing
-
-          watchedSegments.current.add(currentSegmentId);
-
-          onSegmentWatched({
-            segmentId: currentSegmentId,
-            segmentLength,
-            videoLength,
-          });
-
-          previousSegmentId.current = currentSegmentId;
-        }
-      }
-
-      if (currentSegmentId === totalSegments - 1 && !watchedSegments.current.has(currentSegmentId)) {
-        if (currentTime >= lastSegmentEndTime) {
-          console.log('Last segment watched'); // @TODO remove log after testing
-          watchedSegments.current.add(currentSegmentId);
-
-          onSegmentWatched({
-            segmentId: currentSegmentId,
-            segmentLength,
-            videoLength,
-          });
-
-          previousSegmentId.current = currentSegmentId;
-        }
       }
     },
     [videoUrl, segmentLength, onSegmentWatched],
