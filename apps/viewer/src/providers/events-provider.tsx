@@ -26,6 +26,39 @@ export const EventsProvider: FC<EventsProviderProps> = ({ children }) => {
   const cereWallet = useCereWallet();
   const agentServiceRegistry = useAgentServiceRegistry();
 
+  async function shareEdek(signer: CereWalletSigner) {
+    const authorization = await signer.sign('authorization');
+    const userPubKey = signer.publicKey;
+
+    const edekKey = `edek:${userPubKey}:${DATA_SERVICE_PUBLIC_KEY}`;
+    const edekShared = localStorage.getItem(edekKey) === 'true';
+    if (edekShared) {
+      console.log('Data service EDEK has already been shared');
+      return;
+    }
+
+    const dataServiceEdek = await agentServiceRegistry.getEdek(userPubKey, DATA_SERVICE_PUBLIC_KEY, authorization);
+    if (!dataServiceEdek) {
+      console.log('Data service EDEK not found');
+      await cereWallet.isConnected;
+      const edek = await cereWallet.naclBoxEdek(DATA_SERVICE_PUBLIC_KEY);
+      const savedEdek = await agentServiceRegistry.saveEdek(
+        {
+          edek,
+          userPubKey,
+          dataServicePubKey: DATA_SERVICE_PUBLIC_KEY,
+        },
+        authorization,
+      );
+      if (!savedEdek) {
+        console.log('Failed to store data service EDEK');
+        throw new Error('Failed to store data service EDEK');
+      }
+      console.log('Data service EDEK successfully stored', edek);
+    }
+    localStorage.setItem(edekKey, 'true');
+  }
+
   useEffect(() => {
     async function shareEdek(signer: CereWalletSigner) {
       const authorization = await signer.sign('authorization');
