@@ -23,7 +23,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
 
   const [theme] = useThemeParams();
-  const { startParam } = useStartParam();
+  const { campaignId } = useStartParam();
   const eventSource = useEvents();
 
   const activityStartTime = useRef<number | null>(null);
@@ -41,8 +41,8 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           event_type: 'GET_LEADERBOARD',
           timestamp: new Date().toISOString(),
           data: JSON.stringify({
-            campaignId: startParam,
-            campaign_id: startParam,
+            campaignId: campaignId,
+            campaign_id: campaignId,
             theme,
           }),
         };
@@ -59,7 +59,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
     };
 
     fetchData();
-  }, [eventSource, startParam, theme]);
+  }, [eventSource, campaignId, theme]);
 
   useEffect(() => {
     // eslint-disable-next-line prefer-const

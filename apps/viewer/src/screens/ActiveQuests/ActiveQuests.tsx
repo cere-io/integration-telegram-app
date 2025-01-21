@@ -20,7 +20,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
   const [loading, setLoading] = useState(true);
   const [questsHtml, setQuestsHtml] = useState<string>('');
   const eventSource = useEvents();
-  const { startParam } = useStartParam();
+  const { campaignId } = useStartParam();
 
   const [theme] = useThemeParams();
 
@@ -72,8 +72,8 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
         event_type: 'GET_QUESTS',
         timestamp: new Date().toISOString(),
         data: JSON.stringify({
-          campaignId: startParam,
-          campaign_id: startParam,
+          campaignId: campaignId,
+          campaign_id: campaignId,
           theme,
         }),
       };
@@ -88,7 +88,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     };
 
     getQuests();
-  }, [eventSource, startParam, theme]);
+  }, [eventSource, campaignId, theme]);
 
   useEffect(() => {
     // eslint-disable-next-line prefer-const
@@ -157,8 +157,8 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
           event_type: 'X_REPOST_STARTED',
           timestamp: new Date().toISOString(),
           data: JSON.stringify({
-            campaignId: startParam,
-            campaign_id: startParam,
+            campaignId: campaignId,
+            campaign_id: campaignId,
             tweet_id_original: event.data.tweetId,
             theme,
           }),
@@ -178,7 +178,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     return () => {
       window.removeEventListener('message', handleIframeClick);
     };
-  }, [eventSource, startParam, theme]);
+  }, [eventSource, campaignId, theme]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
