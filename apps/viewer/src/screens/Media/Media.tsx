@@ -16,7 +16,7 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
   const [preparingData, setPreparingData] = useState<boolean>(true);
   const [currentVideo, setCurrentVideo] = useState<Video>();
   const eventSource = useEvents();
-  const { startParam } = useStartParam();
+  const { campaignId } = useStartParam();
 
   const activityStartTime = useRef<number | null>(null);
 
@@ -30,8 +30,8 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
         event_type: 'GET_QUESTS',
         timestamp: new Date().toISOString(),
         data: JSON.stringify({
-          campaignId: startParam,
-          campaign_id: startParam,
+          campaignId: campaignId,
+          campaign_id: campaignId,
         }),
       };
 
@@ -45,7 +45,7 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
     };
 
     getQuests();
-  }, [eventSource, startParam]);
+  }, [eventSource, campaignId]);
 
   const sortedVideos = videos.sort((a, b) => {
     const completedA = a.completed ?? false;
@@ -83,15 +83,12 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
         setPreparingData(false);
       }
 
-      if (
-        (event?.payload && event.payload.integrationScriptResults[0].eventType === 'SEGMENT_WATCHED') ||
-        (event?.payload && event.payload.integrationScriptResults[0].eventType === 'X_REPOST')
-      ) {
+      if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'VIDEO_WATCHED') {
         const { integrationScriptResults }: EngagementEventData = event.payload;
-        const questId = (integrationScriptResults as any)[0].questId;
+        const watchedVideoUrl = (integrationScriptResults as any)[0].videoUrl;
 
         setVideos((prevVideos) =>
-          prevVideos.map((video) => (video.videoUrl === questId ? { ...video, completed: true } : video)),
+          prevVideos.map((video) => (video.videoUrl === watchedVideoUrl ? { ...video, completed: true } : video)),
         );
       }
     };

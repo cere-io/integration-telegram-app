@@ -7,8 +7,10 @@ import { useInitData, useThemeParams } from '@vkruglikov/react-telegram-web-app'
 import { Leaderboard, Media, ActiveQuests, WelcomeScreen, EngagementEventData } from './screens';
 
 import '@telegram-apps/telegram-ui/dist/styles.css';
-import { useEvents } from './hooks';
+import { useEvents, useStartParam } from './hooks';
 import hbs from 'handlebars';
+import { ActivityEvent } from '@cere-activity-sdk/events';
+import { useCereWallet } from './cere-wallet';
 
 const tabs = [
   {
@@ -36,6 +38,9 @@ export type ActiveTab = {
 export const App = () => {
   const [initDataUnsafe] = useInitData() || {};
   const [theme] = useThemeParams();
+  const { campaignId, referrerId } = useStartParam();
+
+  const cereWallet = useCereWallet();
   const eventSource = useEvents();
   const user = initDataUnsafe?.user;
 
@@ -54,10 +59,7 @@ export const App = () => {
     if (!eventSource) return;
 
     const handleNotificationEvent = (event: any) => {
-      if (
-        (event?.payload && event.payload.integrationScriptResults[0].eventType === 'SEGMENT_WATCHED') ||
-        (event?.payload && event.payload.integrationScriptResults[0].eventType === 'X_REPOST')
-      ) {
+      if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'VIDEO_WATCHED') {
         const { engagement, integrationScriptResults }: EngagementEventData = event.payload;
         const { widget_template } = engagement;
 
@@ -76,6 +78,28 @@ export const App = () => {
       eventSource.removeEventListener('engagement', handleNotificationEvent);
     };
   }, [eventSource]);
+
+  useEffect(() => {
+    if (!eventSource) return;
+
+    const sendJoinCampaignEvent = async () => {
+      const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
+      const campaignKey = `campaign:${accountId}:${campaignId}`;
+      if (localStorage.getItem(campaignKey) === 'true') {
+        return;
+      }
+
+      const payload: any = {
+        campaign_id: campaignId,
+      };
+      if (referrerId) {
+        payload.referrer_id = referrerId;
+      }
+      await eventSource.dispatchEvent(new ActivityEvent('JOIN_CAMPAIGN', payload));
+      localStorage.setItem(campaignKey, 'true');
+    };
+    sendJoinCampaignEvent();
+  }, [cereWallet, eventSource, campaignId, referrerId]);
 
   return (
     <AppRoot appearance={theme} className="App-root" platform="ios" id="app-root">
