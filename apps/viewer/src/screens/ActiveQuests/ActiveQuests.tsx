@@ -178,7 +178,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     return () => {
       window.removeEventListener('message', handleIframeClick);
     };
-  }, [eventSource, startParam, theme]);
+  }, [eventSource, campaignId, theme]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
