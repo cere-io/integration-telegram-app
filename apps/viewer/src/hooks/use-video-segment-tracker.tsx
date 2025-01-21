@@ -14,7 +14,7 @@ interface UseVideoSegmentTrackerProps {
 
 export const useVideoSegmentTracker = ({ videoUrl, segmentLength, onSegmentWatched }: UseVideoSegmentTrackerProps) => {
   const watchedSegments = useRef<Set<number>>(new Set());
-  const videoEnded = useRef(false); // Флаг для отслеживания завершения видео
+  const videoEnded = useRef(false);
 
   return useCallback(
     (currentTime: number, videoLength: number) => {
