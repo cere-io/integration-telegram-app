@@ -54,7 +54,10 @@ export const App = () => {
     if (!eventSource) return;
 
     const handleNotificationEvent = (event: any) => {
-      if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'VIDEO_WATCHED') {
+      if (
+        (event?.payload && event.payload.integrationScriptResults[0].eventType === 'SEGMENT_WATCHED') ||
+        (event?.payload && event.payload.integrationScriptResults[0].eventType === 'X_REPOST')
+      ) {
         const { engagement, integrationScriptResults }: EngagementEventData = event.payload;
         const { widget_template } = engagement;
 
