@@ -1,4 +1,4 @@
 export * from './useWhiteLabel';
 export * from './useEvents';
 export * from './useStartParam';
-export * from './use-video-time-tracking';
+export * from './use-video-segment-tracker';
