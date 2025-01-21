@@ -35,6 +35,7 @@ export const CereWalletProvider = ({ children }: PropsWithChildren<NonNullable<u
               appId: 'telegram-mini-app',
               env: APP_ENV as WalletEnvironment,
               authMethod: { type: 'telegram-mini-app', token: `${TELEGRAM_BOT_ID}:${initDataRaw}` },
+              mode: 'light',
             }
           : {
               appId: 'qa',
@@ -47,6 +48,7 @@ export const CereWalletProvider = ({ children }: PropsWithChildren<NonNullable<u
                   },
                 },
               },
+              mode: 'light',
             },
       )
       .then(() => {
