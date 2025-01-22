@@ -2,7 +2,7 @@ import { Card, Modal, ModalProps } from '@tg-app/ui';
 import { VideoPlayer as CerePlayer } from '@cere/media-sdk-react';
 
 import './VideoPlayer.css';
-import { SegmentEvent, useEvents, useStartParam, useVideoSegmentTracker } from '../../hooks';
+import { SegmentEvent, useDebounce, useEvents, useStartParam, useVideoSegmentTracker } from '../../hooks';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { useCallback, useEffect, useState } from 'react';
 import { Video } from '../../types';
@@ -78,7 +78,6 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
   const onSegmentWatched = useCallback(
     (event: SegmentEvent) => {
       handleSendEvent('SEGMENT_WATCHED', event);
-      Analytics.trackEvent(AnalyticsId.videoSegmentWatched, event);
     },
     [handleSendEvent],
   );
@@ -89,9 +88,15 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
     onSegmentWatched,
   });
 
-  const handleTimeUpdate = (currentTime: number, duration: number) => {
+  const handleTimeUpdate = useDebounce((currentTime: number, duration: number) => {
     trackSegment(currentTime, duration || 0);
-  };
+    if (currentTime > 0) {
+      Analytics.trackEvent(AnalyticsId.videoPlay, {
+        videoId: video?.videoUrl,
+        currentTime,
+      });
+    }
+  }, 500);
 
   return (
     <Modal open={open && !!video} onOpenChange={(open) => !open && onClose?.()}>
@@ -121,9 +126,6 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
             onTimeUpdate={handleTimeUpdate}
             onPlay={() => {
               handleSendEvent('VIDEO_PLAY');
-              Analytics.trackEvent(AnalyticsId.videoPlay, {
-                videoId: video?.videoUrl,
-              });
             }}
             onEnd={() => {
               handleSendEvent('VIDEO_ENDED');
