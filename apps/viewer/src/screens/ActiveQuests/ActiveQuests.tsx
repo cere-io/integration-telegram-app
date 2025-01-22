@@ -67,8 +67,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
       if (event.data.type === 'REFERRAL_BUTTON_CLICK') {
         const invitationLink = `${TELEGRAM_APP_URL}/startapp?=${campaignId}_${accountId}`;
         const text =
-          'Hey there, friend! 🎉 I’m excited to invite you to join the Watch-to-Earn campaign where you can earn amazing prizes just by watching! Don’t miss out on this fantastic opportunity to have fun and win big.\n' +
-          'Ready to jump in? Click the link above to get started and let’s make this an unforgettable experience together! 🌟';
+          'Hey there, friend! 🎉 I’m excited to invite you to join the Watch-to-Earn campaign where you can earn amazing prizes just by watching! Don’t miss out on this fantastic opportunity to have fun and win big. Ready to jump in? Click the link above to get started and let’s make this an unforgettable experience together! 🌟';
         window.open(`https://t.me/share/url?url=${invitationLink}&text=${text}`);
       }
     };
