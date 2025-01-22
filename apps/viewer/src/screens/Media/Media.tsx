@@ -15,6 +15,7 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
   const [videos, setVideos] = useState<Video[]>([]);
   const [preparingData, setPreparingData] = useState<boolean>(true);
   const [currentVideo, setCurrentVideo] = useState<Video>();
+  const [pendingUpdates, setPendingUpdates] = useState<Partial<Video>[]>([]);
   const eventSource = useEvents();
   const { campaignId } = useStartParam();
 
@@ -83,16 +84,11 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
         setPreparingData(false);
       }
 
-      if (
-        (event?.payload && event.payload.integrationScriptResults[0].eventType === 'SEGMENT_WATCHED') ||
-        (event?.payload && event.payload.integrationScriptResults[0].eventType === 'X_REPOST')
-      ) {
+      if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'SEGMENT_WATCHED') {
         const { integrationScriptResults }: EngagementEventData = event.payload;
         const questId = (integrationScriptResults as any)[0].questId;
 
-        setVideos((prevVideos) =>
-          prevVideos.map((video) => (video.videoUrl === questId ? { ...video, completed: true } : video)),
-        );
+        setPendingUpdates((prevUpdates) => [...prevUpdates, { videoUrl: questId, completed: true }]);
       }
     };
 
@@ -118,6 +114,19 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
       eventSource.removeEventListener('engagement', handleEngagementEvent);
     };
   }, [eventSource, videos]);
+
+  useEffect(() => {
+    if (!currentVideo && pendingUpdates.length > 0) {
+      setVideos((prevVideos) =>
+        prevVideos.map((video) =>
+          pendingUpdates.some((update) => update.videoUrl === video.videoUrl)
+            ? { ...video, ...pendingUpdates.find((update) => update.videoUrl === video.videoUrl) }
+            : video,
+        ),
+      );
+      setPendingUpdates([]);
+    }
+  }, [currentVideo, pendingUpdates]);
 
   useEffect(() => {
     if (videoUrl && videos.length > 0) {

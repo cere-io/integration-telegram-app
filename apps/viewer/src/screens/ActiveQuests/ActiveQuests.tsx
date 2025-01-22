@@ -1,13 +1,15 @@
-import { Loader } from '@tg-app/ui';
+import { Loader, Snackbar } from '@tg-app/ui';
 import { useEvents, useStartParam } from '../../hooks';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { EngagementEventData } from '~/types';
 import hbs from 'handlebars';
 import Reporting from '@tg-app/reporting';
-import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
+import { ENGAGEMENT_TIMEOUT_DURATION, TELEGRAM_APP_URL } from '../../constants.ts';
 import { ActiveTab } from '~/App.tsx';
 import { useThemeParams } from '@vkruglikov/react-telegram-web-app';
+import { ClipboardCheck } from 'lucide-react';
+import { useCereWallet } from '../../cere-wallet';
 
 hbs.registerHelper('json', (context) => JSON.stringify(context));
 
@@ -19,8 +21,10 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
   const [preparingData, setPreparingData] = useState<boolean>(true);
   const [loading, setLoading] = useState(true);
   const [questsHtml, setQuestsHtml] = useState<string>('');
+  const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const eventSource = useEvents();
   const { campaignId } = useStartParam();
+  const cereWallet = useCereWallet();
 
   const [theme] = useThemeParams();
 
@@ -43,7 +47,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
   }, [loading]);
 
   useEffect(() => {
-    const handleIframeClick = (event: MessageEvent) => {
+    const handleIframeClick = async (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
       if (event.data.type === 'VIDEO_QUEST_CLICK') {
         setActiveTab({
@@ -53,6 +57,19 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
           },
         });
       }
+      const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
+      const invitationLink = `${TELEGRAM_APP_URL}/startapp?=${campaignId}_${accountId}`;
+      if (event.data.type === 'REFERRAL_LINK_CLICK') {
+        navigator.clipboard.writeText(invitationLink);
+        setSnackbarMessage('Invitation link copied  to clipboard successfully!');
+      }
+
+      if (event.data.type === 'REFERRAL_BUTTON_CLICK') {
+        const invitationLink = `${TELEGRAM_APP_URL}/startapp?=${campaignId}_${accountId}`;
+        const text =
+          'Hey there, friend! 🎉 I’m excited to invite you to join the Watch-to-Earn campaign where you can earn amazing prizes just by watching! Don’t miss out on this fantastic opportunity to have fun and win big. Ready to jump in? Click the link above to get started and let’s make this an unforgettable experience together! 🌟';
+        window.open(`https://t.me/share/url?url=${invitationLink}&text=${text}`);
+      }
     };
 
     window.addEventListener('message', handleIframeClick);
@@ -60,7 +77,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     return () => {
       window.removeEventListener('message', handleIframeClick);
     };
-  }, [setActiveTab]);
+  }, [campaignId, cereWallet, setActiveTab]);
 
   useEffect(() => {
     if (!eventSource) return;
@@ -194,6 +211,14 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
           }}
           title="Active Quests"
         />
+      )}
+      {snackbarMessage && (
+        <Snackbar onClose={() => setSnackbarMessage(null)} duration={5000}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ClipboardCheck />
+            {snackbarMessage}
+          </div>
+        </Snackbar>
       )}
     </div>
   );
