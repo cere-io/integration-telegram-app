@@ -78,6 +78,7 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
   const onSegmentWatched = useCallback(
     (event: SegmentEvent) => {
       handleSendEvent('SEGMENT_WATCHED', event);
+      Analytics.trackEvent(AnalyticsId.videoSegmentWatched, event);
     },
     [handleSendEvent],
   );
@@ -90,12 +91,6 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
 
   const handleTimeUpdate = useDebounce((currentTime: number, duration: number) => {
     trackSegment(currentTime, duration || 0);
-    if (currentTime > 0) {
-      Analytics.trackEvent(AnalyticsId.videoPlay, {
-        videoId: video?.videoUrl,
-        currentTime,
-      });
-    }
   }, 500);
 
   return (
@@ -126,6 +121,9 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
             onTimeUpdate={handleTimeUpdate}
             onPlay={() => {
               handleSendEvent('VIDEO_PLAY');
+              Analytics.trackEvent(AnalyticsId.videoPlay, {
+                videoId: video?.videoUrl,
+              });
             }}
             onEnd={() => {
               handleSendEvent('VIDEO_ENDED');
