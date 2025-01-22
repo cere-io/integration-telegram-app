@@ -9,7 +9,7 @@ import {
   EVENT_LISTEN_URL,
 } from '../constants';
 import { useAgentServiceRegistry } from '../hooks/useAgentServiceRegistry.ts';
-import { NoOpCipher } from '@cere-activity-sdk/ciphers';
+import { CereWalletCipher } from '@cere-activity-sdk/ciphers';
 
 type EventsProviderProps = {
   children: ReactNode;
@@ -70,7 +70,7 @@ export const EventsProvider: FC<EventsProviderProps> = ({ children }) => {
 
         const signer = new CereWalletSigner(cereWallet);
         await signer.isReady();
-        const cipher = new NoOpCipher();
+        const cipher = new CereWalletCipher(cereWallet);
         await cipher.isReady();
 
         await shareEdek(signer);
