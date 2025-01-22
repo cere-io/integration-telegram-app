@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Video } from '../../types';
 import { useWebApp, useExpand } from '@vkruglikov/react-telegram-web-app';
 import { VIDEO_SEGMENT_LENGTH } from '../../constants.ts';
+import Analytics, { AnalyticsId } from '@tg-app/analytics';
 
 export type VideoPlayerProps = Pick<ModalProps, 'open'> & {
   video?: Video;
@@ -77,6 +78,7 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
   const onSegmentWatched = useCallback(
     (event: SegmentEvent) => {
       handleSendEvent('SEGMENT_WATCHED', event);
+      Analytics.trackEvent(AnalyticsId.videoSegmentWatched, event);
     },
     [handleSendEvent],
   );
@@ -117,8 +119,18 @@ export const VideoPlayer = ({ video, open = false, onClose }: VideoPlayerProps) 
               style: `width: ${width}px; height: ${height}px;` as any,
             }}
             onTimeUpdate={handleTimeUpdate}
-            onPlay={() => handleSendEvent('VIDEO_PLAY')}
-            onEnd={() => handleSendEvent('VIDEO_ENDED')}
+            onPlay={() => {
+              handleSendEvent('VIDEO_PLAY');
+              Analytics.trackEvent(AnalyticsId.videoPlay, {
+                videoId: video?.videoUrl,
+              });
+            }}
+            onEnd={() => {
+              handleSendEvent('VIDEO_ENDED');
+              Analytics.trackEvent(AnalyticsId.videoEnded, {
+                videoId: video?.videoUrl,
+              });
+            }}
           />
         )}
 

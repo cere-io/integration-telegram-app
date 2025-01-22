@@ -11,4 +11,7 @@ export enum AnalyticsId {
    */
 
   walletConnected = 'TON-CONNECTED',
+  videoPlay = 'VIDEO_PLAY',
+  videoEnded = 'VIDEO_ENDED',
+  videoSegmentWatched = 'VIDEO_SEGMENT_WATCHED',
 }
