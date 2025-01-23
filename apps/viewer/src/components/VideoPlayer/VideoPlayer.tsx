@@ -33,8 +33,6 @@ export const VideoPlayer = memo(
     const [isExpanded, expand] = useExpand();
     const [currentVideoTime, setCurrentVideoTime] = useState<number>(0);
 
-    console.log('VIDEO', video);
-
     const width = miniApp.viewportWidth || window.innerWidth;
 
     const eventSource = useEvents();
@@ -119,7 +117,7 @@ export const VideoPlayer = memo(
               }}
               videoOverrides={{
                 autoPlay: true,
-                style: `width: ${width}px; height: ${height}px;` as any,
+                style: `width: 100%; height: ${height}px;` as any,
               }}
               onTimeUpdate={handleTimeUpdate}
               onPlay={() => {
