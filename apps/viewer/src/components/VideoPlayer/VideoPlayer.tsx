@@ -117,7 +117,7 @@ export const VideoPlayer = memo(
               }}
               videoOverrides={{
                 autoPlay: true,
-                style: `width: 100%; height: ${height}px;` as any,
+                style: `width: 100%; height: ${height}px; object-fit: cover;` as any,
               }}
               onTimeUpdate={handleTimeUpdate}
               onPlay={() => {
