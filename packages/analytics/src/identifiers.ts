@@ -11,7 +11,9 @@ export enum AnalyticsId {
    */
 
   walletConnected = 'TON-CONNECTED',
-  videoPlay = 'VIDEO_PLAY',
+  videoStarted = 'VIDEO_STARTED',
   videoEnded = 'VIDEO_ENDED',
   videoSegmentWatched = 'VIDEO_SEGMENT_WATCHED',
+  cereWalletCreated = 'WALLET_CREATED',
+  questCompleted = 'QUEST_COMPLETED',
 }

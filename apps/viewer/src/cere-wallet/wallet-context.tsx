@@ -2,6 +2,7 @@ import { createContext, PropsWithChildren, useContext, useMemo } from 'react';
 import { EmbedWallet, WalletEnvironment } from '@cere/embed-wallet';
 import { APP_ENV, TELEGRAM_BOT_ID } from '../constants.ts';
 import Reporting from '@tg-app/reporting';
+import Analytics, { AnalyticsId } from '@tg-app/analytics';
 
 const CereWalletContext = createContext<EmbedWallet | null>(null);
 
@@ -79,6 +80,9 @@ export const CereWalletProvider = ({ children }: PropsWithChildren<NonNullable<u
             });
 
             wallet.getUserInfo().then((user) => {
+              if (user.isNewWallet) {
+                Analytics.trackEvent(AnalyticsId.cereWalletCreated);
+              }
               console.log('Cere Wallet details: ', user);
             });
           });

@@ -11,6 +11,7 @@ import { useEvents, useStartParam } from './hooks';
 import hbs from 'handlebars';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { useCereWallet } from './cere-wallet';
+import Analytics, { AnalyticsId } from '@tg-app/analytics';
 
 const tabs = [
   {
@@ -72,6 +73,9 @@ export const App = () => {
           data: integrationScriptResults,
         });
 
+        Analytics.trackEvent(AnalyticsId.questCompleted, {
+          questId: (integrationScriptResults as Array<any>)[0].questId,
+        });
         setNotificationHtml(compiledHTML);
       }
     };

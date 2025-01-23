@@ -124,7 +124,7 @@ export const VideoPlayer = memo(
               onTimeUpdate={handleTimeUpdate}
               onPlay={() => {
                 handleSendEvent('VIDEO_PLAY');
-                Analytics.trackEvent(AnalyticsId.videoPlay, {
+                Analytics.trackEvent(AnalyticsId.videoStarted, {
                   videoId: video?.videoUrl,
                 });
               }}
