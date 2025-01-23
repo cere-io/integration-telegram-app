@@ -1,13 +1,13 @@
 import './index.css';
 import { useEffect, useState } from 'react';
-import { AppRoot, Tabbar, MediaIcon, LeaderboardIcon, QuestsIcon } from '@tg-app/ui';
+import { AppRoot, Tabbar, MediaIcon, LeaderboardIcon, QuestsIcon, Title, Text } from '@tg-app/ui';
 import Reporting from '@tg-app/reporting';
 import { useInitData, useThemeParams } from '@vkruglikov/react-telegram-web-app';
 
 import { Leaderboard, Media, ActiveQuests, WelcomeScreen, EngagementEventData } from './screens';
 
 import '@telegram-apps/telegram-ui/dist/styles.css';
-import { useEvents, useStartParam } from './hooks';
+import { useEvents, useStartParam, useValidStartParams } from './hooks';
 import hbs from 'handlebars';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { useCereWallet } from './cere-wallet';
@@ -47,6 +47,10 @@ export const App = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>({ index: 0 });
   const [isWelcomeScreenVisible, setWelcomeScreenVisible] = useState(true);
   const [notificationHtml, setNotificationHtml] = useState<string>('');
+
+  const isValidStartParams = useValidStartParams(campaignId, referrerId);
+
+  console.log('isValidStartParams', isValidStartParams);
 
   const Screen = tabs[activeTab.index].screen;
 
@@ -126,29 +130,38 @@ export const App = () => {
             title="Notification"
           />
         )}
-        {isWelcomeScreenVisible ? (
-          <WelcomeScreen onStart={() => setWelcomeScreenVisible(false)} />
-        ) : (
+        {isValidStartParams ? (
           <>
-            <Screen setActiveTab={setActiveTab} {...activeTab.props} />
+            {isWelcomeScreenVisible ? (
+              <WelcomeScreen onStart={() => setWelcomeScreenVisible(false)} />
+            ) : (
+              <>
+                <Screen setActiveTab={setActiveTab} {...activeTab.props} />
 
-            <Tabbar
-              style={{
-                paddingBottom: 'calc(env(safe-area-inset-bottom) + 13px)',
-              }}
-            >
-              {tabs.map(({ icon: Icon, text }, index) => (
-                <Tabbar.Item
-                  key={index}
-                  text={text}
-                  selected={activeTab.index === index}
-                  onClick={() => setActiveTab({ index })}
+                <Tabbar
+                  style={{
+                    paddingBottom: 'calc(env(safe-area-inset-bottom) + 13px)',
+                  }}
                 >
-                  <Icon style={{ margin: 2, fontSize: 28 }} />
-                </Tabbar.Item>
-              ))}
-            </Tabbar>
+                  {tabs.map(({ icon: Icon, text }, index) => (
+                    <Tabbar.Item
+                      key={index}
+                      text={text}
+                      selected={activeTab.index === index}
+                      onClick={() => setActiveTab({ index })}
+                    >
+                      <Icon style={{ margin: 2, fontSize: 28 }} />
+                    </Tabbar.Item>
+                  ))}
+                </Tabbar>
+              </>
+            )}
           </>
+        ) : (
+          <div style={{ textAlign: 'center', marginTop: '20%' }}>
+            <Title>Invalid invitation link.</Title>
+            <Text>Please check the URL is correct and try again.</Text>
+          </div>
         )}
       </div>
     </AppRoot>
