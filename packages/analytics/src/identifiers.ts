@@ -15,4 +15,5 @@ export enum AnalyticsId {
   videoEnded = 'VIDEO_ENDED',
   videoSegmentWatched = 'VIDEO_SEGMENT_WATCHED',
   cereWalletCreated = 'WALLET_CREATED',
+  questCompleted = 'QUEST_COMPLETED',
 }
