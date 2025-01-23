@@ -1,0 +1,117 @@
+/*
+ * Nohemi
+ */
+@font-face {
+    font-family: 'Nohemi';
+    src: url('./nohemi/Nohemi-Thin-BF6438cc5896c67.ttf') format('truetype');
+    font-weight: 100;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Nohemi';
+    src: url('./nohemi/Nohemi-ExtraLight-BF6438cc58a2634.ttf') format('truetype');
+    font-weight: 200;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Nohemi';
+    src: url('./nohemi/Nohemi-Light-BF6438cc5899919.ttf') format('truetype');
+    font-weight: 300;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Nohemi';
+    src: url('./nohemi/Nohemi-Regular-BF6438cc4d0e493.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Nohemi';
+    src: url('./nohemi/Nohemi-Medium-BF6438cc5883899.ttf') format('truetype');
+    font-weight: 500;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Nohemi';
+    src: url('./nohemi/Nohemi-SemiBold-BF6438cc588a48a.ttf') format('truetype');
+    font-weight: 600;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Nohemi';
+    src: url('./nohemi/Nohemi-Bold-BF6438cc587b5b5.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Nohemi';
+    src: url('./nohemi/Nohemi-ExtraBold-BF6438cc5881baf.ttf') format('truetype');
+    font-weight: 800;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Nohemi';
+    src: url('./nohemi/Nohemi-Black-BF6438cc58744d4.ttf') format('truetype');
+    font-weight: 900;
+    font-style: normal;
+}
+
+/*
+ * HumanSans
+ */
+@font-face {
+    font-family: 'Human Sans';
+    src: url('./humansans/HumanSans-Thin.otf') format('truetype');
+    font-weight: 100;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Human Sans';
+    src: url('./humansans/HumanSans-ExtraLight.otf') format('truetype');
+    font-weight: 200;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Human Sans';
+    src: url('./humansans/HumanSans-Light.otf') format('truetype');
+    font-weight: 300;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Human Sans';
+    src: url('./humansans/HumanSans-Regular.otf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Human Sans';
+    src: url('./humansans/HumanSans-Medium.otf') format('truetype');
+    font-weight: 500;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Human Sans';
+    src: url('./humansans/HumanSans-Bold.otf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Human Sans';
+    src: url('./humansans/HumanSans-Black.otf') format('truetype');
+    font-weight: 900;
+    font-style: normal;
+}
