@@ -5,7 +5,7 @@
   flex-direction: column;
   align-items: center;
   background: #130e26;
-  padding: 4rem 1.79875rem;
+  padding: 3rem 1.79875rem;
   font-family: sans-serif;
   z-index: 1000000;
   height: 100%;
@@ -47,13 +47,12 @@
 }
 
 .checkbox-container {
-  z-index: 10;
   display: flex;
   gap: 14px;
   padding: 0 36px;
   justify-content: center;
   align-items: center;
-  margin-bottom: 16px;
+  margin-top: 16px;
 }
 
 .privacy-text {
@@ -78,7 +77,6 @@
   color: #ffffff;
   opacity: 0.5;
   text-align: center;
-  margin-top: 16px;
 }
 
 .cta-button-container {
@@ -106,14 +104,12 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 16px;
 }
 
 .swiper {
   width: 257px;
   min-height: 322px;
   margin-top: 54px;
-  margin-bottom: 54px;
 }
 
 .swiper .swiper-slide {
@@ -199,7 +195,7 @@
   height: 51px !important;
   justify-content: center !important;
   align-items: center !important;
-  margin: 0 auto !important;
+  margin: 16px auto !important;
 }
 .welcome-cta-button span {
   display: flex !important;

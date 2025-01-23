@@ -20,9 +20,6 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [tempPrivacyAccepted, setTempPrivacyAccepted] = useState(false);
 
-  console.log('privacyAccepted', privacyAccepted);
-  console.log('tempPrivacyAccepted', tempPrivacyAccepted);
-
   useEffect(() => {
     const savedPrivacyAccepted = localStorage.getItem('privacyAccepted') === 'true';
     setPrivacyAccepted(savedPrivacyAccepted);
@@ -77,23 +74,6 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
     <div className="container">
       <div className="content-wrapper">
         <div className="top-container">
-          {!privacyAccepted && (
-            <div className="checkbox-container">
-              <Checkbox checked={tempPrivacyAccepted} onChange={handleCheckboxChange} title="Title" color="white" />
-              <p className="privacy-text">
-                I agree to Cere Media's data processing for personalized content and rewards.
-              </p>
-            </div>
-          )}
-          {renderButton}
-          <a
-            href="https://docs.google.com/document/d/1Sw-FjsNu_uS4t5wIyb8Cam0l8t8WFaAa1VHWMQkIHjs/edit?tab=t.0#heading=h.c6pbbfrgmg51"
-            className="privacy-link"
-          >
-            Read full privacy policy
-          </a>
-        </div>
-        <div className="bottom-container">
           <div className="ellipse-top"></div>
           <div className="ellipse-bottom"></div>
           <div className="hero-wrapper">
@@ -103,6 +83,20 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
             </p>
           </div>
 
+          {!privacyAccepted && (
+            <div className="checkbox-container">
+              <Checkbox checked={tempPrivacyAccepted} onChange={handleCheckboxChange} title="Title" color="white" />
+              <p className="privacy-text">
+                I agree to Cere Media's data processing for personalized content and rewards.
+              </p>
+            </div>
+          )}
+          {renderButton}
+          <a href="https://www.cere.network/privacy-policy" className="privacy-link">
+            Read full privacy policy
+          </a>
+        </div>
+        <div className="bottom-container">
           <Swiper
             effect={'cards'}
             grabCursor={true}
