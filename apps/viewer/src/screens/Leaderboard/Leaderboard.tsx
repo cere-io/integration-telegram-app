@@ -119,10 +119,17 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
     const handleIframeClick = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
       if (event.data.type === 'LEADERBOARD_ROW_CLICK') {
-        navigator.clipboard.writeText(event.data.publicKey);
-        setSnackbarMessage(
-          `Public key ${truncateText({ text: event.data.publicKey, maxLength: 12 })} copied to clipboard successfully!`,
-        );
+        const publicKey = event.data.publicKey;
+        navigator.clipboard
+          .writeText(publicKey)
+          .then(() => {
+            setSnackbarMessage(
+              `Public key ${truncateText({ text: publicKey, maxLength: 12 })} copied to clipboard successfully!`,
+            );
+          })
+          .catch((error) => {
+            console.error('Ошибка при копировании в буфер обмена: ', error);
+          });
       }
       if (event.data.type === 'VIDEO_QUEST_CLICK') {
         setActiveTab({
