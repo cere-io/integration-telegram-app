@@ -123,13 +123,27 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         const publicKey = event.data.publicKey;
 
         try {
-          await navigator.clipboard.writeText(publicKey);
-          setSnackbarMessage(
-            `Public key ${truncateText({ text: publicKey, maxLength: 12 })} copied to clipboard successfully!`,
-          );
+          const tempInput = document.createElement('textarea');
+          tempInput.value = publicKey;
+          document.body.appendChild(tempInput);
+          tempInput.select();
+
+          if (document.execCommand('copy')) {
+            setSnackbarMessage(
+              `Public key ${truncateText({ text: publicKey, maxLength: 12 })} copied to clipboard successfully!`,
+            );
+          } else {
+            setSnackbarMessage(
+              `Failed to copy the public key. Please copy manually: ${truncateText({ text: publicKey, maxLength: 12 })}`,
+            );
+          }
+
+          document.body.removeChild(tempInput);
         } catch (error) {
           console.error('Failed to copy the public key:', error);
-          setSnackbarMessage('Failed to copy the public key. Please try again.');
+          setSnackbarMessage(
+            `Clipboard is not supported. Public key: ${truncateText({ text: publicKey, maxLength: 12 })}.`,
+          );
         }
       }
 
@@ -160,6 +174,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         <Loader size="m" />
       ) : (
         <iframe
+          allow="clipboard-read; clipboard-write"
           srcDoc={leaderboardHtml}
           style={{ width: '100%', height: 'calc(100vh - 75px)', border: 'none' }}
           title="Leaderboard"
