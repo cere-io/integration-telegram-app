@@ -116,21 +116,23 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   }, [eventSource]);
 
   useEffect(() => {
-    const handleIframeClick = (event: MessageEvent) => {
+    const handleIframeClick = async (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
+
       if (event.data.type === 'LEADERBOARD_ROW_CLICK') {
         const publicKey = event.data.publicKey;
-        navigator.clipboard
-          .writeText(publicKey)
-          .then(() => {
-            setSnackbarMessage(
-              `Public key ${truncateText({ text: publicKey, maxLength: 12 })} copied to clipboard successfully!`,
-            );
-          })
-          .catch((error) => {
-            console.error('Ошибка при копировании в буфер обмена: ', error);
-          });
+
+        try {
+          await navigator.clipboard.writeText(publicKey);
+          setSnackbarMessage(
+            `Public key ${truncateText({ text: publicKey, maxLength: 12 })} copied to clipboard successfully!`,
+          );
+        } catch (error) {
+          console.error('Failed to copy the public key:', error);
+          setSnackbarMessage('Failed to copy the public key. Please try again.');
+        }
       }
+
       if (event.data.type === 'VIDEO_QUEST_CLICK') {
         setActiveTab({
           index: 2,
