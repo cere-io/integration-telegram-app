@@ -160,6 +160,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         <Loader size="m" />
       ) : (
         <iframe
+          allow="clipboard-read; clipboard-write"
           srcDoc={leaderboardHtml}
           style={{ width: '100%', height: 'calc(100vh - 75px)', border: 'none' }}
           title="Leaderboard"
