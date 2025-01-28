@@ -122,14 +122,35 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
       if (event.data.type === 'LEADERBOARD_ROW_CLICK') {
         const publicKey = event.data.publicKey;
 
+        const copyToClipboardFallback = (text: string) => {
+          const textArea = document.createElement('textarea');
+          textArea.value = text;
+          document.body.appendChild(textArea);
+          textArea.select();
+          textArea.setSelectionRange(0, 99999);
+          try {
+            document.execCommand('copy');
+            setSnackbarMessage(`Public key ${truncateText({ text, maxLength: 12 })} copied to clipboard successfully!`);
+          } catch (error) {
+            console.error('Fallback: Failed to copy the public key:', error);
+            setSnackbarMessage('Failed to copy the public key. Please try again.');
+          }
+          document.body.removeChild(textArea);
+        };
+
         try {
-          await navigator.clipboard.writeText(publicKey);
-          setSnackbarMessage(
-            `Public key ${truncateText({ text: publicKey, maxLength: 12 })} copied to clipboard successfully!`,
-          );
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(publicKey);
+            setSnackbarMessage(
+              `Public key ${truncateText({ text: publicKey, maxLength: 12 })} copied to clipboard successfully!`,
+            );
+          } else {
+            console.warn('Navigator clipboard API not supported. Falling back to legacy method.');
+            copyToClipboardFallback(publicKey);
+          }
         } catch (error) {
-          console.error('Failed to copy the public key:', error);
-          setSnackbarMessage('Failed to copy the public key. Please try again.');
+          console.error('Failed to copy the public key using Clipboard API:', error);
+          copyToClipboardFallback(publicKey);
         }
       }
 
