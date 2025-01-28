@@ -116,29 +116,20 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   }, [eventSource]);
 
   useEffect(() => {
-    const handleIframeClick = (event: MessageEvent) => {
+    const handleIframeClick = async (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
 
       if (event.data.type === 'LEADERBOARD_ROW_CLICK') {
         const publicKey = event.data.publicKey;
 
-        const input = Object.assign(document.createElement('textarea'), {
-          value: publicKey,
-          style: { position: 'fixed', top: 0, left: 0, opacity: 0 },
-        });
-        document.body.appendChild(input);
-
         try {
-          input.select();
-          document.execCommand('copy');
+          await navigator.clipboard.writeText(publicKey);
           setSnackbarMessage(
             `Public key ${truncateText({ text: publicKey, maxLength: 12 })} copied to clipboard successfully!`,
           );
         } catch (error) {
           console.error('Failed to copy the public key:', error);
           setSnackbarMessage('Failed to copy the public key. Please try again.');
-        } finally {
-          document.body.removeChild(input);
         }
       }
 
