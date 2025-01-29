@@ -10,6 +10,7 @@ import { ActiveTab } from '~/App.tsx';
 import { useThemeParams } from '@vkruglikov/react-telegram-web-app';
 import { ClipboardCheck } from 'lucide-react';
 import { useCereWallet } from '../../cere-wallet';
+import { decodeHtml } from '../../helpers';
 
 hbs.registerHelper('json', (context) => JSON.stringify(context));
 
@@ -132,7 +133,8 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
 
         const compiledHTML = hbs.compile(widget_template.params || '')({ data: integrationScriptResults });
 
-        setQuestsHtml(compiledHTML);
+        const decodedHTML = decodeHtml(compiledHTML);
+        setQuestsHtml(decodedHTML);
         setTimeout(() => {
           setPreparingData(false);
           setLoading(false);
