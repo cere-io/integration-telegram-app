@@ -10,6 +10,7 @@ import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
 import { ActiveTab } from '~/App.tsx';
 import { ClipboardCheck } from 'lucide-react';
 import { useThemeParams } from '@vkruglikov/react-telegram-web-app';
+import { decodeHtml } from '../../helpers';
 
 hbs.registerHelper('json', (context) => JSON.stringify(context));
 
@@ -86,7 +87,8 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         const { engagement, integrationScriptResults }: EngagementEventData = event.payload;
         const { widget_template } = engagement;
         const compiledHTML = hbs.compile(widget_template.params || '')({ data: integrationScriptResults });
-        setLeaderboardHtml(compiledHTML);
+        const decodedHTML = decodeHtml(compiledHTML);
+        setLeaderboardHtml(decodedHTML);
 
         setTimeout(() => setLoading(false), 0);
       }
