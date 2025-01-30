@@ -5,7 +5,7 @@ import Analytics from '@tg-app/analytics';
 import { App } from './App';
 import { APP_ENV, APP_VERSION } from './constants';
 import { CereWalletProvider } from './cere-wallet';
-import { EventsProvider } from './providers';
+import { DataProvider, EventsProvider } from './providers';
 import { WebAppProvider } from '@vkruglikov/react-telegram-web-app';
 
 Analytics.init();
@@ -21,11 +21,13 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     }}
   >
     <CereWalletProvider>
-      <EventsProvider>
-        <ErrorBoundary>
-          <App />
-        </ErrorBoundary>
-      </EventsProvider>
+      <DataProvider>
+        <EventsProvider>
+          <ErrorBoundary>
+            <App />
+          </ErrorBoundary>
+        </EventsProvider>
+      </DataProvider>
     </CereWalletProvider>
   </WebAppProvider>,
 );

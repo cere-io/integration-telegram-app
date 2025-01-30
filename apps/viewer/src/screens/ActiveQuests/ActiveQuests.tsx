@@ -1,5 +1,5 @@
 import { Loader, Snackbar } from '@tg-app/ui';
-import { useEvents, useStartParam } from '../../hooks';
+import { useEventQueue, useEvents, useStartParam } from '../../hooks';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { EngagementEventData } from '~/types';
@@ -11,6 +11,7 @@ import { useThemeParams } from '@vkruglikov/react-telegram-web-app';
 import { ClipboardCheck } from 'lucide-react';
 import { useCereWallet } from '../../cere-wallet';
 import { decodeHtml } from '../../helpers';
+import { useData } from '../../providers';
 
 hbs.registerHelper('json', (context) => JSON.stringify(context));
 
@@ -19,13 +20,17 @@ type ActiveQuestsProps = {
 };
 
 export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
+  const { questData, questsHtml, updateData } = useData();
+  const { addToQueue } = useEventQueue();
   const [preparingData, setPreparingData] = useState<boolean>(true);
   const [loading, setLoading] = useState(true);
-  const [questsHtml, setQuestsHtml] = useState<string>('');
+  // const [questsHtml, setQuestsHtml] = useState<string>('');
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const eventSource = useEvents();
   const { campaignId } = useStartParam();
   const cereWallet = useCereWallet();
+
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
   const [theme] = useThemeParams();
 
@@ -101,11 +106,11 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
         timestamp,
       });
 
-      await eventSource.dispatchEvent(event);
+      addToQueue(event);
     };
 
     getQuests();
-  }, [eventSource, campaignId, theme]);
+  }, [campaignId, theme, addToQueue, eventSource]);
 
   useEffect(() => {
     // eslint-disable-next-line prefer-const
@@ -134,7 +139,17 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
         const compiledHTML = hbs.compile(widget_template.params || '')({ data: integrationScriptResults });
 
         const decodedHTML = decodeHtml(compiledHTML);
-        setQuestsHtml(decodedHTML);
+
+        updateData((integrationScriptResults as Array<any>)?.[0].quests, decodedHTML, 'quest');
+
+        if (iframeRef.current) {
+          const eventData = {
+            type: 'QUESTS_UPDATE',
+            payload: integrationScriptResults,
+          };
+
+          iframeRef.current.contentWindow?.postMessage(eventData, '*');
+        }
         setTimeout(() => {
           setPreparingData(false);
           setLoading(false);
@@ -163,7 +178,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
       clearTimeout(engagementTimeout);
       eventSource.removeEventListener('engagement', handleEngagementEvent);
     };
-  }, [eventSource]);
+  }, [eventSource, updateData]);
 
   useEffect(() => {
     const handleIframeClick = (event: MessageEvent) => {
@@ -204,6 +219,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
         <Loader size="m" />
       ) : (
         <iframe
+          ref={iframeRef}
           srcDoc={questsHtml}
           style={{
             width: '100%',

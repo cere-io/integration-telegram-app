@@ -1,7 +1,7 @@
 import './Leaderboard.css';
 import { Snackbar, Loader, truncateText } from '@tg-app/ui';
 import { useEffect, useRef, useState } from 'react';
-import { useStartParam, useEvents } from '../../hooks';
+import { useStartParam, useEvents, useEventQueue } from '../../hooks';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { EngagementEventData } from '../../types';
 import * as hbs from 'handlebars';
@@ -11,6 +11,7 @@ import { ActiveTab } from '~/App.tsx';
 import { ClipboardCheck } from 'lucide-react';
 import { useThemeParams } from '@vkruglikov/react-telegram-web-app';
 import { decodeHtml } from '../../helpers';
+import { useData } from '../../providers';
 
 hbs.registerHelper('json', (context) => JSON.stringify(context));
 
@@ -19,7 +20,9 @@ type LeaderboardProps = {
 };
 
 export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
-  const [leaderboardHtml, setLeaderboardHtml] = useState<string>('');
+  const { leaderboardData, leaderboardHtml, updateData } = useData();
+  const { addToQueue } = useEventQueue();
+
   const [isLoading, setLoading] = useState(true);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
 
@@ -27,14 +30,14 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   const { campaignId } = useStartParam();
   const eventSource = useEvents();
 
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+
   const activityStartTime = useRef<number | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-
-        if (!eventSource) return;
 
         activityStartTime.current = performance.now();
 
@@ -53,14 +56,14 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           timestamp,
         });
 
-        await eventSource.dispatchEvent(event);
+        addToQueue(event);
       } catch (error) {
         console.error('Error dispatching event:', error);
       }
     };
 
     fetchData();
-  }, [eventSource, campaignId, theme]);
+  }, [campaignId, theme]);
 
   useEffect(() => {
     // eslint-disable-next-line prefer-const
@@ -88,7 +91,8 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         const { widget_template } = engagement;
         const compiledHTML = hbs.compile(widget_template.params || '')({ data: integrationScriptResults });
         const decodedHTML = decodeHtml(compiledHTML);
-        setLeaderboardHtml(decodedHTML);
+
+        updateData((integrationScriptResults as Array<any>)?.[0].users, decodedHTML, 'leaderboard');
 
         setTimeout(() => setLoading(false), 0);
       }
@@ -115,7 +119,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
       clearTimeout(engagementTimeout);
       eventSource.removeEventListener('engagement', handleEngagementEvent);
     };
-  }, [eventSource]);
+  }, [eventSource, updateData]);
 
   useEffect(() => {
     const handleIframeClick = async (event: MessageEvent) => {
@@ -176,6 +180,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         <Loader size="m" />
       ) : (
         <iframe
+          ref={iframeRef}
           allow="clipboard-read; clipboard-write"
           srcDoc={leaderboardHtml}
           style={{ width: '100%', height: 'calc(100vh - 75px)', border: 'none' }}
