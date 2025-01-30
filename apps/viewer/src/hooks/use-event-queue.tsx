@@ -31,7 +31,6 @@ export const useEventQueue = () => {
   const processQueue = useCallback(async () => {
     const currentTime = Date.now();
 
-    // Если событие не повторяется, отправляем его
     if (queue.length > 0) {
       const eventToSend = queue[0];
 
@@ -51,7 +50,7 @@ export const useEventQueue = () => {
 
       setQueue((prevQueue) => prevQueue.slice(1));
     }
-  }, [queue, lastSentEvent, lastSentTimestamp]);
+  }, [queue, shouldThrottle, sendEvent, lastSentTimestamp]);
 
   useEffect(() => {
     const interval = setInterval(processQueue, 1000);
