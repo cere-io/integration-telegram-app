@@ -16,11 +16,18 @@ export const useEventQueue = () => {
     setQueue((prevQueue) => [...prevQueue, event]);
   };
 
-  const sendEvent = async (event: any) => {
-    if (!eventSource) return;
-    console.log('Sending event:', event);
-    await eventSource.dispatchEvent(event);
-  };
+  const sendEvent = useCallback(
+    async (event: any) => {
+      if (!eventSource) return;
+      console.log('Sending event:', event);
+      try {
+        await eventSource.dispatchEvent(event);
+      } catch (e) {
+        console.error('Error sending event:', e);
+      }
+    },
+    [eventSource],
+  );
 
   const shouldThrottle = (event: any) => {
     if (!lastSentEvent) return false;
@@ -32,18 +39,22 @@ export const useEventQueue = () => {
     const currentTime = Date.now();
 
     if (queue.length > 0) {
+      debugger;
       const eventToSend = queue[0];
 
       if (shouldThrottle(eventToSend)) {
         const timeElapsed = currentTime - lastSentTimestamp;
-
         if (timeElapsed < EVENT_THROTTLE_TIME) {
           console.log('Event throttled, waiting...');
           return;
         }
       }
 
-      await sendEvent(eventToSend);
+      try {
+        await sendEvent(eventToSend);
+      } catch (e) {
+        console.error('Error sending event:', e);
+      }
 
       setLastSentEvent(eventToSend);
       setLastSentTimestamp(currentTime);
@@ -51,7 +62,6 @@ export const useEventQueue = () => {
       setQueue((prevQueue) => prevQueue.slice(1));
     }
   }, [queue, shouldThrottle, sendEvent, lastSentTimestamp]);
-
   useEffect(() => {
     const interval = setInterval(processQueue, 1000);
 

@@ -92,7 +92,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         const compiledHTML = hbs.compile(widget_template.params || '')({ data: integrationScriptResults });
         const decodedHTML = decodeHtml(compiledHTML);
 
-        updateData((integrationScriptResults as Array<any>)?.[0].users, decodedHTML, 'leaderboard');
+        updateData(integrationScriptResults, decodedHTML, 'leaderboard');
 
         setTimeout(() => setLoading(false), 0);
       }

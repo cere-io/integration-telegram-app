@@ -20,9 +20,9 @@ type ActiveQuestsProps = {
 };
 
 export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
-  const { questData, questsHtml, updateData } = useData();
+  const { questsHtml, updateData } = useData();
   const { addToQueue } = useEventQueue();
-  const [preparingData, setPreparingData] = useState<boolean>(true);
+  const [preparingData, setPreparingData] = useState<boolean>(questsHtml === '');
   const [loading, setLoading] = useState(true);
   // const [questsHtml, setQuestsHtml] = useState<string>('');
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
@@ -110,7 +110,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     };
 
     getQuests();
-  }, [campaignId, theme, addToQueue, eventSource]);
+  }, [campaignId, theme]);
 
   useEffect(() => {
     // eslint-disable-next-line prefer-const
@@ -140,12 +140,12 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
 
         const decodedHTML = decodeHtml(compiledHTML);
 
-        updateData((integrationScriptResults as Array<any>)?.[0].quests, decodedHTML, 'quest');
+        updateData(integrationScriptResults, decodedHTML, 'quest');
 
         if (iframeRef.current) {
           const eventData = {
             type: 'QUESTS_UPDATE',
-            payload: integrationScriptResults,
+            payload: (integrationScriptResults as Array<any>)?.[0].quests,
           };
 
           iframeRef.current.contentWindow?.postMessage(eventData, '*');
