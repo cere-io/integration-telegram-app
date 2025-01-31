@@ -102,11 +102,14 @@ export const App = () => {
       if (referrerId) {
         payload.referrer_id = referrerId;
       }
+      if (user?.username) {
+        payload.username = user.username;
+      }
       await eventSource.dispatchEvent(new ActivityEvent('JOIN_CAMPAIGN', payload));
       localStorage.setItem(campaignKey, 'true');
     };
     sendJoinCampaignEvent();
-  }, [cereWallet, eventSource, campaignId, referrerId]);
+  }, [cereWallet, eventSource, campaignId, referrerId, user?.username]);
 
   return (
     <AppRoot appearance={theme} className="App-root" platform="ios" id="app-root">
