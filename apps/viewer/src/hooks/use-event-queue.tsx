@@ -32,14 +32,13 @@ export const useEventQueue = () => {
   const shouldThrottle = (event: any) => {
     if (!lastSentEvent) return false;
 
-    return JSON.stringify(lastSentEvent) === JSON.stringify(event);
+    return JSON.stringify(lastSentEvent.type) === JSON.stringify(event.type);
   };
 
   const processQueue = useCallback(async () => {
     const currentTime = Date.now();
 
     if (queue.length > 0) {
-      debugger;
       const eventToSend = queue[0];
 
       if (shouldThrottle(eventToSend)) {

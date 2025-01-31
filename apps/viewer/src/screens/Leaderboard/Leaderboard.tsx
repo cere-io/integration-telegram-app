@@ -20,21 +20,26 @@ type LeaderboardProps = {
 };
 
 export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
-  const { leaderboardData, leaderboardHtml, updateData } = useData();
+  const { leaderboardHtml, updateData } = useData();
   const { addToQueue } = useEventQueue();
 
-  const [isLoading, setLoading] = useState(true);
+  const [isLoading, setLoading] = useState(leaderboardHtml === '');
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
 
   const [theme] = useThemeParams();
   const { campaignId } = useStartParam();
   const eventSource = useEvents();
 
+  const isFetching = useRef(false);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
   const activityStartTime = useRef<number | null>(null);
 
   useEffect(() => {
+    if (!eventSource || isFetching.current) return;
+
+    isFetching.current = true;
+
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -63,7 +68,10 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
     };
 
     fetchData();
-  }, [campaignId, theme]);
+    return () => {
+      isFetching.current = false;
+    };
+  }, [eventSource]);
 
   useEffect(() => {
     // eslint-disable-next-line prefer-const
@@ -93,6 +101,15 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         const decodedHTML = decodeHtml(compiledHTML);
 
         updateData(integrationScriptResults, decodedHTML, 'leaderboard');
+
+        if (iframeRef.current) {
+          const eventData = {
+            type: 'LEADERBOARD_UPDATE',
+            payload: (integrationScriptResults as Array<any>)?.[0].users,
+          };
+
+          iframeRef.current.contentWindow?.postMessage(eventData, '*');
+        }
 
         setTimeout(() => setLoading(false), 0);
       }

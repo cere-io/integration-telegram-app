@@ -24,12 +24,12 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
   const { addToQueue } = useEventQueue();
   const [preparingData, setPreparingData] = useState<boolean>(questsHtml === '');
   const [loading, setLoading] = useState(true);
-  // const [questsHtml, setQuestsHtml] = useState<string>('');
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const eventSource = useEvents();
   const { campaignId } = useStartParam();
   const cereWallet = useCereWallet();
 
+  const isFetching = useRef(false);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
   const [theme] = useThemeParams();
@@ -63,6 +63,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
           },
         });
       }
+      if (!cereWallet) return;
       const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
       const invitationLink = `${TELEGRAM_APP_URL}?startapp=${campaignId}_${accountId}`;
       if (event.data.type === 'REFERRAL_LINK_CLICK') {
@@ -85,7 +86,9 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
   }, [campaignId, cereWallet, setActiveTab]);
 
   useEffect(() => {
-    if (!eventSource) return;
+    if (!eventSource || isFetching.current) return;
+
+    isFetching.current = true;
 
     const getQuests = async () => {
       activityStartTime.current = performance.now();
@@ -110,7 +113,10 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     };
 
     getQuests();
-  }, [campaignId, theme]);
+    return () => {
+      isFetching.current = false;
+    };
+  }, [eventSource]);
 
   useEffect(() => {
     // eslint-disable-next-line prefer-const
