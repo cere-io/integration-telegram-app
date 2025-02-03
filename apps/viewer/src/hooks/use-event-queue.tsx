@@ -34,6 +34,7 @@ export const useEventQueue = () => {
     [eventSource],
   );
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const shouldThrottle = (event: any) => {
     if (!lastSentEvent) return false;
 

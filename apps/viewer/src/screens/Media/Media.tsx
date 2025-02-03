@@ -72,6 +72,7 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
       clearTimeout(engagementTimeout);
       eventSource.removeEventListener('engagement', handleEngagementEvent);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventSource, videos]);
 
   useEffect(() => {

@@ -77,6 +77,7 @@ export const useEngagementData = ({
     return () => {
       isFetching.current = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventSource]);
 
   useEffect(() => {
@@ -137,6 +138,7 @@ export const useEngagementData = ({
       clearTimeout(engagementTimeout);
       eventSource.removeEventListener('engagement', handleEngagementEvent);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventSource, updateData]);
 
   return { isLoading };
