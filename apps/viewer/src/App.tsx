@@ -96,14 +96,18 @@ export const App = () => {
         return;
       }
 
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
+      const initData = window.Telegram?.WebApp?.initData;
+
       const payload: any = {
         campaign_id: campaignId,
       };
       if (referrerId) {
         payload.referrer_id = referrerId;
       }
-      if (user?.username) {
-        payload.username = user.username;
+      if (initData?.username) {
+        payload.username = initData.username;
       }
       await eventSource.dispatchEvent(new ActivityEvent('JOIN_CAMPAIGN', payload));
       localStorage.setItem(campaignKey, 'true');

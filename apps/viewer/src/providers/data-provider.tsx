@@ -5,8 +5,9 @@ type DataContextType = {
   questsHtml: string;
   leaderboardData: any;
   leaderboardHtml: string;
-  updateData: (newData: any, newHtml: string, key: 'quest' | 'leaderboard') => void;
+  updateData: (newData: any, newHtml: string, key: 'quests' | 'leaderboard') => void;
   loadCache: () => void;
+  updateQuestStatus: (questId: string, taskType: string, newStatus: boolean) => void;
 };
 
 const DataContext = createContext<DataContextType | null>(null);
@@ -25,6 +26,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [leaderboardData, setLeaderboardData] = useState<any | null>(null);
   const [leaderboardHtml, setLeaderboardHtml] = useState<string>('');
 
+  const initialQuestsHtmlRef = useRef<string | null>(null);
+  const initialLeaderboardHtmlRef = useRef<any | null>(null);
+
   const previousQuestData = useRef<any | null>(null);
   const previousQuestsHtml = useRef<string>('');
   const previousLeaderboardData = useRef<any | null>(null);
@@ -40,6 +44,13 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     setQuestsHtml(cachedQuestsHtml);
     setLeaderboardData(cachedLeaderboardData);
     setLeaderboardHtml(cachedLeaderboardHtml);
+
+    if (!initialQuestsHtmlRef.current) {
+      initialQuestsHtmlRef.current = cachedQuestsHtml;
+    }
+    if (!initialLeaderboardHtmlRef.current) {
+      initialLeaderboardHtmlRef.current = cachedLeaderboardHtml;
+    }
   }, []);
 
   const saveCache = useCallback(() => {
@@ -61,8 +72,8 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [questData, questsHtml, leaderboardData, leaderboardHtml]);
 
-  const updateData = (newData: any, newHtml: string, key: 'quest' | 'leaderboard') => {
-    if (key === 'quest') {
+  const updateData = (newData: any, newHtml: string, key: 'quests' | 'leaderboard') => {
+    if (key === 'quests') {
       setQuestData(newData);
       setQuestsHtml(newHtml);
     } else {
@@ -70,6 +81,37 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       setLeaderboardHtml(newHtml);
     }
   };
+
+  const updateQuestStatus = useCallback(
+    (questId: string, taskType: string, newStatus: boolean) => {
+      if (!questData) return;
+
+      const updatedQuestData = [
+        {
+          ...questData[0],
+          quests: {
+            ...questData[0].quests,
+            videoTasks: questData[0].quests?.[taskType].map((quest: any) => {
+              if (quest.videoUrl === questId) {
+                return { ...quest, completed: newStatus };
+              }
+              return quest;
+            }),
+          },
+        },
+      ];
+
+      const updatedQuestDataString = JSON.stringify(updatedQuestData);
+      const updatedQuestsHtml =
+        questsHtml.split('var TEMPLATE_DATA = JSON.stringify(')[0] +
+        `var TEMPLATE_DATA = JSON.stringify(${updatedQuestDataString});` +
+        questsHtml.split('var TEMPLATE_DATA = JSON.stringify(')[1].split(');')[1];
+
+      setQuestData(updatedQuestData);
+      setQuestsHtml(updatedQuestsHtml);
+    },
+    [questData, questsHtml],
+  );
 
   useEffect(() => {
     loadCache();
@@ -80,7 +122,17 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   }, [questData, questsHtml, leaderboardData, leaderboardHtml, saveCache]);
 
   return (
-    <DataContext.Provider value={{ questData, questsHtml, leaderboardData, leaderboardHtml, updateData, loadCache }}>
+    <DataContext.Provider
+      value={{
+        questData,
+        questsHtml: initialQuestsHtmlRef.current || questsHtml,
+        leaderboardData,
+        leaderboardHtml: initialLeaderboardHtmlRef.current || leaderboardHtml,
+        updateData,
+        loadCache,
+        updateQuestStatus,
+      }}
+    >
       {children}
     </DataContext.Provider>
   );

@@ -1,52 +1,30 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MediaList, MediaListItem, Title, Text, Loader } from '@tg-app/ui';
 import Reporting from '@tg-app/reporting';
-import { useEvents, useStartParam } from '../../hooks';
+import { useEngagementData, useEvents, useStartParam } from '../../hooks';
 import { VideoPlayer } from '../../components';
-import { ActivityEvent } from '@cere-activity-sdk/events';
 import { EngagementEventData, Video } from '../../types';
 import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
+import { useData } from '~/providers';
 
 export type MediaTypeProps = {
   videoUrl?: string;
 };
 
 export const Media = ({ videoUrl }: MediaTypeProps) => {
-  const [videos, setVideos] = useState<Video[]>([]);
-  const [preparingData, setPreparingData] = useState<boolean>(true);
+  const { questData, updateData, updateQuestStatus } = useData();
+  const [videos, setVideos] = useState<Video[]>(questData?.[0].quests.videoTasks || []);
   const [currentVideo, setCurrentVideo] = useState<Video>();
   const [pendingUpdates, setPendingUpdates] = useState<Partial<Video>[]>([]);
   const eventSource = useEvents();
   const { campaignId } = useStartParam();
 
-  const activityStartTime = useRef<number | null>(null);
-
-  useEffect(() => {
-    const getQuests = async () => {
-      if (!eventSource) return;
-
-      activityStartTime.current = performance.now();
-
-      const { event_type, timestamp, data } = {
-        event_type: 'GET_QUESTS',
-        timestamp: new Date().toISOString(),
-        data: JSON.stringify({
-          campaignId: campaignId,
-          campaign_id: campaignId,
-        }),
-      };
-
-      const parsedData = JSON.parse(data);
-      const event = new ActivityEvent(event_type, {
-        ...parsedData,
-        timestamp,
-      });
-
-      await eventSource.dispatchEvent(event);
-    };
-
-    getQuests();
-  }, [eventSource, campaignId]);
+  const { isLoading } = useEngagementData({
+    eventSource,
+    eventType: 'GET_QUESTS',
+    campaignId,
+    updateData,
+  });
 
   const sortedVideos = videos.sort((a, b) => {
     const completedA = a.completed ?? false;
@@ -64,31 +42,12 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
     const handleEngagementEvent = (event: any) => {
       clearTimeout(engagementTimeout);
 
-      if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'GET_QUESTS') {
-        const engagementTime = performance.now() - (activityStartTime.current || 0);
-        console.log(`Media Engagement Time: ${engagementTime}ms`);
-
-        Reporting.message(`Media Engagement Loaded: ${engagementTime.toFixed(2)}`, {
-          level: 'info',
-          contexts: {
-            engagementTime: {
-              duration: engagementTime,
-              unit: 'ms',
-            },
-          },
-        });
-
-        const { integrationScriptResults }: EngagementEventData = event.payload;
-        const videos: any = (integrationScriptResults as any)[0]?.quests?.videoTasks || [];
-        setVideos(videos);
-        setPreparingData(false);
-      }
-
       if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'SEGMENT_WATCHED') {
         const { integrationScriptResults }: EngagementEventData = event.payload;
         const questId = (integrationScriptResults as any)[0].questId;
 
         setPendingUpdates((prevUpdates) => [...prevUpdates, { videoUrl: questId, completed: true }]);
+        updateQuestStatus(questId, 'videoTasks', true);
       }
     };
 
@@ -147,7 +106,7 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
         closer to unlocking exclusive prizes!
       </Text>
 
-      {preparingData ? (
+      {isLoading ? (
         <Loader size="m" style={{ marginTop: '50%' }} />
       ) : (
         <MediaList>

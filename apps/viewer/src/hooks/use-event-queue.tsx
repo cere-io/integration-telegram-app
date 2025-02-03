@@ -1,23 +1,28 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useEvents } from '../hooks/useEvents.ts';
+import { ActivityEvent } from '@cere-activity-sdk/events';
 
 const EVENT_THROTTLE_TIME = 30 * 1000;
 
 export const useEventQueue = () => {
-  const [queue, setQueue] = useState<any[]>([]);
+  const [queue, setQueue] = useState<ActivityEvent[]>([]);
   const [lastSentEvent, setLastSentEvent] = useState<any | null>(null);
   const [lastSentTimestamp, setLastSentTimestamp] = useState<number>(0);
 
-  console.log({ queue, lastSentEvent, lastSentTimestamp });
-
   const eventSource = useEvents();
 
-  const addToQueue = (event: any) => {
-    setQueue((prevQueue) => [...prevQueue, event]);
+  const addToQueue = (event: ActivityEvent) => {
+    setQueue((prevQueue) => {
+      const alreadyExists = prevQueue.some((q) => q.type === event.type);
+      if (!alreadyExists) {
+        return [...prevQueue, event];
+      }
+      return prevQueue;
+    });
   };
 
   const sendEvent = useCallback(
-    async (event: any) => {
+    async (event: ActivityEvent) => {
       if (!eventSource) return;
       console.log('Sending event:', event);
       try {
@@ -60,7 +65,8 @@ export const useEventQueue = () => {
 
       setQueue((prevQueue) => prevQueue.slice(1));
     }
-  }, [queue, shouldThrottle, sendEvent, lastSentTimestamp]);
+  }, [queue, shouldThrottle, lastSentTimestamp, sendEvent]);
+
   useEffect(() => {
     const interval = setInterval(processQueue, 1000);
 
