@@ -19,7 +19,8 @@ function useDebouncedCallback(callback: Function, delay: number) {
       if (timer) clearTimeout(timer);
       setTimer(setTimeout(() => callback(...args), delay));
     },
-    [callback, timer, delay],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [callback, delay],
   );
 }
 
@@ -31,6 +32,16 @@ type ActiveQuestsProps = {
 
 export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
   const { questsHtml, updateData } = useData();
+
+  const lastHtml = useRef(questsHtml);
+  const [memoizedQuestsHtml, setMemoizedQuestsHtml] = useState(questsHtml);
+
+  useEffect(() => {
+    if (lastHtml.current !== questsHtml) {
+      lastHtml.current = questsHtml;
+      setMemoizedQuestsHtml(questsHtml);
+    }
+  }, [questsHtml]);
 
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const eventSource = useEvents();
@@ -48,6 +59,8 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     updateData,
     iframeRef,
   });
+
+  console.log({ isLoading });
 
   const setSnackbarMessageIfChanged = useDebouncedCallback((newMessage: string) => {
     setSnackbarMessage(newMessage);
@@ -116,12 +129,12 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {isLoading ? (
+      {isLoading || memoizedQuestsHtml === '' ? (
         <Loader size="m" />
       ) : (
         <iframe
           ref={iframeRef}
-          srcDoc={questsHtml}
+          srcDoc={memoizedQuestsHtml}
           style={{
             width: '100%',
             height: 'calc(100vh - 74px)',

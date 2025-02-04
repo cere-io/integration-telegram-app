@@ -17,6 +17,16 @@ type LeaderboardProps = {
 export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   const { leaderboardHtml, updateData } = useData();
 
+  const lastHtml = useRef(leaderboardHtml);
+  const [memoizedLeaderboardHtml, setMemoizedLeaderboardHtml] = useState(leaderboardHtml);
+
+  useEffect(() => {
+    if (lastHtml.current !== leaderboardHtml) {
+      lastHtml.current = leaderboardHtml;
+      setMemoizedLeaderboardHtml(leaderboardHtml);
+    }
+  }, [leaderboardHtml]);
+
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
 
   const eventSource = useEvents();
@@ -96,7 +106,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         <iframe
           ref={iframeRef}
           allow="clipboard-read; clipboard-write"
-          srcDoc={leaderboardHtml}
+          srcDoc={memoizedLeaderboardHtml}
           style={{ width: '100%', height: 'calc(100vh - 75px)', border: 'none' }}
           title="Leaderboard"
         />
