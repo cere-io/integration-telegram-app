@@ -87,10 +87,11 @@ export const App = () => {
   }, [eventSource]);
 
   useEffect(() => {
-    if (!eventSource) return;
+    if (!eventSource || !cereWallet) return;
 
     const sendJoinCampaignEvent = async () => {
       const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
+      const userInfo = await cereWallet.getUserInfo();
       const campaignKey = `campaign:${accountId}:${campaignId}`;
       if (localStorage.getItem(campaignKey) === 'true') {
         return;
@@ -102,8 +103,8 @@ export const App = () => {
       if (referrerId) {
         payload.referrer_id = referrerId;
       }
-      if (user?.username) {
-        payload.username = user.username;
+      if (userInfo?.name) {
+        payload.username = userInfo.name;
       }
       await eventSource.dispatchEvent(new ActivityEvent('JOIN_CAMPAIGN', payload));
       localStorage.setItem(campaignKey, 'true');
