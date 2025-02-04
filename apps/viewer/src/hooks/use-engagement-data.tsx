@@ -5,7 +5,7 @@ import { EngagementEventData } from '../types';
 import Reporting from '@tg-app/reporting';
 import * as hbs from 'handlebars';
 import { ENGAGEMENT_TIMEOUT_DURATION } from '../constants';
-import { decodeHtml } from '../helpers';
+import { compileHtml, decodeHtml } from '../helpers';
 import { useData } from '~/providers';
 import { ColorScheme } from '@vkruglikov/react-telegram-web-app';
 
@@ -16,7 +16,7 @@ type UseEngagementDataProps = {
   eventType: 'GET_QUESTS' | 'GET_LEADERBOARD';
   campaignId: string | null;
   theme?: ColorScheme;
-  updateData: (data: any, html: string, key: 'quests' | 'leaderboard') => void;
+  updateData: (data: any, originalHtml: string, html: string, key: 'quests' | 'leaderboard') => void;
   iframeRef?: MutableRefObject<HTMLIFrameElement | null>;
 };
 
@@ -95,9 +95,10 @@ export const useEngagementData = ({
         });
 
         const { engagement, integrationScriptResults }: EngagementEventData = event.payload;
-        const compiledHTML = hbs.compile(engagement.widget_template.params || '')({ data: integrationScriptResults });
+        const compiledHTML = compileHtml(engagement.widget_template.params || '', integrationScriptResults);
         updateData(
           integrationScriptResults,
+          engagement.widget_template.params,
           decodeHtml(compiledHTML),
           eventType === 'GET_QUESTS' ? 'quests' : 'leaderboard',
         );

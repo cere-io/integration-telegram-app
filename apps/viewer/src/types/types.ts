@@ -69,8 +69,17 @@ export type DexTask = BaseTask & {
   };
 };
 
+export type ReferralTask = BaseTask & {
+  percents: number;
+  type: 'referral';
+  invitees?: string[] | number;
+  instructions: string;
+  questImage?: string;
+};
+
 export type Quests = {
   videoTasks: VideoTask[];
   socialTasks: SocialTask[];
   dexTasks: DexTask[];
+  referralTask?: ReferralTask;
 };

@@ -45,9 +45,10 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
       if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'SEGMENT_WATCHED') {
         const { integrationScriptResults }: EngagementEventData = event.payload;
         const questId = (integrationScriptResults as any)[0].questId;
+        const rewardPoints = (integrationScriptResults as any)[0].rewardPoints;
 
         setPendingUpdates((prevUpdates) => [...prevUpdates, { videoUrl: questId, completed: true }]);
-        updateQuestStatus(questId, 'videoTasks', true);
+        updateQuestStatus(questId, 'videoTasks', true, rewardPoints);
       }
     };
 
@@ -99,6 +100,18 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
 
   return (
     <div style={{ paddingBottom: 65 }}>
+      <button
+        onClick={async () =>
+          updateQuestStatus(
+            "https://cdn.ddcdragon.com/1225/baear4ie7ydw5pdpltvaoqyyiv6hwrcbwjsgbh5rlofgk6nlxuoesi2bdje/Martijn's Video - Dec 23, 2024-VEED.mp4?source=developer-console",
+            'videoTasks',
+            true,
+            20,
+          )
+        }
+      >
+        Updarte
+      </button>
       <Title weight="2" style={{ marginLeft: 16, marginTop: 16 }}>
         Library
       </Title>
