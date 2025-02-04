@@ -60,8 +60,6 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     iframeRef,
   });
 
-  console.log({ isLoading });
-
   const setSnackbarMessageIfChanged = useDebouncedCallback((newMessage: string) => {
     setSnackbarMessage(newMessage);
   }, 500);
