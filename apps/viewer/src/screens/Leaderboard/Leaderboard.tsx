@@ -2,13 +2,11 @@ import './Leaderboard.css';
 import { Snackbar, Loader, truncateText } from '@tg-app/ui';
 import { useEffect, useRef, useState } from 'react';
 import { useStartParam, useEvents, useEngagementData } from '../../hooks';
-import * as hbs from 'handlebars';
 import { ActiveTab } from '~/App.tsx';
 import { ClipboardCheck } from 'lucide-react';
 import { useThemeParams } from '@vkruglikov/react-telegram-web-app';
 import { useData } from '../../providers';
-
-hbs.registerHelper('json', (context) => JSON.stringify(context));
+import { IframeRenderer } from '../../components/IframeRenderer';
 
 type LeaderboardProps = {
   setActiveTab: (tab: ActiveTab) => void;
@@ -103,10 +101,10 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
       {isLoading ? (
         <Loader size="m" />
       ) : (
-        <iframe
-          ref={iframeRef}
+        <IframeRenderer
+          iframeRef={iframeRef}
           allow="clipboard-read; clipboard-write"
-          srcDoc={memoizedLeaderboardHtml}
+          html={memoizedLeaderboardHtml}
           style={{ width: '100%', height: 'calc(100vh - 75px)', border: 'none' }}
           title="Leaderboard"
         />

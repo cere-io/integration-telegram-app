@@ -2,13 +2,13 @@ import { Loader, Snackbar } from '@tg-app/ui';
 import { useEngagementData, useEvents, useStartParam } from '../../hooks';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityEvent } from '@cere-activity-sdk/events';
-import hbs from 'handlebars';
 import { TELEGRAM_APP_URL } from '../../constants.ts';
 import { ActiveTab } from '~/App.tsx';
 import { useThemeParams } from '@vkruglikov/react-telegram-web-app';
 import { ClipboardCheck } from 'lucide-react';
 import { useCereWallet } from '../../cere-wallet';
 import { useData } from '../../providers';
+import { IframeRenderer } from '../../components/IframeRenderer';
 
 // eslint-disable-next-line @typescript-eslint/ban-types
 function useDebouncedCallback(callback: Function, delay: number) {
@@ -23,8 +23,6 @@ function useDebouncedCallback(callback: Function, delay: number) {
     [callback, delay],
   );
 }
-
-hbs.registerHelper('json', (context) => JSON.stringify(context));
 
 type ActiveQuestsProps = {
   setActiveTab: (tab: ActiveTab) => void;
@@ -130,15 +128,15 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
       {isLoading || memoizedQuestsHtml === '' ? (
         <Loader size="m" />
       ) : (
-        <iframe
-          ref={iframeRef}
-          srcDoc={memoizedQuestsHtml}
+        <IframeRenderer
+          iframeRef={iframeRef}
+          title="Active Quests"
+          html={memoizedQuestsHtml}
           style={{
             width: '100%',
             height: 'calc(100vh - 74px)',
             border: 'none',
           }}
-          title="Active Quests"
         />
       )}
       {snackbarMessage && (

@@ -212,9 +212,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     <DataContext.Provider
       value={{
         questData,
-        questsHtml: initialQuestsHtmlRef.current || questsHtml,
+        questsHtml,
         leaderboardData,
-        leaderboardHtml: initialLeaderboardHtmlRef.current || leaderboardHtml,
+        leaderboardHtml,
         updateData,
         loadCache,
         updateQuestStatus,
