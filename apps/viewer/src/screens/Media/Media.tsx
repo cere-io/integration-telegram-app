@@ -100,18 +100,6 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
 
   return (
     <div style={{ paddingBottom: 65 }}>
-      <button
-        onClick={async () =>
-          updateQuestStatus(
-            "https://cdn.ddcdragon.com/1225/baear4ie7ydw5pdpltvaoqyyiv6hwrcbwjsgbh5rlofgk6nlxuoesi2bdje/Martijn's Video - Dec 23, 2024-VEED.mp4?source=developer-console",
-            'videoTasks',
-            true,
-            20,
-          )
-        }
-      >
-        Updarte
-      </button>
       <Title weight="2" style={{ marginLeft: 16, marginTop: 16 }}>
         Library
       </Title>
