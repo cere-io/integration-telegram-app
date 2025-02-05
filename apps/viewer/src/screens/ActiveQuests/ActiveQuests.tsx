@@ -103,7 +103,15 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
       const invitationLink = `${TELEGRAM_APP_URL}?startapp=${campaignId}_${accountId}`;
       if (event.data.type === 'REFERRAL_LINK_CLICK') {
         navigator.clipboard.writeText(invitationLink);
-        setSnackbarMessageIfChanged('Invitation link copied to clipboard successfully!');
+        const tempInput = document.createElement('textarea');
+        tempInput.value = invitationLink;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        if (document.execCommand('copy')) {
+          setSnackbarMessageIfChanged('Invitation link copied to clipboard successfully!');
+        } else {
+          setSnackbarMessageIfChanged('Failed to copy the invitation link.');
+        }
       }
 
       if (event.data.type === 'REFERRAL_BUTTON_CLICK') {
