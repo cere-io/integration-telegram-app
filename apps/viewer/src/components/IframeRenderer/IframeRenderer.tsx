@@ -46,18 +46,34 @@ export const IframeRenderer: React.FC<IframeRendererProps> = memo(
   ({ iframeRef, html, title, style }) => {
     useEffect(() => {
       if (iframeRef.current) {
-        const iframeDoc = iframeRef.current.contentDocument;
+        const iframe = iframeRef.current;
+        const iframeDoc = iframe.contentDocument;
+
         if (iframeDoc) {
+          iframe.style.opacity = '0';
           requestAnimationFrame(() => {
             iframeDoc.open();
             iframeDoc.write(html);
             iframeDoc.close();
           });
+
+          iframe.onload = () => {
+            iframe.style.opacity = '1';
+          };
         }
       }
     }, [html, iframeRef]);
 
-    return <iframe ref={iframeRef} title={title} style={style} />;
+    return (
+      <iframe
+        ref={iframeRef}
+        title={title}
+        style={{
+          transition: 'opacity 0.2s ease-in-out',
+          ...style,
+        }}
+      />
+    );
   },
   (prevProps, nextProps) => {
     const prevData = normalizeTemplateData(prevProps.html);
