@@ -1,0 +1,13 @@
+.Button-cta {
+  background: linear-gradient(90deg, #6864F4 9.44%, #AC55F2 65.64%, #EB4799 100%);
+  box-shadow: 2px 4px 8px 0px #00000033;
+}
+
+.Button-size-l {
+  height: 56px;
+}
+
+.Button-mode-link {
+  color: var(--tgui--text_color);
+  text-decoration: underline;
+}

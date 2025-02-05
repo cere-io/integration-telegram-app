@@ -1,0 +1,24 @@
+:root {
+  --tgui--outline: #fff;
+}
+
+body .App-root {
+  --tgui--accent_text_color: #9244E0;
+  --tgui--link_color: #9244E0;
+  --tgui--button_color: #9244E0;
+  --tgui--font_weight--accent2: 500;
+  --tgui--text--secondaty_color: #707579;
+  --tgui--outline: #707579;
+  --tgui--hint_color: #707579;
+}
+
+#app-root {
+  min-height: var(--tg-viewport-stable-height);
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: var(--tg-viewport-stable-height);
+}

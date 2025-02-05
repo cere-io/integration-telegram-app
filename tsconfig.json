@@ -22,10 +22,8 @@
 
     /* Paths */
     "paths": {
-      "~/*": ["./src/*"],
+      "~/*": ["${configDir}/src/*"],
       "@tg-app/*": ["./packages/*/src"] // Local packages
     }
   },
-  "include": ["src"],
-  "references": [{ "path": "./tsconfig.node.json" }]
 }

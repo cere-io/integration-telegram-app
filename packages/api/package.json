@@ -1,0 +1,12 @@
+{
+  "name": "@tg-app/api",
+  "version": "0.1.0",
+  "private": true,
+  "sideEffects": false,
+  "types": "./src",
+  "exports": {
+    "import": "./src"
+  },
+  "dependencies": {},
+  "scripts": {}
+}

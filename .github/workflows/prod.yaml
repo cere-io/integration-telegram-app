@@ -17,7 +17,7 @@ jobs:
       install_packages_command: 'cp .env.prod .env; npm ci'
       build_command: 'npm run build'
       path_to_static_files_to_upload: 'dist'
-      aws_account_id: ${{ vars.PRD_CORE_AWS_ACCOUNT_ID }}
-      s3_bucket_name: 'prd-cere-ddc-telegram-mini-app'
+      aws_account_id: ${{ vars.PRD_NETWORK_AWS_ACCOUNT_ID }}
+      s3_bucket_name: 'telegram-miniapps.cere.io'
     secrets:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN_READ }}

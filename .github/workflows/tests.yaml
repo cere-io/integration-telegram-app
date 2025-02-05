@@ -25,7 +25,7 @@ jobs:
           node-version: ${{ steps.nvm.outputs.NODE_VERSION }}
 
       - name: Install packages
-        run: npm ci
+        run: cp .env.test .env; npm ci
 
       - name: Check code style
         run: npm run lint

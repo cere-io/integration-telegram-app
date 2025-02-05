@@ -1,0 +1,11 @@
+{
+  "name": "@integration-telegram-app/viewer",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "start": "vite --open",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "check-types": "tsc --noEmit"
+  }
+}

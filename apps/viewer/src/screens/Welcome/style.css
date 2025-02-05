@@ -1,0 +1,219 @@
+@import url('./fonts/fonts.css');
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #130e26;
+  padding: 3rem 1.79875rem;
+  font-family: sans-serif;
+  z-index: 1000000;
+  height: 100%;
+  overflow-x: hidden;
+}
+
+.hero-slider-wrapper {
+  margin-bottom: 2.125rem;
+}
+
+.hero-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: center;
+  padding: 0 26px;
+}
+
+.hero-title {
+  font-family: 'Nohemi';
+  color: #ffffff;
+  font-size: 2.25rem;
+  line-height: 2.75rem;
+  font-weight: 500;
+  margin-bottom: 0;
+  margin-top: 0;
+  letter-spacing: 0.01em;
+}
+
+.hero-description {
+  font-family: 'Human Sans';
+  font-weight: 400;
+  color: #ffffff;
+  font-size: 1rem;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+  opacity: 0.5;
+  margin: 0;
+}
+
+.checkbox-container {
+  display: flex;
+  gap: 14px;
+  padding: 0 36px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 16px;
+}
+
+.privacy-text {
+  font-family: 'Human Sans';
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.01em;
+  color: #ffffff;
+  opacity: 0.5;
+  margin: 0;
+}
+
+.privacy-link {
+  font-family: 'Human Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.01em;
+  text-decoration-line: underline;
+  color: #ffffff;
+  opacity: 0.5;
+  text-align: center;
+}
+
+.cta-button-container {
+  margin-top: 12px;
+  width: 191px;
+  height: 51px;
+}
+
+.cta-button {
+  background: radial-gradient(50.26% 100% at 50.26% 100%, #ec69bf 0%, #a733dd 100%);
+  box-shadow:
+    0px 0px 0px 3px rgba(167, 51, 221, 0.25),
+    inset 0px 2px 0px rgba(255, 255, 255, 0.25);
+  border-radius: 100px !important;
+}
+
+.bottom-container {
+  justify-content: center;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.top-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.swiper {
+  width: 257px;
+  min-height: 322px;
+  margin-top: 54px;
+}
+
+.swiper .swiper-slide {
+  min-width: 257px;
+  min-height: 272px;
+  background: rgba(19, 14, 38, 0.5);
+  backdrop-filter: blur(20px);
+  box-shadow: 0px 0px 60px 30px #130e26;
+  border-radius: 48px;
+  border: 3px solid #a733dd;
+  padding: 24px 10px;
+  text-align: center;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.slider-icon {
+  margin-bottom: 24px;
+}
+
+.slider-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0px 23px;
+}
+
+.slider-content h3 {
+  font-family: 'Nohemi';
+  font-style: normal;
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 32px;
+  letter-spacing: 0.01em;
+  color: #ffffff;
+  margin: 0;
+}
+
+.slider-content p {
+  font-family: 'Human Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  letter-spacing: 0.01em;
+  color: #ffffff;
+  opacity: 0.5;
+  margin: 0;
+}
+
+.ellipse-top {
+  --ellipse-size: 257.74px;
+  position: fixed;
+  width: var(--ellipse-size);
+  height: var(--ellipse-size);
+  left: -120px;
+  top: 0px;
+  background: #a733dd;
+  filter: blur(227.959px);
+}
+
+.ellipse-bottom {
+  --ellipse-size: 229px;
+  position: fixed;
+  width: var(--ellipse-size);
+  height: var(--ellipse-size);
+  left: 279px;
+  top: 729px;
+  background: #ec69bf;
+  filter: blur(227.959px);
+}
+
+.welcome-cta-button {
+  background: radial-gradient(47.31% 94.12% at 49.74% 0%, #ec69bf 0%, #a733dd 100%) !important;
+  box-shadow:
+    0px 0px 0px 3px rgba(167, 51, 221, 0.25),
+    inset 0px 2px 0px rgba(255, 255, 255, 0.25);
+  border-radius: 100px !important;
+  width: 191px !important;
+  height: 51px !important;
+  justify-content: center !important;
+  align-items: center !important;
+  margin: 16px auto !important;
+}
+.welcome-cta-button span {
+  display: flex !important;
+  gap: 14px !important;
+  font-family: 'Nohemi';
+  font-style: normal;
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 15px;
+  text-align: center;
+  letter-spacing: 1px;
+  color: #ffffff;
+}
+.checkbox-container label > svg {
+  border: 3px solid #a733dd;
+  background: rgb(0 0 0 / 50%);
+  color: transparent;
+  border-radius: 6px;
+  width: 15px;
+  height: 15px;
+}
