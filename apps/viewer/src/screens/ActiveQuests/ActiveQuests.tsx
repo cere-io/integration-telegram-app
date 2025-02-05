@@ -102,7 +102,6 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
       const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
       const invitationLink = `${TELEGRAM_APP_URL}?startapp=${campaignId}_${accountId}`;
       if (event.data.type === 'REFERRAL_LINK_CLICK') {
-        navigator.clipboard.writeText(invitationLink);
         const tempInput = document.createElement('textarea');
         tempInput.value = invitationLink;
         document.body.appendChild(tempInput);
