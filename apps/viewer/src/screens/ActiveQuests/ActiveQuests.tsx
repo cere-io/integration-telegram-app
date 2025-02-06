@@ -29,7 +29,7 @@ type ActiveQuestsProps = {
 };
 
 export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
-  const { questsHtml, updateData } = useData();
+  const { questsHtml, questData, updateData } = useData();
 
   const lastHtml = useRef(questsHtml);
   const [memoizedQuestsHtml, setMemoizedQuestsHtml] = useState(questsHtml);
@@ -114,12 +114,18 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
       }
 
       if (event.data.type === 'REFERRAL_BUTTON_CLICK') {
-        const text =
-          'Hey there, friend! 🎉 I’m excited to invite you to join the Watch-to-Earn campaign where you can earn amazing prizes just by watching! Don’t miss out on this fantastic opportunity to have fun and win big. Ready to jump in? Click the link above to get started and let’s make this an unforgettable experience together! 🌟';
-        window.open(`https://t.me/share/url?url=${invitationLink}&text=${text}`);
+        const messageText: string = questData[0].quests.referralTask.message;
+
+        const decodedText = messageText.replace(/\\u[0-9A-Fa-f]{4,}/g, (match) =>
+          String.fromCodePoint(parseInt(match.replace('\\u', ''), 16)),
+        );
+
+        const message = decodedText.replace('{link}', invitationLink);
+
+        window.open(`https://t.me/share/url?url=${invitationLink}&text=${encodeURIComponent(message)}`);
       }
     },
-    [campaignId, cereWallet, setActiveTab, eventSource, setSnackbarMessageIfChanged, theme],
+    [cereWallet, campaignId, setActiveTab, eventSource, theme, setSnackbarMessageIfChanged, questData],
   );
 
   useEffect(() => {
