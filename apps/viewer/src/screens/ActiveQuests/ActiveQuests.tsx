@@ -121,7 +121,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
       }
 
       if (event.data.type === 'REFERRAL_BUTTON_CLICK') {
-        window.open(`https://t.me/share/url?url=${invitationLink}&text=${encodeURIComponent(message)}`);
+        window.open(`https://t.me/share/url?url=${encodeURIComponent(message)}`);
       }
     },
     [cereWallet, campaignId, setActiveTab, eventSource, theme, setSnackbarMessageIfChanged, questData],
