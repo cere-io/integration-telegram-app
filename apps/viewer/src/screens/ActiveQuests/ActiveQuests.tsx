@@ -101,28 +101,27 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
       if (!cereWallet) return;
       const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
       const invitationLink = `${TELEGRAM_APP_URL}?startapp=${campaignId}_${accountId}`;
+
+      const messageText: string = questData[0].quests.referralTask.message;
+      const decodedText = messageText.replace(/\\u[0-9A-Fa-f]{4,}/g, (match) =>
+        String.fromCodePoint(parseInt(match.replace('\\u', ''), 16)),
+      );
+      const message = decodedText.replace('{link}', invitationLink);
+
       if (event.data.type === 'REFERRAL_LINK_CLICK') {
         const tempInput = document.createElement('textarea');
-        tempInput.value = invitationLink;
+        tempInput.value = message;
         document.body.appendChild(tempInput);
         tempInput.select();
         if (document.execCommand('copy')) {
-          setSnackbarMessageIfChanged('Invitation link copied to clipboard successfully!');
+          setSnackbarMessageIfChanged('Invitation copied to clipboard successfully!');
         } else {
-          setSnackbarMessageIfChanged('Failed to copy the invitation link.');
+          setSnackbarMessageIfChanged('Failed to copy the invitation.');
         }
       }
 
       if (event.data.type === 'REFERRAL_BUTTON_CLICK') {
-        const messageText: string = questData[0].quests.referralTask.message;
-
-        const decodedText = messageText.replace(/\\u[0-9A-Fa-f]{4,}/g, (match) =>
-          String.fromCodePoint(parseInt(match.replace('\\u', ''), 16)),
-        );
-
-        const message = decodedText.replace('{link}', invitationLink);
-
-        window.open(`https://t.me/share/url?url=${invitationLink}&text=${encodeURIComponent(message)}`);
+        window.open(`https://t.me/share/url?url=${encodeURIComponent(message)}`);
       }
     },
     [cereWallet, campaignId, setActiveTab, eventSource, theme, setSnackbarMessageIfChanged, questData],
