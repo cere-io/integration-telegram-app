@@ -187,6 +187,7 @@
 .welcome-cta-button {
   background: radial-gradient(47.31% 94.12% at 49.74% 0%, var(--color-secondary) 0%, var(--color-primary) 100%) !important;
   box-shadow: var(--shadow-border);
+  border: 3px solid var(--color-primary) !important;
   border-radius: var(--border-radius) !important;
   width: 191px !important;
   height: 51px !important;
