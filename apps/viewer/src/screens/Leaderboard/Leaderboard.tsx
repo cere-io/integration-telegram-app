@@ -7,6 +7,7 @@ import { ClipboardCheck } from 'lucide-react';
 import { useThemeParams } from '@vkruglikov/react-telegram-web-app';
 import { useData } from '../../providers';
 import { IframeRenderer } from '../../components/IframeRenderer';
+import Reporting from '@tg-app/reporting';
 
 type LeaderboardProps = {
   setActiveTab: (tab: ActiveTab) => void;
@@ -17,6 +18,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
 
   const lastHtml = useRef(leaderboardHtml);
   const [memoizedLeaderboardHtml, setMemoizedLeaderboardHtml] = useState(leaderboardHtml);
+  const mountTimeRef = useRef<number>(performance.now());
 
   useEffect(() => {
     if (lastHtml.current !== leaderboardHtml) {
@@ -96,6 +98,20 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
     };
   }, [setActiveTab]);
 
+  const handleIframeLoad = () => {
+    const renderTime = performance.now() - mountTimeRef.current;
+    console.log(`Leaderboard Tab Loaded: ${renderTime.toFixed(2)}ms`);
+    Reporting.message(`Leaderboard Tab Loaded: ${renderTime.toFixed(2)}`, {
+      level: 'info',
+      contexts: {
+        tabLoadingTime: {
+          duration: renderTime,
+          unit: 'ms',
+        },
+      },
+    });
+  };
+
   return (
     <div className="leaderboard" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {isLoading ? (
@@ -107,6 +123,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           html={memoizedLeaderboardHtml}
           style={{ width: '100%', height: 'calc(100vh - 75px)', border: 'none' }}
           title="Leaderboard"
+          onLoad={handleIframeLoad}
         />
       )}
       {snackbarMessage && (
