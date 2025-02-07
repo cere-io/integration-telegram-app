@@ -11,7 +11,6 @@ import 'swiper/css';
 import 'swiper/css/effect-cards';
 import 'swiper/css/pagination';
 import 'swiper/css/navigation';
-import { RMS_API_KEY } from '../../constants.ts';
 import { useStartParam, useRmsService } from '../../hooks';
 import { FormDataType } from '@tg-app/rms-service';
 
@@ -30,7 +29,7 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
   const fetchCampaignConfig = useCallback(async () => {
     if (!campaignId) return;
     try {
-      const campaign = await rmsService.getCampaignById(campaignId, RMS_API_KEY);
+      const campaign = await rmsService.getCampaignById(campaignId);
       if (Object.prototype.hasOwnProperty.call(campaign, 'welcomeScreen')) {
         setConfig(campaign?.formData.campaign.configuration.welcomeScreen || {});
       }

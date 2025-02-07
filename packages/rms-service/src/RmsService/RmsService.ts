@@ -22,12 +22,8 @@ export class RmsService {
     return response;
   }
 
-  async getCampaignById(campaignId: string, authorization: string): Promise<Campaign | undefined> {
-    const response = await this.request(`/api/campaign/${campaignId}`, {
-      headers: {
-        Authorization: authorization,
-      },
-    });
+  async getCampaignById(campaignId: string): Promise<Campaign | undefined> {
+    const response = await this.request(`/api/campaign/${campaignId}`);
 
     const responseBody: Response<Campaign> = await response.json();
 
