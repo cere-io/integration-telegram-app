@@ -1,5 +1,3 @@
-const appStartTime = performance.now();
-
 import './index.css';
 import { useEffect, useState } from 'react';
 import { AppRoot, Tabbar, MediaIcon, LeaderboardIcon, QuestsIcon } from '@tg-app/ui';
@@ -52,19 +50,6 @@ export const App = () => {
   const [notificationHtml, setNotificationHtml] = useState<string>('');
 
   const Screen = tabs[activeTab.index].screen;
-
-  useEffect(() => {
-    const loadTime = performance.now() - appStartTime;
-    Reporting.message(`App loaded: ${loadTime.toFixed(2)}ms`, {
-      level: 'info',
-      contexts: {
-        loadTime: {
-          duration: loadTime,
-          unit: 'ms',
-        },
-      },
-    });
-  }, []);
 
   useEffect(
     () => (!user ? Reporting.clearUser() : Reporting.setUser({ id: user.id.toString(), username: user.username })),
