@@ -9,6 +9,7 @@ import { ClipboardCheck } from 'lucide-react';
 import { useCereWallet } from '../../cere-wallet';
 import { useData } from '../../providers';
 import { IframeRenderer } from '../../components/IframeRenderer';
+import Reporting from '@tg-app/reporting';
 
 // eslint-disable-next-line @typescript-eslint/ban-types
 function useDebouncedCallback(callback: Function, delay: number) {
@@ -33,6 +34,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
 
   const lastHtml = useRef(questsHtml);
   const [memoizedQuestsHtml, setMemoizedQuestsHtml] = useState(questsHtml);
+  const mountTimeRef = useRef<number>(performance.now());
 
   useEffect(() => {
     if (lastHtml.current !== questsHtml) {
@@ -135,6 +137,20 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     };
   }, [campaignId, cereWallet, handleIframeClick, setActiveTab, eventSource]);
 
+  const handleIframeLoad = () => {
+    const renderTime = performance.now() - mountTimeRef.current;
+    console.log(`Active Quests Tab Loaded: ${renderTime.toFixed(2)}ms`);
+    Reporting.message(`Active Quests Tab Loaded: ${renderTime.toFixed(2)}`, {
+      level: 'info',
+      contexts: {
+        tabLoadingTime: {
+          duration: renderTime,
+          unit: 'ms',
+        },
+      },
+    });
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {isLoading || memoizedQuestsHtml === '' ? (
@@ -149,6 +165,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
             height: 'calc(100vh - 74px)',
             border: 'none',
           }}
+          onLoad={handleIframeLoad}
         />
       )}
       {snackbarMessage && (

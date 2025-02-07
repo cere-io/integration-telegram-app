@@ -38,12 +38,13 @@ type IframeRendererProps = {
   html: string;
   iframeRef: MutableRefObject<HTMLIFrameElement | null>;
   title: string;
+  onLoad?: () => void;
   style?: React.CSSProperties;
   allow?: string;
 };
 
 export const IframeRenderer: React.FC<IframeRendererProps> = memo(
-  ({ iframeRef, html, title, style }) => {
+  ({ iframeRef, html, title, onLoad, style }) => {
     useEffect(() => {
       if (iframeRef.current) {
         const iframe = iframeRef.current;
@@ -59,10 +60,11 @@ export const IframeRenderer: React.FC<IframeRendererProps> = memo(
 
           iframe.onload = () => {
             iframe.style.opacity = '1';
+            onLoad?.();
           };
         }
       }
-    }, [html, iframeRef]);
+    }, [html, iframeRef, onLoad]);
 
     return (
       <iframe

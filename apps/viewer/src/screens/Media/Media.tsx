@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MediaList, MediaListItem, Title, Text, Loader } from '@tg-app/ui';
 import Reporting from '@tg-app/reporting';
 import { useEngagementData, useEvents, useStartParam } from '../../hooks';
@@ -19,6 +19,9 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
   const eventSource = useEvents();
   const { campaignId } = useStartParam();
 
+  const mountTimeRef = useRef<number>(performance.now());
+  const [isRendered, setIsRendered] = useState(false);
+
   const { isLoading } = useEngagementData({
     eventSource,
     eventType: 'GET_QUESTS',
@@ -32,6 +35,25 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
 
     return Number(completedA) - Number(completedB);
   });
+
+  useEffect(() => {
+    if (!isRendered) {
+      const renderTime = performance.now() - mountTimeRef.current;
+      console.log(`Media Tab Loaded: ${renderTime.toFixed(2)}ms`);
+
+      Reporting.message(`Media Tab Loaded: ${renderTime.toFixed(2)}`, {
+        level: 'info',
+        contexts: {
+          renderTime: {
+            duration: renderTime,
+            unit: 'ms',
+          },
+        },
+      });
+
+      setIsRendered(true);
+    }
+  }, [isLoading, isRendered]);
 
   useEffect(() => {
     // eslint-disable-next-line prefer-const
