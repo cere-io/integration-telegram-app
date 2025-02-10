@@ -22,25 +22,30 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [tempPrivacyAccepted, setTempPrivacyAccepted] = useState(false);
   const [config, setConfig] = useState<FormDataType['campaign']['configuration']['welcomeScreen'] | null>(null);
+  const [isConfigLoaded, setIsConfigLoaded] = useState(false);
 
   const rmsService = useRmsService();
   const { campaignId } = useStartParam();
 
-  const fetchCampaignConfig = useCallback(async () => {
-    if (!campaignId) return;
-    try {
-      const campaign = await rmsService.getCampaignById(campaignId);
-      if (Object.prototype.hasOwnProperty.call(campaign, 'welcomeScreen')) {
-        setConfig(campaign?.formData.campaign.configuration.welcomeScreen || {});
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }, [campaignId, rmsService]);
-
   useEffect(() => {
+    const fetchCampaignConfig = async () => {
+      if (!campaignId) return;
+      try {
+        const response = await rmsService.getCampaignById(campaignId);
+        const formData = JSON.parse((response?.formData as unknown as string) || '');
+        if (Object.prototype.hasOwnProperty.call(formData.campaign.configuration, 'welcomeScreen')) {
+          setConfig(formData.campaign.configuration.welcomeScreen || {});
+        }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setIsConfigLoaded(true);
+      }
+    };
+
     fetchCampaignConfig();
-  }, [fetchCampaignConfig]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaignId]);
 
   useEffect(() => {
     if (config?.cssVariables) {
@@ -136,6 +141,10 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
 
     return defaultSlides;
   }, [config?.sliderContent]);
+
+  if (!isConfigLoaded) {
+    return null;
+  }
 
   return (
     <div className="container">
