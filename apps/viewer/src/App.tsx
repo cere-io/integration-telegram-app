@@ -67,7 +67,6 @@ export const App = () => {
       ) {
         const { engagement, integrationScriptResults }: EngagementEventData = event.payload;
         const { widget_template } = engagement;
-        debugger;
 
         (integrationScriptResults as Array<any>)[0].duration = 10000;
 
