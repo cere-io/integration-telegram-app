@@ -31,20 +31,8 @@ export const useEngagementData = ({
   const { questsHtml, leaderboardHtml } = useData();
   const { addToQueue } = useEventQueue();
   const [isLoading, setLoading] = useState(eventType === 'GET_QUESTS' ? !questsHtml : !leaderboardHtml);
-  const appStartTime = useRef<number>(performance.now());
   const activityStartTime = useRef<number | null>(null);
   const isFetching = useRef(false);
-
-  useEffect(() => {
-    if (!eventType) return;
-    if (!isLoading) {
-      const loadTime = performance.now() - appStartTime.current;
-      Reporting.message(`${eventType} loaded: ${loadTime.toFixed(2)}ms`, {
-        level: 'info',
-        contexts: { loadTime: { duration: loadTime, unit: 'ms' } },
-      });
-    }
-  }, [eventType, isLoading]);
 
   useEffect(() => {
     if (!eventSource || isFetching.current) return;
@@ -89,7 +77,7 @@ export const useEngagementData = ({
       clearTimeout(engagementTimeout);
       if (event?.payload?.integrationScriptResults[0]?.eventType === eventType) {
         const engagementTime = performance.now() - (activityStartTime.current || 0);
-        Reporting.message(`${eventType} Engagement Loaded: ${engagementTime}ms`, {
+        Reporting.message(`${eventType} Engagement Loaded: ${engagementTime}`, {
           level: 'info',
           contexts: { engagementTime: { duration: engagementTime, unit: 'ms' } },
         });
