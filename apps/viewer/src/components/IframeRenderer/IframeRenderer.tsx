@@ -52,16 +52,25 @@ export const IframeRenderer: React.FC<IframeRendererProps> = memo(
 
         if (iframeDoc) {
           iframe.style.opacity = '0';
+
           requestAnimationFrame(() => {
             iframeDoc.open();
             iframeDoc.write(html);
             iframeDoc.close();
           });
 
-          iframe.onload = () => {
-            iframe.style.opacity = '1';
-            onLoad?.();
+          const checkReady = () => {
+            if (iframeDoc.readyState === 'complete') {
+              setTimeout(() => {
+                iframe.style.opacity = '1';
+                onLoad?.();
+              }, 100);
+            } else {
+              setTimeout(checkReady, 10);
+            }
           };
+
+          checkReady();
         }
       }
     }, [html, iframeRef, onLoad]);

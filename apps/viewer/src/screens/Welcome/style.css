@@ -1,11 +1,23 @@
 @import url('./fonts/fonts.css');
 
+:root {
+  --color-primary: #a733dd;
+  --color-secondary: #ec69bf;
+  --color-background: #130e26;
+  --color-text: #ffffff;
+  --color-text-muted: rgba(255, 255, 255, 0.5);
+  --border-radius: 100px;
+  --border-radius-card: 48px;
+  --shadow-intense: 0px 0px 60px 30px var(--color-background);
+  --shadow-border: 0px 0px 0px 3px rgba(167, 51, 221, 0.25), inset 0px 2px 0px rgba(255, 255, 255, 0.25);
+}
+
 .container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: #130e26;
-  padding: 3rem 1.79875rem;
+  background: var(--color-background);
+  padding: 3rem 1.8rem;
   font-family: sans-serif;
   z-index: 1000000;
   height: 100%;
@@ -26,19 +38,18 @@
 
 .hero-title {
   font-family: 'Nohemi';
-  color: #ffffff;
+  color: var(--color-text);
   font-size: 2.25rem;
   line-height: 2.75rem;
   font-weight: 500;
-  margin-bottom: 0;
-  margin-top: 0;
+  margin: 0;
   letter-spacing: 0.01em;
 }
 
 .hero-description {
   font-family: 'Human Sans';
   font-weight: 400;
-  color: #ffffff;
+  color: var(--color-text-muted);
   font-size: 1rem;
   line-height: 1.5;
   letter-spacing: 0.01em;
@@ -55,27 +66,18 @@
   margin-top: 16px;
 }
 
-.privacy-text {
+.privacy-text,
+.privacy-link {
   font-family: 'Human Sans';
   font-weight: 400;
   font-size: 12px;
   line-height: 16px;
   letter-spacing: 0.01em;
-  color: #ffffff;
-  opacity: 0.5;
-  margin: 0;
+  color: var(--color-text-muted);
 }
 
 .privacy-link {
-  font-family: 'Human Sans';
-  font-style: normal;
-  font-weight: 400;
-  font-size: 12px;
-  line-height: 16px;
-  letter-spacing: 0.01em;
-  text-decoration-line: underline;
-  color: #ffffff;
-  opacity: 0.5;
+  text-decoration: underline;
   text-align: center;
 }
 
@@ -86,11 +88,9 @@
 }
 
 .cta-button {
-  background: radial-gradient(50.26% 100% at 50.26% 100%, #ec69bf 0%, #a733dd 100%);
-  box-shadow:
-    0px 0px 0px 3px rgba(167, 51, 221, 0.25),
-    inset 0px 2px 0px rgba(255, 255, 255, 0.25);
-  border-radius: 100px !important;
+  background: radial-gradient(50.26% 100% at 50.26% 100%, var(--color-secondary) 0%, var(--color-primary) 100%);
+  box-shadow: var(--shadow-border);
+  border-radius: var(--border-radius) !important;
 }
 
 .bottom-container {
@@ -117,9 +117,9 @@
   min-height: 272px;
   background: rgba(19, 14, 38, 0.5);
   backdrop-filter: blur(20px);
-  box-shadow: 0px 0px 60px 30px #130e26;
-  border-radius: 48px;
-  border: 3px solid #a733dd;
+  box-shadow: var(--shadow-intense);
+  border-radius: var(--border-radius-card);
+  border: 3px solid var(--color-primary);
   padding: 24px 10px;
   text-align: center;
   height: auto;
@@ -137,7 +137,7 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 0px 23px;
+  padding: 0 23px;
 }
 
 .slider-content h3 {
@@ -147,7 +147,7 @@
   font-size: 24px;
   line-height: 32px;
   letter-spacing: 0.01em;
-  color: #ffffff;
+  color: var(--color-text);
   margin: 0;
 }
 
@@ -158,45 +158,44 @@
   font-size: 16px;
   line-height: 24px;
   letter-spacing: 0.01em;
-  color: #ffffff;
-  opacity: 0.5;
+  color: var(--color-text-muted);
   margin: 0;
 }
 
-.ellipse-top {
-  --ellipse-size: 257.74px;
+.ellipse-top,
+.ellipse-bottom {
   position: fixed;
-  width: var(--ellipse-size);
-  height: var(--ellipse-size);
+  filter: blur(227.959px);
+}
+
+.ellipse-top {
+  width: 257.74px;
+  height: 257.74px;
   left: -120px;
   top: 0px;
-  background: #a733dd;
-  filter: blur(227.959px);
+  background: var(--color-primary);
 }
 
 .ellipse-bottom {
-  --ellipse-size: 229px;
-  position: fixed;
-  width: var(--ellipse-size);
-  height: var(--ellipse-size);
+  width: 229px;
+  height: 229px;
   left: 279px;
   top: 729px;
-  background: #ec69bf;
-  filter: blur(227.959px);
+  background: var(--color-secondary);
 }
 
 .welcome-cta-button {
-  background: radial-gradient(47.31% 94.12% at 49.74% 0%, #ec69bf 0%, #a733dd 100%) !important;
-  box-shadow:
-    0px 0px 0px 3px rgba(167, 51, 221, 0.25),
-    inset 0px 2px 0px rgba(255, 255, 255, 0.25);
-  border-radius: 100px !important;
+  background: radial-gradient(47.31% 94.12% at 49.74% 0%, var(--color-secondary) 0%, var(--color-primary) 100%) !important;
+  box-shadow: var(--shadow-border);
+  border: 3px solid var(--color-primary) !important;
+  border-radius: var(--border-radius) !important;
   width: 191px !important;
   height: 51px !important;
   justify-content: center !important;
   align-items: center !important;
   margin: 16px auto !important;
 }
+
 .welcome-cta-button span {
   display: flex !important;
   gap: 14px !important;
@@ -207,11 +206,12 @@
   line-height: 15px;
   text-align: center;
   letter-spacing: 1px;
-  color: #ffffff;
+  color: var(--color-text);
 }
+
 .checkbox-container label > svg {
-  border: 3px solid #a733dd;
-  background: rgb(0 0 0 / 50%);
+  border: 3px solid var(--color-primary);
+  background: rgba(0, 0, 0, 0.5);
   color: transparent;
   border-radius: 6px;
   width: 15px;
