@@ -7,6 +7,10 @@ body .App-root {
   --tgui--outline: #fff;
 }
 
+:root {
+  transition: background-color 0.8s ease-out, color 0.8s ease-out;
+}
+
 body {
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }

@@ -18,5 +18,6 @@ export const ENGAGEMENT_TIMEOUT_DURATION = 3000;
 export const DATA_SERVICE_PUBLIC_KEY = import.meta.env.VITE_DATA_SERVICE_PUBLIC_KEY;
 export const APP_PUBLIC_KEY = import.meta.env.VITE_APP_PUBLIC_KEY;
 export const AGENT_SERVICE_REGISTRY_URL = import.meta.env.VITE_AGENT_SERVICE_REGISTRY_URL;
+export const RMS_URL = import.meta.env.VITE_RMS_URL;
 
 export const VIDEO_SEGMENT_LENGTH = import.meta.env.VITE_APP_VIDEO_SEGMENT_LENGTH || 10;
