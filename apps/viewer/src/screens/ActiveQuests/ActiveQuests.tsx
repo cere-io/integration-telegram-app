@@ -100,6 +100,29 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
         void eventSource.dispatchEvent(activityEvent);
       }
 
+      if (event.data.type === 'QUESTION_ANSWERED') {
+        if (!eventSource) return;
+
+        const { event_type, timestamp, data } = {
+          event_type: 'QUESTION_ANSWERED',
+          timestamp: new Date().toISOString(),
+          data: JSON.stringify({
+            campaign_id: campaignId,
+            quizId: event.data.quizId,
+            questionId: event.data.questionId,
+            answerId: event.data.answerId,
+          }),
+        };
+        const parsedData = JSON.parse(data);
+
+        const activityEvent = new ActivityEvent(event_type, {
+          ...parsedData,
+          timestamp,
+        });
+
+        void eventSource.dispatchEvent(activityEvent);
+      }
+
       if (!cereWallet) return;
       const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
       const invitationLink = `${TELEGRAM_APP_URL}?startapp=${campaignId}_${accountId}`;
