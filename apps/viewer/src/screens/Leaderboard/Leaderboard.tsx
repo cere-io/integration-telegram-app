@@ -100,7 +100,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
 
   const handleIframeLoad = () => {
     const renderTime = performance.now() - mountTimeRef.current;
-    console.log(`Leaderboard Tab Loaded: ${renderTime.toFixed(2)}`);
+    console.log(`Leaderboard Tab Loaded: ${renderTime.toFixed(2)}ms`);
     Reporting.message(`Leaderboard Tab Loaded: ${renderTime.toFixed(2)}`, {
       level: 'info',
       contexts: {

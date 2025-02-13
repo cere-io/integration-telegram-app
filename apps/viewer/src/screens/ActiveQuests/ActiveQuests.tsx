@@ -139,7 +139,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
 
   const handleIframeLoad = () => {
     const renderTime = performance.now() - mountTimeRef.current;
-    console.log(`Active Quests Tab Loaded: ${renderTime.toFixed(2)}`);
+    console.log(`Active Quests Tab Loaded: ${renderTime.toFixed(2)}ms`);
     Reporting.message(`Active Quests Tab Loaded: ${renderTime.toFixed(2)}`, {
       level: 'info',
       contexts: {
