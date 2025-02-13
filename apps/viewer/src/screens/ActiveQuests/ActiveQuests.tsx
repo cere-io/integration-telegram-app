@@ -98,6 +98,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
         });
 
         void eventSource.dispatchEvent(activityEvent);
+        return;
       }
 
       if (event.data.type === 'QUESTION_ANSWERED') {
@@ -121,6 +122,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
         });
 
         void eventSource.dispatchEvent(activityEvent);
+        return;
       }
 
       if (!cereWallet) return;
@@ -143,10 +145,12 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
         } else {
           setSnackbarMessageIfChanged('Failed to copy the invitation.');
         }
+        return;
       }
 
       if (event.data.type === 'REFERRAL_BUTTON_CLICK') {
         window.open(`https://t.me/share/url?url=${encodeURIComponent(message)}`);
+        return;
       }
     },
     [cereWallet, campaignId, setActiveTab, eventSource, theme, setSnackbarMessageIfChanged, questData],
