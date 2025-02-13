@@ -89,7 +89,7 @@ export const useEngagementData = ({
       clearTimeout(engagementTimeout);
       if (event?.payload?.integrationScriptResults[0]?.eventType === eventType) {
         const engagementTime = performance.now() - (activityStartTime.current || 0);
-        Reporting.message(`${eventType} Engagement Loaded: ${engagementTime}ms`, {
+        Reporting.message(`${eventType} Engagement Loaded: ${engagementTime}`, {
           level: 'info',
           contexts: { engagementTime: { duration: engagementTime, unit: 'ms' } },
         });
@@ -127,7 +127,7 @@ export const useEngagementData = ({
     };
 
     engagementTimeout = setTimeout(() => {
-      console.error(`${eventType} Engagement Timeout after ${ENGAGEMENT_TIMEOUT_DURATION}ms`);
+      console.error(`${eventType} Engagement Timeout after ${ENGAGEMENT_TIMEOUT_DURATION}`);
       Reporting.message(`${eventType} Engagement Failed`, {
         level: 'error',
         contexts: { timeout: { duration: ENGAGEMENT_TIMEOUT_DURATION, unit: 'ms' } },
