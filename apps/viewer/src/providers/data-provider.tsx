@@ -69,16 +69,19 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     fetchCampaignConfig();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     getAccountId();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (accountId && campaignConfig) {
       compileQuestHtml();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountId, campaignConfig]);
 
   const getAccountId = async () => {
