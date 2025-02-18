@@ -86,36 +86,49 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountId, campaignConfig]);
 
+  useEffect(() => {
+    if (!campaignConfig || questData || questsHtml) return;
+    prepareDataFromConfig();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaignConfig, questData, questsHtml]);
+
   const getAccountId = async () => {
     const id = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
     setAccountId(id);
   };
 
-  const fetchCampaignConfig = async () => {
+  const fetchCampaignConfig = useCallback(async () => {
     if (!campaignId) return;
 
     try {
       const response = await rmsService.getCampaignById(campaignId);
+
       if (!response) return;
-
-      const parsedData = parseCampaignData(response);
-      if (!parsedData) return;
-
       setCampaignConfig(response);
-      setQuestData([parsedData]);
-      saveCache();
       setIsConfigLoaded(true);
     } catch (error) {
       console.error('Error fetching campaign config:', error);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [questData]);
+
+  const prepareDataFromConfig = () => {
+    if (!campaignConfig) return;
+    const parsedData = parseCampaignData(campaignConfig);
+    if (!parsedData) return;
+
+    setQuestData([parsedData]);
+    saveCache();
   };
+
+  console.log({ questData });
 
   const compileQuestHtml = () => {
     if (!campaignConfig || !accountId) return;
-
-    const updatedData = { ...campaignConfig, accountId };
+    const updatedData = { ...questData, accountId };
     const compiledHtml = compileHtml(campaignConfig.templateHtml || '', [updatedData]);
 
+    setQuestData(updatedData);
     setQuestsHtml(compiledHtml);
     setQuestsOriginalHtml(campaignConfig.templateHtml || '');
   };
@@ -130,7 +143,6 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       return {
         quests,
         campaignId: response.campaignId,
-        accountId: '6UcspPyB1zFGpaPKZCs3EvF9WZo7Qf91e4mY6ahMtyFunr8q',
         theme: 'light',
         campaignName: formDataCampaign.name,
         campaignDescription: formDataCampaign.description,
@@ -181,6 +193,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     setLeaderboardData(cachedLeaderboardData);
     setLeaderboardHtml(cachedLeaderboardHtml);
     setLeaderboardOriginalHtml(cachedLeaderboardOriginalHtml);
+    setTimeout(() => {}, 0);
 
     if (!initialQuestsHtmlRef.current) {
       initialQuestsHtmlRef.current = cachedQuestsHtml;

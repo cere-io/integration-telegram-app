@@ -114,34 +114,27 @@ export const App = () => {
     sendJoinCampaignEvent();
   }, [cereWallet, eventSource, campaignId, referrerId, user?.username]);
 
-  if (campaignExpired) {
+  const renderContent = () => {
+    if (campaignExpired) {
+      return (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100vh',
+            textAlign: 'center',
+            padding: '2rem',
+          }}
+        >
+          <Text>Campaign Unavailable</Text>
+          <Text>This campaign is no longer available or an error occurred.</Text>
+        </div>
+      );
+    }
     return (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh',
-          textAlign: 'center',
-          padding: '2rem',
-        }}
-      >
-        <Text>Campaign Unavailable</Text>
-        <Text>This campaign is no longer available or an error occurred.</Text>
-      </div>
-    );
-  }
-
-  return (
-    <AppRoot appearance={theme} className="App-root" platform="ios" id="app-root">
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100vh',
-        }}
-      >
+      <>
         {notificationHtml && (
           <iframe
             srcDoc={notificationHtml}
@@ -179,6 +172,20 @@ export const App = () => {
             </Tabbar>
           </>
         )}
+      </>
+    );
+  };
+
+  return (
+    <AppRoot appearance={theme} className="App-root" platform="ios" id="app-root">
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100vh',
+        }}
+      >
+        {renderContent()}
       </div>
     </AppRoot>
   );
