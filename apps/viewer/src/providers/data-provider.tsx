@@ -121,8 +121,6 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     saveCache();
   };
 
-  console.log({ questData });
-
   const compileQuestHtml = () => {
     if (!campaignConfig || !accountId) return;
     const updatedData = { ...questData, accountId };
