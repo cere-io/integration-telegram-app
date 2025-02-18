@@ -13,6 +13,7 @@ export type Campaign = {
   modDate: string;
   guid: string;
   formData: FormDataType;
+  templateHtml?: string;
 };
 
 type VideoTask = {
