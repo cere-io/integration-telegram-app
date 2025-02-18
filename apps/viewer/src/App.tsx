@@ -1,6 +1,6 @@
 import './index.css';
 import { useEffect, useState } from 'react';
-import { AppRoot, Tabbar, MediaIcon, LeaderboardIcon, QuestsIcon } from '@tg-app/ui';
+import { AppRoot, Tabbar, MediaIcon, LeaderboardIcon, QuestsIcon, Text } from '@tg-app/ui';
 import Reporting from '@tg-app/reporting';
 import { useInitData, useThemeParams } from '@vkruglikov/react-telegram-web-app';
 
@@ -12,6 +12,7 @@ import hbs from 'handlebars';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { useCereWallet } from './cere-wallet';
 import Analytics, { AnalyticsId } from '@tg-app/analytics';
+import { useData } from './providers';
 
 const tabs = [
   {
@@ -38,6 +39,7 @@ export type ActiveTab = {
 
 export const App = () => {
   const [initDataUnsafe] = useInitData() || {};
+  const { campaignExpired } = useData();
   const [theme] = useThemeParams();
   const { campaignId, referrerId } = useStartParam();
 
@@ -111,6 +113,25 @@ export const App = () => {
     };
     sendJoinCampaignEvent();
   }, [cereWallet, eventSource, campaignId, referrerId, user?.username]);
+
+  if (campaignExpired) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          textAlign: 'center',
+          padding: '2rem',
+        }}
+      >
+        <Text>Campaign Unavailable</Text>
+        <Text>This campaign is no longer available or an error occurred.</Text>
+      </div>
+    );
+  }
 
   return (
     <AppRoot appearance={theme} className="App-root" platform="ios" id="app-root">

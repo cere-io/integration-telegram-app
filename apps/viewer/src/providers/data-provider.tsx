@@ -11,6 +11,7 @@ type DataContextType = {
   leaderboardHtml: string;
   campaignConfig: Campaign | null;
   campaignConfigLoaded: boolean;
+  campaignExpired: boolean;
   updateData: (newData: any, originalHtml: string, newHtml: string, key: 'quests' | 'leaderboard') => void;
   loadCache: () => void;
   updateQuestStatus: (questId: string, taskType: string, newStatus: boolean, points: number) => void;
@@ -37,6 +38,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [leaderboardHtml, setLeaderboardHtml] = useState<string>('');
   const [leaderboardOriginalHtml, setLeaderboardOriginalHtml] = useState<string>('');
   const [accountId, setAccountId] = useState<string>();
+  const [isCampaignExpired, setIsCampaignExpired] = useState(false);
 
   const initialQuestsHtmlRef = useRef<string | null>(null);
   const initialLeaderboardHtmlRef = useRef<any | null>(null);
@@ -150,6 +152,10 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     const remainingMilliseconds = Math.max(endDate.getTime() - Date.now(), 0);
+
+    if (remainingMilliseconds <= 0) {
+      setIsCampaignExpired(true);
+    }
 
     return {
       days: Math.floor(remainingMilliseconds / (1000 * 60 * 60 * 24)),
@@ -318,6 +324,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         leaderboardHtml,
         campaignConfig,
         campaignConfigLoaded: isConfigLoaded,
+        campaignExpired: isCampaignExpired,
         updateData,
         loadCache,
         updateQuestStatus,
