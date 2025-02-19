@@ -64,6 +64,18 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     setSnackbarMessage(newMessage);
   }, 500);
 
+  const getReferralProgramMessage = useCallback(async () => {
+    if (!cereWallet) return;
+    const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
+    const invitationLink = `${TELEGRAM_APP_URL}?startapp=${campaignId}_${accountId}`;
+
+    const messageText: string = questData[0].quests.referralTask.message;
+    const decodedText = messageText.replace(/\\u[0-9A-Fa-f]{4,}/g, (match) =>
+      String.fromCodePoint(parseInt(match.replace('\\u', ''), 16)),
+    );
+    return decodedText.replace('{link}', invitationLink);
+  }, [campaignId, cereWallet, questData]);
+
   const handleIframeClick = useCallback(
     async (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
@@ -98,19 +110,36 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
         });
 
         void eventSource.dispatchEvent(activityEvent);
+        return;
       }
 
-      if (!cereWallet) return;
-      const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
-      const invitationLink = `${TELEGRAM_APP_URL}?startapp=${campaignId}_${accountId}`;
+      if (event.data.type === 'QUESTION_ANSWERED') {
+        if (!eventSource) return;
 
-      const messageText: string = questData[0].quests.referralTask.message;
-      const decodedText = messageText.replace(/\\u[0-9A-Fa-f]{4,}/g, (match) =>
-        String.fromCodePoint(parseInt(match.replace('\\u', ''), 16)),
-      );
-      const message = decodedText.replace('{link}', invitationLink);
+        const { event_type, timestamp, data } = {
+          event_type: 'QUESTION_ANSWERED',
+          timestamp: new Date().toISOString(),
+          data: JSON.stringify({
+            campaign_id: campaignId,
+            quizId: event.data.quizId,
+            questionId: event.data.questionId,
+            answerId: event.data.answerId,
+          }),
+        };
+        const parsedData = JSON.parse(data);
+
+        const activityEvent = new ActivityEvent(event_type, {
+          ...parsedData,
+          timestamp,
+        });
+
+        void eventSource.dispatchEvent(activityEvent);
+        return;
+      }
 
       if (event.data.type === 'REFERRAL_LINK_CLICK') {
+        const message = await getReferralProgramMessage();
+        if (!message) return;
         const tempInput = document.createElement('textarea');
         tempInput.value = message;
         document.body.appendChild(tempInput);
@@ -120,13 +149,17 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
         } else {
           setSnackbarMessageIfChanged('Failed to copy the invitation.');
         }
+        return;
       }
 
       if (event.data.type === 'REFERRAL_BUTTON_CLICK') {
+        const message = await getReferralProgramMessage();
+        if (!message) return;
         window.open(`https://t.me/share/url?url=${encodeURIComponent(message)}`);
+        return;
       }
     },
-    [cereWallet, campaignId, setActiveTab, eventSource, theme, setSnackbarMessageIfChanged, questData],
+    [setActiveTab, eventSource, campaignId, theme, getReferralProgramMessage, setSnackbarMessageIfChanged],
   );
 
   useEffect(() => {

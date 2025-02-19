@@ -62,7 +62,8 @@ export const App = () => {
     const handleNotificationEvent = (event: any) => {
       if (
         (event?.payload && event.payload.integrationScriptResults[0].eventType === 'SEGMENT_WATCHED') ||
-        (event?.payload && event.payload.integrationScriptResults[0].eventType === 'X_REPOST')
+        (event?.payload && event.payload.integrationScriptResults[0].eventType === 'X_REPOST') ||
+        (event?.payload && event.payload.integrationScriptResults[0].eventType === 'QUESTION_ANSWERED')
       ) {
         const { engagement, integrationScriptResults }: EngagementEventData = event.payload;
         const { widget_template } = engagement;
