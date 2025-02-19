@@ -1,12 +1,17 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { useStartParam } from '~/hooks';
+import { useRmsService, useStartParam } from '~/hooks';
 import { compileHtml } from '~/helpers';
+import { Campaign } from '@tg-app/rms-service';
+import { useCereWallet } from '~/cere-wallet';
 
 type DataContextType = {
   questData: any;
   questsHtml: string;
   leaderboardData: any;
   leaderboardHtml: string;
+  campaignConfig: Campaign | null;
+  campaignConfigLoaded: boolean;
+  campaignExpired: boolean;
   updateData: (newData: any, originalHtml: string, newHtml: string, key: 'quests' | 'leaderboard') => void;
   loadCache: () => void;
   updateQuestStatus: (questId: string, taskType: string, newStatus: boolean, points: number) => void;
@@ -24,12 +29,16 @@ export const useData = () => {
 
 export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [campaignKey, setCampaignKey] = useState<string | null>(null);
+  const [campaignConfig, setCampaignConfig] = useState<Campaign | null>(null);
+  const [isConfigLoaded, setIsConfigLoaded] = useState(false);
   const [questData, setQuestData] = useState<any | null>(null);
   const [questsHtml, setQuestsHtml] = useState<string>('');
   const [questsOriginalHtml, setQuestsOriginalHtml] = useState<string>('');
   const [leaderboardData, setLeaderboardData] = useState<any | null>(null);
   const [leaderboardHtml, setLeaderboardHtml] = useState<string>('');
   const [leaderboardOriginalHtml, setLeaderboardOriginalHtml] = useState<string>('');
+  const [accountId, setAccountId] = useState<string>();
+  const [isCampaignExpired, setIsCampaignExpired] = useState(false);
 
   const initialQuestsHtmlRef = useRef<string | null>(null);
   const initialLeaderboardHtmlRef = useRef<any | null>(null);
@@ -41,7 +50,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const previousLeaderboardHtml = useRef<string>('');
   const previousLeaderboardOriginalHtml = useRef<string>('');
 
+  const cereWallet = useCereWallet();
   const { campaignId } = useStartParam();
+  const rmsService = useRmsService();
 
   useEffect(() => {
     let isMounted = true;
@@ -57,6 +68,112 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       isMounted = false;
     };
   }, [campaignId]);
+
+  useEffect(() => {
+    fetchCampaignConfig();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    getAccountId();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (accountId && campaignConfig) {
+      compileQuestHtml();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountId, campaignConfig]);
+
+  useEffect(() => {
+    if (!campaignConfig || questData || questsHtml) return;
+    prepareDataFromConfig();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaignConfig, questData, questsHtml]);
+
+  const getAccountId = async () => {
+    const id = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
+    setAccountId(id);
+  };
+
+  const fetchCampaignConfig = useCallback(async () => {
+    if (!campaignId) return;
+
+    try {
+      const response = await rmsService.getCampaignById(campaignId);
+
+      if (!response) return;
+      setCampaignConfig(response);
+      setIsConfigLoaded(true);
+    } catch (error) {
+      console.error('Error fetching campaign config:', error);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [questData]);
+
+  const prepareDataFromConfig = () => {
+    if (!campaignConfig) return;
+    const parsedData = parseCampaignData(campaignConfig);
+    if (!parsedData) return;
+
+    setQuestData([parsedData]);
+    saveCache();
+  };
+
+  const compileQuestHtml = () => {
+    if (!campaignConfig || !accountId) return;
+    const updatedData = { ...questData, accountId };
+    const compiledHtml = compileHtml(campaignConfig.templateHtml || '', [updatedData]);
+
+    setQuestData(updatedData);
+    setQuestsHtml(compiledHtml);
+    setQuestsOriginalHtml(campaignConfig.templateHtml || '');
+  };
+
+  const parseCampaignData = (response: Campaign) => {
+    try {
+      const { campaign: formDataCampaign, quests } = JSON.parse(response?.formData as unknown as string);
+
+      const remainingTime = calculateRemainingTime(formDataCampaign.endDate);
+      if (!remainingTime) return null;
+
+      return {
+        quests,
+        campaignId: response.campaignId,
+        theme: 'light',
+        campaignName: formDataCampaign.name,
+        campaignDescription: formDataCampaign.description,
+        remainingTime,
+        startDate: formDataCampaign.startDate,
+        endDate: formDataCampaign.endDate,
+      };
+    } catch (error) {
+      console.error('Error parsing campaign data:', error);
+      return null;
+    }
+  };
+
+  const calculateRemainingTime = (endDateString: string) => {
+    const endDate = new Date(endDateString);
+    if (isNaN(endDate.getTime())) {
+      console.error('Invalid date format:', endDateString);
+      return null;
+    }
+
+    const remainingMilliseconds = Math.max(endDate.getTime() - Date.now(), 0);
+
+    if (remainingMilliseconds <= 0) {
+      setIsCampaignExpired(true);
+    }
+
+    return {
+      days: Math.floor(remainingMilliseconds / (1000 * 60 * 60 * 24)),
+      hours: Math.floor((remainingMilliseconds / (1000 * 60 * 60)) % 24),
+      minutes: Math.floor((remainingMilliseconds / (1000 * 60)) % 60),
+      seconds: Math.floor((remainingMilliseconds / 1000) % 60),
+    };
+  };
 
   const loadCache = useCallback(async () => {
     if (!campaignKey) return;
@@ -74,6 +191,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     setLeaderboardData(cachedLeaderboardData);
     setLeaderboardHtml(cachedLeaderboardHtml);
     setLeaderboardOriginalHtml(cachedLeaderboardOriginalHtml);
+    setTimeout(() => {}, 0);
 
     if (!initialQuestsHtmlRef.current) {
       initialQuestsHtmlRef.current = cachedQuestsHtml;
@@ -215,6 +333,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         questsHtml,
         leaderboardData,
         leaderboardHtml,
+        campaignConfig,
+        campaignConfigLoaded: isConfigLoaded,
+        campaignExpired: isCampaignExpired,
         updateData,
         loadCache,
         updateQuestStatus,

@@ -11,8 +11,8 @@ import 'swiper/css';
 import 'swiper/css/effect-cards';
 import 'swiper/css/pagination';
 import 'swiper/css/navigation';
-import { useStartParam, useRmsService } from '../../hooks';
 import { FormDataType } from '@tg-app/rms-service';
+import { useData } from '~/providers';
 
 type WelcomeScreenProps = {
   onStart?: () => void;
@@ -22,30 +22,16 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [tempPrivacyAccepted, setTempPrivacyAccepted] = useState(false);
   const [config, setConfig] = useState<FormDataType['campaign']['configuration']['welcomeScreen'] | null>(null);
-  const [isConfigLoaded, setIsConfigLoaded] = useState(false);
 
-  const rmsService = useRmsService();
-  const { campaignId } = useStartParam();
+  const { campaignConfig, campaignConfigLoaded } = useData();
 
   useEffect(() => {
-    const fetchCampaignConfig = async () => {
-      if (!campaignId) return;
-      try {
-        const response = await rmsService.getCampaignById(campaignId);
-        const formData = JSON.parse((response?.formData as unknown as string) || '');
-        if (Object.prototype.hasOwnProperty.call(formData.campaign.configuration, 'welcomeScreen')) {
-          setConfig(formData.campaign.configuration.welcomeScreen || {});
-        }
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setIsConfigLoaded(true);
-      }
-    };
-
-    fetchCampaignConfig();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [campaignId]);
+    if (!campaignConfig) return;
+    const formData = JSON.parse((campaignConfig?.formData as unknown as string) || '');
+    if (Object.prototype.hasOwnProperty.call(formData.campaign.configuration, 'welcomeScreen')) {
+      setConfig(formData.campaign.configuration.welcomeScreen || {});
+    }
+  }, [campaignConfig]);
 
   useEffect(() => {
     if (config?.cssVariables) {
@@ -142,7 +128,7 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
     return defaultSlides;
   }, [config?.sliderContent]);
 
-  if (!isConfigLoaded) {
+  if (!campaignConfigLoaded) {
     return null;
   }
 
