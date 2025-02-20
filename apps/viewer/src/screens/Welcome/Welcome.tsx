@@ -28,7 +28,10 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
   useEffect(() => {
     if (!campaignConfig) return;
     const formData = JSON.parse((campaignConfig?.formData as unknown as string) || '');
-    if (Object.prototype.hasOwnProperty.call(formData.campaign.configuration, 'welcomeScreen')) {
+    if (
+      formData.campaign?.configuration &&
+      Object.prototype.hasOwnProperty.call(formData.campaign?.configuration, 'welcomeScreen')
+    ) {
       setConfig(formData.campaign.configuration.welcomeScreen || {});
     }
   }, [campaignConfig]);
