@@ -16,6 +16,20 @@ export type Campaign = {
   templateHtml?: string;
 };
 
+export type Template = {
+  id: string;
+  name: string;
+  type: string;
+  theme: string;
+  params: string;
+  archived: number;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
+  guid: string;
+};
+
 type VideoTask = {
   title: string;
   description: string;

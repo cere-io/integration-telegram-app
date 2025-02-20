@@ -101,9 +101,18 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     if (!campaignId) return;
 
     try {
-      const response = await rmsService.getCampaignById(campaignId);
+      const [campaignResponse, templateResponse] = await Promise.all([
+        rmsService.getCampaignById(campaignId),
+        rmsService.getTemplateByCampaignIdAndEventType(campaignId, 'GET_QUESTS'),
+      ]);
 
-      if (!response) return;
+      if (!campaignResponse) return;
+
+      const response = {
+        ...campaignResponse,
+        templateHtml: templateResponse?.params || '',
+      };
+
       setCampaignConfig(response);
       setIsConfigLoaded(true);
     } catch (error) {
