@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useRmsService, useStartParam } from '~/hooks';
-import { compileHtml } from '~/helpers';
+import { compileHtml, decodeHtml } from '~/helpers';
 import { Campaign } from '@tg-app/rms-service';
-import { useCereWallet } from '~/cere-wallet';
 
 type DataContextType = {
   questData: any;
@@ -37,7 +36,6 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [leaderboardData, setLeaderboardData] = useState<any | null>(null);
   const [leaderboardHtml, setLeaderboardHtml] = useState<string>('');
   const [leaderboardOriginalHtml, setLeaderboardOriginalHtml] = useState<string>('');
-  const [accountId, setAccountId] = useState<string>();
   const [isCampaignExpired, setIsCampaignExpired] = useState(false);
 
   const initialQuestsHtmlRef = useRef<string | null>(null);
@@ -50,7 +48,6 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const previousLeaderboardHtml = useRef<string>('');
   const previousLeaderboardOriginalHtml = useRef<string>('');
 
-  const cereWallet = useCereWallet();
   const { campaignId } = useStartParam();
   const rmsService = useRmsService();
 
@@ -75,27 +72,10 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    getAccountId();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (accountId && campaignConfig) {
-      compileQuestHtml();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accountId, campaignConfig]);
-
-  useEffect(() => {
     if (!campaignConfig || questData || questsHtml) return;
     prepareDataFromConfig();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaignConfig, questData, questsHtml]);
-
-  const getAccountId = async () => {
-    const id = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
-    setAccountId(id);
-  };
 
   const fetchCampaignConfig = useCallback(async () => {
     if (!campaignId) return;
@@ -127,17 +107,11 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     if (!parsedData) return;
 
     setQuestData([parsedData]);
-    saveCache();
-  };
-
-  const compileQuestHtml = () => {
-    if (!campaignConfig || !accountId) return;
-    const updatedData = { ...questData, accountId };
-    const compiledHtml = compileHtml(campaignConfig.templateHtml || '', [updatedData]);
-
-    setQuestData(updatedData);
-    setQuestsHtml(compiledHtml);
+    const compiledHtml = compileHtml(campaignConfig.templateHtml || '', [parsedData]);
+    setQuestData(parsedData);
+    setQuestsHtml(decodeHtml(compiledHtml));
     setQuestsOriginalHtml(campaignConfig.templateHtml || '');
+    saveCache();
   };
 
   const parseCampaignData = (response: Campaign) => {
