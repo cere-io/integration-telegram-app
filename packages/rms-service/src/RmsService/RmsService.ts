@@ -33,8 +33,6 @@ export class RmsService {
   async getTemplateByCampaignIdAndEventType(campaignId: string, eventType: string): Promise<Template | undefined> {
     const response = await this.request(`/api/template/${campaignId}/type/${eventType}`);
 
-    const responseBody: Response<Template> = await response.json();
-
-    return responseBody.data;
+    return await response.json();
   }
 }
