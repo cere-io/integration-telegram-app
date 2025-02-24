@@ -1,6 +1,6 @@
 {
   "name": "@tg-app/eslint-config",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "main": ".eslintrc.json",
   "private": true,
   "author": "Cere Network <contact@cere.io (https://www.cere.io/)",
