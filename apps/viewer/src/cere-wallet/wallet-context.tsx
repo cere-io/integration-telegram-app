@@ -3,13 +3,13 @@ import { EmbedWallet, WalletEnvironment } from '@cere/embed-wallet';
 import { APP_ENV, TELEGRAM_BOT_ID } from '../constants.ts';
 import Reporting from '@tg-app/reporting';
 import Analytics, { AnalyticsId } from '@tg-app/analytics';
-import { useHideTorusIframe } from '../hooks';
+import { useForceHideTorusIframe } from '../hooks';
 
 const CereWalletContext = createContext<EmbedWallet | null>(null);
 
 export const useCereWallet = () => {
   const wallet = useContext(CereWalletContext);
-  useHideTorusIframe();
+  useForceHideTorusIframe();
 
   if (!wallet) {
     throw new Error('Not in wallet context');
