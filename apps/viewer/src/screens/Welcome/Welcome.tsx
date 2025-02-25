@@ -11,6 +11,8 @@ import 'swiper/css';
 import 'swiper/css/effect-cards';
 import 'swiper/css/pagination';
 import 'swiper/css/navigation';
+import { FormDataType } from '@tg-app/rms-service';
+import { useData } from '~/providers';
 
 type WelcomeScreenProps = {
   onStart?: () => void;
@@ -19,6 +21,28 @@ type WelcomeScreenProps = {
 export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [tempPrivacyAccepted, setTempPrivacyAccepted] = useState(false);
+  const [config, setConfig] = useState<FormDataType['campaign']['configuration']['welcomeScreen'] | null>(null);
+
+  const { campaignConfig, campaignConfigLoaded } = useData();
+
+  useEffect(() => {
+    if (!campaignConfig) return;
+    const formData = JSON.parse((campaignConfig?.formData as unknown as string) || '');
+    if (
+      formData.campaign?.configuration &&
+      Object.prototype.hasOwnProperty.call(formData.campaign?.configuration, 'welcomeScreen')
+    ) {
+      setConfig(formData.campaign.configuration.welcomeScreen || {});
+    }
+  }, [campaignConfig]);
+
+  useEffect(() => {
+    if (config?.cssVariables) {
+      Object.entries(config?.cssVariables).forEach(([key, value]) => {
+        document.documentElement.style.setProperty(key, value);
+      });
+    }
+  }, [config?.cssVariables]);
 
   useEffect(() => {
     const savedPrivacyAccepted = localStorage.getItem('privacyAccepted') === 'true';
@@ -54,7 +78,7 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
         className="welcome-cta-button"
       >
         <Text className="welcom-cta-text">
-          <span>Start Earning</span>
+          <span>{config?.buttonText || 'Start Earning'}</span>
           <svg width="15" height="14" viewBox="0 0 15 14" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M14.1178 5.18713L8.93455 -6.10352e-05L7.55176 1.38567L12.735 6.57286L7.55176 11.7601L8.93847 13.1458L14.1178 7.9586C14.4853 7.59104 14.6917 7.09259 14.6917 6.57286C14.6917 6.05314 14.4853 5.55469 14.1178 5.18713Z"
@@ -68,7 +92,48 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
         </Text>
       </Button>
     );
-  }, [tempPrivacyAccepted, handleButtonClick]);
+  }, [tempPrivacyAccepted, handleButtonClick, config?.buttonText]);
+
+  const slidesToRender = useMemo(() => {
+    const defaultSlides = [
+      {
+        icon: EarnRewards,
+        title: 'Earn Rewards',
+        description: 'Complete challenges and climb to the top of our leaderboard',
+      },
+      {
+        icon: ExpertInsights,
+        title: 'Expert Insights',
+        description: 'Get insights on top projects with expert-created explainers',
+      },
+      {
+        icon: AINLP,
+        title: 'AI NLP',
+        description: 'Intelligent rewards for positive community engagement',
+      },
+    ];
+
+    if (config?.sliderContent && config.sliderContent.length > 0) {
+      return defaultSlides.map((slide, index) => {
+        const updatedSlide = config.sliderContent?.[index];
+        if (updatedSlide) {
+          return {
+            ...slide,
+            icon: updatedSlide.icon || slide.icon,
+            title: updatedSlide.title || slide.title,
+            description: updatedSlide.description || slide.description,
+          };
+        }
+        return slide;
+      });
+    }
+
+    return defaultSlides;
+  }, [config?.sliderContent]);
+
+  if (!campaignConfigLoaded) {
+    return null;
+  }
 
   return (
     <div className="container">
@@ -77,9 +142,10 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
           <div className="ellipse-top"></div>
           <div className="ellipse-bottom"></div>
           <div className="hero-wrapper">
-            <h1 className="hero-title">Sit back, Enjoy, and Earn!</h1>
+            <h1 className="hero-title">{config?.title || 'Sit back, Enjoy, and Earn!'}</h1>
             <p className="hero-description">
-              Watch exclusive project explainers for unique insights and get rewarded in top-project tokens!
+              {config?.description ||
+                'Watch exclusive project explainers for unique insights and get rewarded in top-project tokens!'}
             </p>
           </div>
 
@@ -87,13 +153,14 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
             <div className="checkbox-container">
               <Checkbox checked={tempPrivacyAccepted} onChange={handleCheckboxChange} title="Title" color="white" />
               <p className="privacy-text">
-                I agree to Cere Media's data processing for personalized content and rewards.
+                {config?.agreementText ||
+                  "I agree to Cere Media's data processing for personalized content and rewards."}
               </p>
             </div>
           )}
           {renderButton}
-          <a href="https://www.cere.network/privacy-policy" className="privacy-link">
-            Read full privacy policy
+          <a href={config?.privacyLink || 'https://www.cere.network/privacy-policy'} className="privacy-link">
+            {config?.privacyText || 'Read full privacy policy'}
           </a>
         </div>
         <div className="bottom-container">
@@ -103,33 +170,17 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
             modules={[EffectCards, Pagination, Navigation]}
             className="hero-slider-wrapper"
           >
-            <SwiperSlide>
-              <div className="slider-icon">
-                <img src={EarnRewards} alt="Earn Rewards" />
-              </div>
-              <div className="slider-content">
-                <h3>Earn Rewards</h3>
-                <p>Complete challenges and climb to the top of our leaderboard</p>
-              </div>
-            </SwiperSlide>
-            <SwiperSlide>
-              <div className="slider-icon">
-                <img src={ExpertInsights} alt="Expert Insights" />
-              </div>
-              <div className="slider-content">
-                <h3>Expert Insights</h3>
-                <p>Get insights on top projects with expert-created explainers</p>
-              </div>
-            </SwiperSlide>
-            <SwiperSlide>
-              <div className="slider-icon">
-                <img src={AINLP} alt="AI NLP" />
-              </div>
-              <div className="slider-content">
-                <h3>AI NLP</h3>
-                <p>Intelligent rewards for positive community engagement</p>
-              </div>
-            </SwiperSlide>
+            {slidesToRender.map((slide, index) => (
+              <SwiperSlide key={index}>
+                <div className="slider-icon">
+                  <img src={slide.icon} alt={slide.title} />
+                </div>
+                <div className="slider-content">
+                  <h3>{slide.title}</h3>
+                  <p>{slide.description}</p>
+                </div>
+              </SwiperSlide>
+            ))}
           </Swiper>
         </div>
       </div>

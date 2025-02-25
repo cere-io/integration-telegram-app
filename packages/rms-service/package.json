@@ -1,5 +1,5 @@
 {
-  "name": "@tg-app/reporting",
+  "name": "@tg-app/rms-service",
   "version": "0.2.0",
   "private": true,
   "sideEffects": false,
@@ -7,8 +7,6 @@
   "exports": {
     "import": "./src"
   },
-  "dependencies": {
-    "@sentry/react": "^8.20.0"
-  },
+  "dependencies": {},
   "scripts": {}
 }

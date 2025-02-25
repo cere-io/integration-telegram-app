@@ -38,12 +38,13 @@ type IframeRendererProps = {
   html: string;
   iframeRef: MutableRefObject<HTMLIFrameElement | null>;
   title: string;
+  onLoad?: () => void;
   style?: React.CSSProperties;
   allow?: string;
 };
 
 export const IframeRenderer: React.FC<IframeRendererProps> = memo(
-  ({ iframeRef, html, title, style }) => {
+  ({ iframeRef, html, title, onLoad, style }) => {
     useEffect(() => {
       if (iframeRef.current) {
         const iframe = iframeRef.current;
@@ -51,18 +52,28 @@ export const IframeRenderer: React.FC<IframeRendererProps> = memo(
 
         if (iframeDoc) {
           iframe.style.opacity = '0';
+
           requestAnimationFrame(() => {
             iframeDoc.open();
             iframeDoc.write(html);
             iframeDoc.close();
           });
 
-          iframe.onload = () => {
-            iframe.style.opacity = '1';
+          const checkReady = () => {
+            if (iframeDoc.readyState === 'complete') {
+              setTimeout(() => {
+                iframe.style.opacity = '1';
+                onLoad?.();
+              }, 100);
+            } else {
+              setTimeout(checkReady, 10);
+            }
           };
+
+          checkReady();
         }
       }
-    }, [html, iframeRef]);
+    }, [html, iframeRef, onLoad]);
 
     return (
       <iframe

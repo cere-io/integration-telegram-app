@@ -9,6 +9,7 @@ import { ClipboardCheck } from 'lucide-react';
 import { useCereWallet } from '../../cere-wallet';
 import { useData } from '../../providers';
 import { IframeRenderer } from '../../components/IframeRenderer';
+import Reporting from '@tg-app/reporting';
 
 // eslint-disable-next-line @typescript-eslint/ban-types
 function useDebouncedCallback(callback: Function, delay: number) {
@@ -29,10 +30,11 @@ type ActiveQuestsProps = {
 };
 
 export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
-  const { questsHtml, updateData } = useData();
+  const { questsHtml, questData, updateData } = useData();
 
   const lastHtml = useRef(questsHtml);
   const [memoizedQuestsHtml, setMemoizedQuestsHtml] = useState(questsHtml);
+  const mountTimeRef = useRef<number>(performance.now());
 
   useEffect(() => {
     if (lastHtml.current !== questsHtml) {
@@ -61,6 +63,18 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
   const setSnackbarMessageIfChanged = useDebouncedCallback((newMessage: string) => {
     setSnackbarMessage(newMessage);
   }, 500);
+
+  const getReferralProgramMessage = useCallback(async () => {
+    if (!cereWallet) return;
+    const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
+    const invitationLink = `${TELEGRAM_APP_URL}?startapp=${campaignId}_${accountId}`;
+
+    const messageText: string = questData[0].quests.referralTask.message;
+    const decodedText = messageText.replace(/\\u[0-9A-Fa-f]{4,}/g, (match) =>
+      String.fromCodePoint(parseInt(match.replace('\\u', ''), 16)),
+    );
+    return decodedText.replace('{link}', invitationLink);
+  }, [campaignId, cereWallet, questData]);
 
   const handleIframeClick = useCallback(
     async (event: MessageEvent) => {
@@ -96,30 +110,56 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
         });
 
         void eventSource.dispatchEvent(activityEvent);
+        return;
       }
 
-      if (!cereWallet) return;
-      const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
-      const invitationLink = `${TELEGRAM_APP_URL}?startapp=${campaignId}_${accountId}`;
+      if (event.data.type === 'QUESTION_ANSWERED') {
+        if (!eventSource) return;
+
+        const { event_type, timestamp, data } = {
+          event_type: 'QUESTION_ANSWERED',
+          timestamp: new Date().toISOString(),
+          data: JSON.stringify({
+            campaign_id: campaignId,
+            quizId: event.data.quizId,
+            questionId: event.data.questionId,
+            answerId: event.data.answerId,
+          }),
+        };
+        const parsedData = JSON.parse(data);
+
+        const activityEvent = new ActivityEvent(event_type, {
+          ...parsedData,
+          timestamp,
+        });
+
+        void eventSource.dispatchEvent(activityEvent);
+        return;
+      }
+
       if (event.data.type === 'REFERRAL_LINK_CLICK') {
+        const message = await getReferralProgramMessage();
+        if (!message) return;
         const tempInput = document.createElement('textarea');
-        tempInput.value = invitationLink;
+        tempInput.value = message;
         document.body.appendChild(tempInput);
         tempInput.select();
         if (document.execCommand('copy')) {
-          setSnackbarMessageIfChanged('Invitation link copied to clipboard successfully!');
+          setSnackbarMessageIfChanged('Invitation copied to clipboard successfully!');
         } else {
-          setSnackbarMessageIfChanged('Failed to copy the invitation link.');
+          setSnackbarMessageIfChanged('Failed to copy the invitation.');
         }
+        return;
       }
 
       if (event.data.type === 'REFERRAL_BUTTON_CLICK') {
-        const text =
-          'Hey there, friend! 🎉 I’m excited to invite you to join the Watch-to-Earn campaign where you can earn amazing prizes just by watching! Don’t miss out on this fantastic opportunity to have fun and win big. Ready to jump in? Click the link above to get started and let’s make this an unforgettable experience together! 🌟';
-        window.open(`https://t.me/share/url?url=${invitationLink}&text=${text}`);
+        const message = await getReferralProgramMessage();
+        if (!message) return;
+        window.open(`https://t.me/share/url?url=${encodeURIComponent(message)}`);
+        return;
       }
     },
-    [campaignId, cereWallet, setActiveTab, eventSource, setSnackbarMessageIfChanged, theme],
+    [setActiveTab, eventSource, campaignId, theme, getReferralProgramMessage, setSnackbarMessageIfChanged],
   );
 
   useEffect(() => {
@@ -129,6 +169,20 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
       window.removeEventListener('message', handleIframeClick);
     };
   }, [campaignId, cereWallet, handleIframeClick, setActiveTab, eventSource]);
+
+  const handleIframeLoad = () => {
+    const renderTime = performance.now() - mountTimeRef.current;
+    console.log(`Active Quests Tab Loaded: ${renderTime.toFixed(2)}ms`);
+    Reporting.message(`Active Quests Tab Loaded: ${renderTime.toFixed(2)}`, {
+      level: 'info',
+      contexts: {
+        tabLoadingTime: {
+          duration: renderTime,
+          unit: 'ms',
+        },
+      },
+    });
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -144,6 +198,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
             height: 'calc(100vh - 74px)',
             border: 'none',
           }}
+          onLoad={handleIframeLoad}
         />
       )}
       {snackbarMessage && (
