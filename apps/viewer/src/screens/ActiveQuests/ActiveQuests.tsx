@@ -121,6 +121,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
           timestamp: new Date().toISOString(),
           data: JSON.stringify({
             campaign_id: campaignId,
+            campaignId: campaignId,
             quizId: event.data.quizId,
             questionId: event.data.questionId,
             answerId: event.data.answerId,
@@ -133,7 +134,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
           timestamp,
         });
 
-        setTimeout(() => void eventSource.dispatchEvent(activityEvent), 3000);
+        setTimeout(() => void eventSource.dispatchEvent(activityEvent), 1000);
         return;
       }
 
