@@ -133,7 +133,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
           timestamp,
         });
 
-        void eventSource.dispatchEvent(activityEvent);
+        setTimeout(() => void eventSource.dispatchEvent(activityEvent), 3000);
         return;
       }
 
