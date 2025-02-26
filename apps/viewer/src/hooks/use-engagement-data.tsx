@@ -99,6 +99,9 @@ export const useEngagementData = ({
                 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                 // @ts-expect-error
                 quests: integrationScriptResults?.[0].quests || {},
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-expect-error
+                accountId: integrationScriptResults?.[0].accountId || '',
               }),
               ...(eventType === 'GET_LEADERBOARD' && {
                 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
