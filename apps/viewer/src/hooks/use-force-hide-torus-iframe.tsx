@@ -2,7 +2,10 @@ import { useEffect } from 'react';
 
 export const useForceHideTorusIframe = () => {
   useEffect(() => {
-    const isInTelegram = /Telegram/.test(window.navigator.userAgent);
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
+    const initDataRaw = window.Telegram?.WebApp?.initData || '';
+    const isInTelegram = initDataRaw !== '';
     console.log(`In Telegram: ${isInTelegram}`);
     if (isInTelegram) {
       const observer = new MutationObserver(() => {
