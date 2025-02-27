@@ -12,10 +12,10 @@ test.describe('Performance testing for screens', () => {
 
   test('Open active quests screen', async ({ page }) => {
     const start = Date.now();
-    await page.goto('https://telegram-viewer-app.cere.io/?campaignId=12');
+    await page.goto('https://telegram-viewer-app.stage.cere.io/campaignId=115');
 
-    await page.locator('.tgui-bca5056bf34297b0').click();
-    await page.locator('.welcom-cta-text').click();
+    // await page.locator('.tgui-bca5056bf34297b0').click();
+    // await page.locator('.welcom-cta-text').click();
 
     await page.locator('#sign_in').click();
     await page.locator('[name="login"]').fill(userName);
@@ -38,10 +38,10 @@ test.describe('Performance testing for screens', () => {
 
   test('Open leaderboard screen', async ({ page }) => {
     const start = Date.now();
-    await page.goto('https://telegram-viewer-app.cere.io/?campaignId=12');
+    await page.goto('https://telegram-viewer-app.stage.cere.io/campaignId=115');
 
-    await page.locator('.tgui-bca5056bf34297b0').click();
-    await page.locator('.welcom-cta-text').click();
+    // await page.locator('.tgui-bca5056bf34297b0').click();
+    // await page.locator('.welcom-cta-text').click();
 
     await page.locator('#sign_in').click();
     await page.locator('[name="login"]').fill(userName);
@@ -74,10 +74,10 @@ test.describe('Performance testing for screens', () => {
 
   test('Open library screen', async ({ page }) => {
     const start = Date.now();
-    await page.goto('https://telegram-viewer-app.cere.io/?campaignId=12');
+    await page.goto('https://telegram-viewer-app.stage.cere.io/campaignId=115');
 
-    await page.locator('.tgui-bca5056bf34297b0').click();
-    await page.locator('.welcom-cta-text').click();
+    // await page.locator('.tgui-bca5056bf34297b0').click();
+    // await page.locator('.welcom-cta-text').click();
 
     await page.locator('#sign_in').click();
     await page.locator('[name="login"]').fill(userName);
