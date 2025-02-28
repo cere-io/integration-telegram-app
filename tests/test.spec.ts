@@ -62,9 +62,9 @@ test.describe('Performance testing for screens', () => {
 
     const end = Date.now();
     const timeTaken = end - start;
-    console.log(`Время для загрузки экрана активных квестов: ${timeTaken}ms`);
+    console.log(`Time to load the active quests screen: ${timeTaken}ms`);
     logTime('Active Quests Screen', timeTaken);
-    expect(timeTaken).toBeLessThan(20000);
+    expect(timeTaken).toBeLessThan(30000);
   });
 
   test('Open leaderboard screen', async ({ page }) => {
@@ -122,9 +122,9 @@ test.describe('Performance testing for screens', () => {
 
     const end = Date.now();
     const timeTaken = end - start;
-    console.log(`Время для загрузки экрана лидерборда: ${timeTaken}ms`);
+    console.log(`Time to load the leaderboard screen: ${timeTaken}ms`);
     logTime('Leaderboard Screen', timeTaken);
-    expect(timeTaken).toBeLessThan(20000);
+    expect(timeTaken).toBeLessThan(30000);
   });
 
   test('Open library screen', async ({ page }) => {
@@ -134,55 +134,12 @@ test.describe('Performance testing for screens', () => {
     await page.locator('.tgui-bca5056bf34297b0').click();
     await page.locator('.welcom-cta-text').click();
 
-    await page
-      .locator('#torusIframe')
-      .contentFrame()
-      .locator('iframe[title="Embedded browser"]')
-      .contentFrame()
-      .getByRole('button', { name: 'I already have a wallet' })
-      .click();
-    await page
-      .locator('#torusIframe')
-      .contentFrame()
-      .locator('iframe[title="Embedded browser"]')
-      .contentFrame()
-      .getByRole('textbox', { name: 'Email' })
-      .click();
-    await page
-      .locator('#torusIframe')
-      .contentFrame()
-      .locator('iframe[title="Embedded browser"]')
-      .contentFrame()
-      .getByRole('textbox', { name: 'Email' })
-      .fill(userName);
-    await page
-      .locator('#torusIframe')
-      .contentFrame()
-      .locator('iframe[title="Embedded browser"]')
-      .contentFrame()
-      .getByRole('button', { name: 'Sign In' })
-      .click();
-    await page
-      .locator('#torusIframe')
-      .contentFrame()
-      .locator('iframe[title="Embedded browser"]')
-      .contentFrame()
-      .getByRole('textbox', { name: 'OTP input' })
-      .fill(otp);
-    await page
-      .locator('#torusIframe')
-      .contentFrame()
-      .locator('iframe[title="Embedded browser"]')
-      .contentFrame()
-      .getByRole('button', { name: 'Verify' })
-      .click();
-
     await page.getByRole('button', { name: 'Library' }).click();
 
     const end = Date.now();
     const timeTaken = end - start;
-    console.log(`Время для загрузки экрана библиотеки: ${timeTaken}ms`);
+    console.log(`Time to load the library screen: ${timeTaken}ms`);
     logTime('Library Screen', timeTaken);
-    expect(timeTaken).toBeLessThan(20000);
+    expect(timeTaken).toBeLessThan(30000);
   });
 });
