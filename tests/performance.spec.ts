@@ -4,15 +4,27 @@ import fs from 'fs';
 const userName = 'veronika.filipenko@cere.io';
 const otp = '555555';
 
-test.describe('Performance testing for screens', () => {
-  const logTime = (testName: string, time: number) => {
-    const logMessage = `${testName} took ${time}ms\n`;
-    fs.appendFileSync('performance-log.txt', logMessage);
-  };
+const logTime = (testName: string, time: number) => {
+  const logMessage = `${testName} took ${time}ms\n`;
+  fs.appendFileSync(`performance-log}.txt`, logMessage);
+};
 
-  test('Open active quests screen', async ({ page }) => {
+test.describe(`Performance testing from`, () => {
+  test(`Check IP and Country`, async ({ page }) => {
+    await page.goto('https://api64.ipify.org?format=json');
+    const ipResponse = await page.locator('pre').textContent();
+    const { ip } = JSON.parse(ipResponse || '{}');
+    console.log(`[] Detected IP: ${ip}`);
+
+    await page.goto('https://ipapi.co/json/');
+    const locationResponse = await page.locator('pre').textContent();
+    const { country_name, country } = JSON.parse(locationResponse || '{}');
+    console.log(`[] Detected Country: ${country_name} (${country})`);
+  });
+
+  test(`Open active quests screen`, async ({ page }) => {
     const start = Date.now();
-    await page.goto('https://telegram-viewer-app.stage.cere.io/?campaignId=117');
+    await page.goto('https://telegram-viewer-app.cere.io/?campaignId=12');
 
     await page.locator('.tgui-bca5056bf34297b0').click();
     await page.locator('.welcom-cta-text').click();
@@ -23,13 +35,6 @@ test.describe('Performance testing for screens', () => {
       .locator('iframe[title="Embedded browser"]')
       .contentFrame()
       .getByRole('button', { name: 'I already have a wallet' })
-      .click();
-    await page
-      .locator('#torusIframe')
-      .contentFrame()
-      .locator('iframe[title="Embedded browser"]')
-      .contentFrame()
-      .getByRole('textbox', { name: 'Email' })
       .click();
     await page
       .locator('#torusIframe')
@@ -60,16 +65,15 @@ test.describe('Performance testing for screens', () => {
       .getByRole('button', { name: 'Verify' })
       .click();
 
-    const end = Date.now();
-    const timeTaken = end - start;
-    console.log(`Time to load the active quests screen: ${timeTaken}ms`);
+    const timeTaken = Date.now() - start;
+    console.log(`Time to load active quests screen: ${timeTaken}ms`);
     logTime('Active Quests Screen', timeTaken);
     expect(timeTaken).toBeLessThan(30000);
   });
 
-  test('Open leaderboard screen', async ({ page }) => {
+  test(`Open leaderboard screen`, async ({ page }) => {
     const start = Date.now();
-    await page.goto('https://telegram-viewer-app.stage.cere.io/?campaignId=117');
+    await page.goto('https://telegram-viewer-app.cere.io/?campaignId=12');
 
     await page.locator('.tgui-bca5056bf34297b0').click();
     await page.locator('.welcom-cta-text').click();
@@ -80,13 +84,6 @@ test.describe('Performance testing for screens', () => {
       .locator('iframe[title="Embedded browser"]')
       .contentFrame()
       .getByRole('button', { name: 'I already have a wallet' })
-      .click();
-    await page
-      .locator('#torusIframe')
-      .contentFrame()
-      .locator('iframe[title="Embedded browser"]')
-      .contentFrame()
-      .getByRole('textbox', { name: 'Email' })
       .click();
     await page
       .locator('#torusIframe')
@@ -120,16 +117,15 @@ test.describe('Performance testing for screens', () => {
     await page.getByRole('button', { name: 'Leaderboard' }).click();
     await page.locator('iframe[title="Leaderboard"]').contentFrame().getByRole('img').click();
 
-    const end = Date.now();
-    const timeTaken = end - start;
-    console.log(`Time to load the leaderboard screen: ${timeTaken}ms`);
+    const timeTaken = Date.now() - start;
+    console.log(`Time to load leaderboard screen: ${timeTaken}ms`);
     logTime('Leaderboard Screen', timeTaken);
     expect(timeTaken).toBeLessThan(30000);
   });
 
-  test('Open library screen', async ({ page }) => {
+  test(`Open library screen`, async ({ page }) => {
     const start = Date.now();
-    await page.goto('https://telegram-viewer-app.stage.cere.io/?campaignId=117');
+    await page.goto('https://telegram-viewer-app.cere.io/?campaignId=12');
 
     await page.locator('.tgui-bca5056bf34297b0').click();
     await page.locator('.welcom-cta-text').click();
