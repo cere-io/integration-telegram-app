@@ -38,14 +38,11 @@ export default defineConfig({
 
   /* Configure projects for major browsers */
   projects: [
-    {
-      name: 'USA',
-      testDir: './tests',
-      use: {
-        browserName: 'firefox',
-        headless: true,
-      },
-    },
+    // {
+    //   name: 'USA',
+    //   testDir: './tests',
+    //   use: { ...devices['Desktop Chrome'] },
+    // },
     {
       name: 'Germany',
       testDir: './tests',
