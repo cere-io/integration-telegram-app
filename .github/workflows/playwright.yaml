@@ -16,9 +16,9 @@ jobs:
         run: npm ci
 
       - name: Set up OpenVPN (Germany)
-        uses: 3l3ktr0/setup-openvpn@v1
+        uses: marketplace-actions/openvpn-action@v1
         with:
-          config_file: ./configs/de-12.protonvpn.tcp.ovpn
+          config: ./configs/de-12.protonvpn.tcp.ovpn
           username: ${{ secrets.PROTONVPN_USERNAME }}
           password: ${{ secrets.PROTONVPN_PASSWORD }}
 
