@@ -23,9 +23,8 @@ jobs:
 
       - name: Set up OpenVPN (Germany)
         run: |
-          sudo openvpn --config ./ovpn-configs/de-12.protonvpn.tcp.ovpn \
-                       --auth-user-pass <(echo -e "${{ secrets.PROTONVPN_USERNAME }}\n${{ secrets.PROTONVPN_PASSWORD }}") \
-                       --daemon
+          echo -e "${{ secrets.PROTONVPN_USERNAME }}\n${{ secrets.PROTONVPN_PASSWORD }}" > /tmp/auth.txt
+          sudo openvpn --config ./ovpn-configs/de-12.protonvpn.tcp.ovpn --auth-user-pass /tmp/auth.txt --daemon
           echo "Waiting for VPN to connect..."
           sleep 10
 
