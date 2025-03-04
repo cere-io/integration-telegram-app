@@ -15,16 +15,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Playwright browsers
+        run: npx playwright install
+
       - name: Install OpenVPN
         run: sudo apt-get update && sudo apt-get install -y openvpn
 
       - name: Set up OpenVPN (Germany)
         run: |
-          echo -e "${{ secrets.PROTONVPN_USERNAME }}\n${{ secrets.PROTONVPN_PASSWORD }}" > vpn-credentials.txt
-          sudo openvpn --config ./ovpn-configs/de-12.protonvpn.tcp.ovpn --auth-user-pass vpn-credentials.txt --daemon
+          sudo openvpn --config ./ovpn-configs/de-12.protonvpn.tcp.ovpn \
+                       --auth-user-pass <(echo -e "${{ secrets.PROTONVPN_USERNAME }}\n${{ secrets.PROTONVPN_PASSWORD }}") \
+                       --daemon
           echo "Waiting for VPN to connect..."
           sleep 10
-          rm vpn-credentials.txt
 
       - name: Verify VPN connection
         run: |
