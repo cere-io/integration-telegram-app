@@ -8,12 +8,13 @@
     "lint:fix": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0 --fix",
     "check-types": "npm run check-types --ws --if-present",
     "build": "npm run build --ws --if-present",
-    "analyze": "vite-bundle-visualizer"
+    "analyze": "vite-bundle-visualizer",
+    "test:e2e": "npx playwright test"
   },
   "dependencies": {
+    "@cere-activity-sdk/ciphers": "^0.1.6",
     "@cere-activity-sdk/events": "^0.1.6",
     "@cere-activity-sdk/signers": "^0.1.6",
-    "@cere-activity-sdk/ciphers": "^0.1.6",
     "@cere/embed-wallet": "^0.23.4",
     "@cere/media-sdk-react": "^1.6.0-rc.18",
     "@vkruglikov/react-telegram-web-app": "^2.1.9",
@@ -22,6 +23,8 @@
     "swiper": "^11.2.1"
   },
   "devDependencies": {
+    "@azure/microsoft-playwright-testing": "^1.0.0-beta.7",
+    "@playwright/test": "^1.50.1",
     "@preact/preset-vite": "^2.9.0",
     "@types/node": "^22.1.0",
     "@types/react": "^18.3.4",

@@ -1,0 +1,27 @@
+name: Run Playwright Tests
+
+on:
+  schedule:
+    - cron: '0 9,18 * * *'
+  workflow_dispatch:
+
+jobs:
+  vpn-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: |
+          npm ci
+
+      - name: Set up OpenVPN (Germany)
+        uses: dsyer/openvpn-action@v1
+        with:
+          config-file: ./configs/de-12.protonvpn.tcp.ovpn
+          username: ${{ secrets.PROTONVPN_USERNAME }}
+          password: ${{ secrets.PROTONVPN_PASSWORD }}
+
+      - name: Run Playwright tests (Germany)
+        run: npx playwright test --project=Germany
