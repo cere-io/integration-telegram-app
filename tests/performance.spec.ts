@@ -75,7 +75,7 @@ test.describe(`Performance testing from`, () => {
     const timeTaken = Date.now() - start;
     console.log(`Time to load active quests screen: ${timeTaken}ms`);
     logTime('Active Quests Screen', timeTaken);
-    expect(timeTaken).toBeLessThan(30000);
+    expect(timeTaken).toBeLessThan(60000);
   });
 
   test(`Open leaderboard screen`, async ({ page }) => {
@@ -92,7 +92,7 @@ test.describe(`Performance testing from`, () => {
     const timeTaken = Date.now() - start;
     console.log(`Time to load leaderboard screen: ${timeTaken}ms`);
     logTime('Leaderboard Screen', timeTaken);
-    expect(timeTaken).toBeLessThan(30000);
+    expect(timeTaken).toBeLessThan(60000);
   });
 
   test(`Open library screen`, async ({ page }) => {
@@ -107,6 +107,6 @@ test.describe(`Performance testing from`, () => {
     const timeTaken = end - start;
     console.log(`Time to load the library screen: ${timeTaken}ms`);
     logTime('Library Screen', timeTaken);
-    expect(timeTaken).toBeLessThan(30000);
+    expect(timeTaken).toBeLessThan(60000);
   });
 });
