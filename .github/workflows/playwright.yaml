@@ -10,18 +10,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Install dependencies
-        run: |
-          npm ci
+        run: npm ci
 
       - name: Set up OpenVPN (Germany)
-        uses: jippi/openvpn-action@v1
+        uses: 3l3ktr0/setup-openvpn@v1
         with:
-          config-file: ./configs/de-12.protonvpn.tcp.ovpn
+          config_file: ./configs/de-12.protonvpn.tcp.ovpn
           username: ${{ secrets.PROTONVPN_USERNAME }}
           password: ${{ secrets.PROTONVPN_PASSWORD }}
+
+      - name: Wait for VPN connection
+        run: sleep 10 && curl ifconfig.me
 
       - name: Run Playwright tests (Germany)
         run: npx playwright test --project=Germany
