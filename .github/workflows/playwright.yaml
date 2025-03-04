@@ -17,7 +17,7 @@ jobs:
           npm ci
 
       - name: Set up OpenVPN (Germany)
-        uses: dsyer/openvpn-action@v1
+        uses: jippi/openvpn-action@v1
         with:
           config-file: ./configs/de-12.protonvpn.tcp.ovpn
           username: ${{ secrets.PROTONVPN_USERNAME }}
