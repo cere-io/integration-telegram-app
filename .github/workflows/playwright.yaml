@@ -15,15 +15,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install OpenVPN
+        run: sudo apt-get update && sudo apt-get install -y openvpn
+
       - name: Set up OpenVPN (Germany)
-        uses: marketplace-actions/openvpn-action@v1
-        with:
-          config: ./configs/de-12.protonvpn.tcp.ovpn
-          username: ${{ secrets.PROTONVPN_USERNAME }}
-          password: ${{ secrets.PROTONVPN_PASSWORD }}
+        run: |
+          sudo openvpn --config ./configs/de-12.protonvpn.tcp.ovpn \
+                       --auth-user-pass <(echo -e "${{ secrets.PROTONVPN_USERNAME }}\n${{ secrets.PROTONVPN_PASSWORD }}") \
+                       --daemon
 
       - name: Wait for VPN connection
-        run: sleep 10 && curl ifconfig.me
+        run: |
+          sleep 10
+          curl ifconfig.me
 
       - name: Run Playwright tests (Germany)
         run: npx playwright test --project=Germany
