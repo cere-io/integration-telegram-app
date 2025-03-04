@@ -1,0 +1,35 @@
+Resources:
+  PlaywrightLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: PlaywrightTests
+      Handler: index.lambdaHandler
+      Runtime: nodejs18.x
+      Timeout: 120
+      MemorySize: 2048
+      Layers:
+        - arn:aws:lambda:us-west-2:123456789012:layer:PlaywrightLayer:1
+      Policies:
+        - AWSLambdaBasicExecutionRole
+      Environment:
+        Variables:
+          HEADLESS: 'true'
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /run-tests
+            Method: POST
+
+  PlaywrightLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: PlaywrightLayer
+      ContentUri: playwright-layer/  # Убедитесь, что путь правильный
+      CompatibleRuntimes:
+        - nodejs18.x
+      RetentionPolicy: Delete
+
+Outputs:
+  PlaywrightLambdaFunction:
+    Value: !GetAtt PlaywrightLambdaFunction.Arn
