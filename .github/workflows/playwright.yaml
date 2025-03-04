@@ -23,11 +23,17 @@ jobs:
           sudo openvpn --config ./configs/de-12.protonvpn.tcp.ovpn \
                        --auth-user-pass <(echo -e "${{ secrets.PROTONVPN_USERNAME }}\n${{ secrets.PROTONVPN_PASSWORD }}") \
                        --daemon
-
-      - name: Wait for VPN connection
-        run: |
+          echo "Waiting for VPN to connect..."
           sleep 10
-          curl ifconfig.me
+
+      - name: Verify VPN connection
+        run: |
+          VPN_IP=$(curl -s ifconfig.me)
+          echo "Current IP: $VPN_IP"
+          if ! echo "$VPN_IP" | grep -qE "^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$"; then
+            echo "VPN connection failed!"
+            exit 1
+          fi
 
       - name: Run Playwright tests (Germany)
         run: npx playwright test --project=Germany
