@@ -22,7 +22,6 @@ const login = async (page: Page, userName: string, otp: string) => {
 };
 
 test.describe('Integration Tests', () => {
-  // Проверка окружения и геолокации
   test('Environment and Geolocation Check', async ({ page }) => {
     const env = process.env.TEST_ENV || 'dev';
     const isLambda = process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined;
@@ -32,7 +31,6 @@ test.describe('Integration Tests', () => {
     console.log(`Is Lambda: ${isLambda}`);
     console.log(`Region: ${region}`);
 
-    // Проверяем IP и страну
     await page.goto('https://api64.ipify.org?format=json');
     const ipResponse = await page.locator('pre').textContent();
     const { ip } = JSON.parse(ipResponse || '{}');
@@ -44,7 +42,6 @@ test.describe('Integration Tests', () => {
     console.log(`Detected Country: ${country_name} (${country})`);
   });
 
-  // Тесты производительности и функциональности
   test('Active Quests Screen Performance', async ({ page }) => {
     const start = Date.now();
     await page.goto('https://telegram-viewer-app.stage.cere.io/?campaignId=117');
@@ -95,4 +92,4 @@ test.describe('Integration Tests', () => {
     logTime('Library Screen', timeTaken);
     expect(timeTaken).toBeLessThan(60000);
   });
-}); 
+});

@@ -3,12 +3,10 @@ const path = require('path');
 
 exports.handler = async (event) => {
   try {
-    // Устанавливаем переменные окружения
     process.env.AWS_LAMBDA_FUNCTION_NAME = process.env.AWS_LAMBDA_FUNCTION_NAME;
     process.env.TEST_ENV = process.env.TEST_ENV;
     process.env.REGION = process.env.REGION;
 
-    // Запускаем тесты
     execSync('npx playwright test tests/integration.spec.ts', {
       stdio: 'inherit',
       cwd: path.dirname(__filename),

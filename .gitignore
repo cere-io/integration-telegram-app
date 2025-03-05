@@ -34,3 +34,4 @@ dist-ssr
 /temp-playwright/
 performance-log.txt
 lambda-function.zip
+lambda-build/
