@@ -136,4 +136,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.env }}-${{ matrix.region }}
-          path: lambda-test-results-${{ matrix.env }}-${{ matrix.region }}.json
+          path: playwright-test-${{ matrix.env }}.zip
+          if-no-files-found: warn
+          retention-days: 2
