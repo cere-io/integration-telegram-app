@@ -92,7 +92,7 @@ jobs:
     strategy:
       matrix:
         region: ${{ fromJson(needs.get-regions.outputs.regions) }}
-    uses: cere-io/reusable-workflows/.github/workflows/deploy-lambda.yml@master
+    uses: cere-io/reusable-workflows/.github/workflows/deploy-to-lambda.yaml@master
     with:
       aws_account_id: ${{ needs.get-env.outputs.account_id }}
       function_name: playwright-test-${{ needs.get-env.outputs.env }}
