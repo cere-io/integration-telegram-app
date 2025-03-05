@@ -37,7 +37,7 @@ jobs:
     name: Run Playwright Tests in Lambda
     runs-on: ubuntu-latest
     needs: [get-regions, get-env]
-    
+
     strategy:
       matrix:
         region: ${{ fromJson(needs.get-regions.outputs.regions) }}
@@ -46,28 +46,28 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ matrix.region }}
-          
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          
+
       - name: Install dependencies
         run: npm ci
-        
+
       - name: Prepare Lambda package
         run: npm run prepare:lambda
-        
+
       - name: Create Lambda function if not exists
         run: npm run create:lambda:${{ matrix.env }}
-        
+
       - name: Run tests in Lambda
         run: |
           aws lambda invoke \
@@ -78,13 +78,13 @@ jobs:
           
           echo "Test results:"
           cat "lambda-test-results-${{ matrix.env }}-${{ matrix.region }}.json"
-          
+
       - name: Upload test results
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.env }}-${{ matrix.region }}
           path: lambda-test-results-${{ matrix.env }}-${{ matrix.region }}.json
-          
+
   get-regions:
     name: Get regions to test
     runs-on: ubuntu-latest
@@ -99,7 +99,7 @@ jobs:
           else
             echo "regions=['${{ inputs.regions }}']" >> $GITHUB_OUTPUT
           fi
-          
+
   get-env:
     name: Get environment
     runs-on: ubuntu-latest
@@ -120,4 +120,4 @@ jobs:
             fi
           else
             echo "env=['${{ inputs.environment }}']" >> $GITHUB_OUTPUT
-          fi 
+          fi
