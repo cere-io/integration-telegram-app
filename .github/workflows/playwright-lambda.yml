@@ -95,7 +95,7 @@ jobs:
     uses: cere-io/reusable-workflows/.github/workflows/deploy-to-lambda.yaml@master
     with:
       aws_account_id: ${{ needs.get-env.outputs.account_id }}
-      function_name: playwright-test-${{ needs.get-env.outputs.env }}
+      lambda_function_name: playwright-test-${{ needs.get-env.outputs.env }}
       aws_region: ${{ matrix.region }}
       build_files: true
       build_container: node:20
