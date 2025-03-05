@@ -31,3 +31,6 @@ dist-ssr
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+/temp-playwright/
+performance-log.txt
+lambda-function.zip

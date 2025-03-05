@@ -1,35 +1,59 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    Timeout: 300
+    MemorySize: 1024
+    Runtime: nodejs20.x
+    Environment:
+      Variables:
+        TEST_ENV: stage
+        AWS_LAMBDA_FUNCTION_NAME: !Ref PlaywrightTestFunction
+        REGION: !Ref AWS::Region
+        HEADLESS: 'true'
+        PLAYWRIGHT_BROWSERS_PATH: '/tmp/ms-playwright'
+
 Resources:
-  PlaywrightLambdaFunction:
+  PlaywrightTestFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: PlaywrightTests
-      Handler: index.lambdaHandler
-      Runtime: nodejs18.x
-      Timeout: 120
-      MemorySize: 2048
-#      Layers:
-#        - arn:aws:lambda:us-west-2:123456789012:layer:PlaywrightLayer:1
+      FunctionName: playwright-test-stage
+      Handler: index.handler
+      CodeUri: .
       Policies:
         - AWSLambdaBasicExecutionRole
-      Environment:
-        Variables:
-          HEADLESS: 'true'
-      Events:
-        Api:
-          Type: Api
-          Properties:
-            Path: /run-tests
-            Method: POST
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                - s3:PutObject
+                - s3:GetObject
+                - s3:ListBucket
+              Resource: '*'
 
-  PlaywrightLayer:
-    Type: AWS::Serverless::LayerVersion
+  DailyTestRule:
+    Type: AWS::Events::Rule
     Properties:
-      LayerName: PlaywrightLayer
-      ContentUri: playwright-layer/  # Убедитесь, что путь правильный
-      CompatibleRuntimes:
-        - nodejs18.x
-      RetentionPolicy: Delete
+      Name: DailyPlaywrightTest
+      Description: Run Playwright tests daily
+      ScheduleExpression: rate(1 day)
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt PlaywrightTestFunction.Arn
+          Id: PlaywrightTestTarget
+
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref PlaywrightTestFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt DailyTestRule.Arn
 
 Outputs:
-  PlaywrightLambdaFunction:
-    Value: !GetAtt PlaywrightLambdaFunction.Arn
+  PlaywrightTestFunction:
+    Description: "Lambda Function ARN"
+    Value: !GetAtt PlaywrightTestFunction.Arn
