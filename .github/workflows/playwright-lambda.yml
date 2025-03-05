@@ -36,6 +36,7 @@ jobs:
   test:
     name: Run Playwright Tests in Lambda
     runs-on: ubuntu-latest
+    needs: [get-regions, get-env]
     
     strategy:
       matrix:
