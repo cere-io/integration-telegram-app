@@ -141,3 +141,16 @@ jobs:
           path: response.json
           if-no-files-found: warn
           retention-days: 2
+
+      - name: Cleanup temporary files
+        if: always()
+        run: |
+          rm -f response.json
+          rm -f lambda-function.zip
+
+      - name: Delete Lambda function
+        if: always()
+        run: |
+          aws lambda delete-function \
+            --function-name "playwright-test-${{ matrix.env }}" \
+            --region ${{ matrix.region }} || true
