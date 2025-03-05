@@ -110,7 +110,9 @@ jobs:
       build_container: node:20
       install_packages_command: npm ci
       build_command: npm run prepare:lambda
-      path_to_application_files_to_upload: .
+      path_to_application_files_to_upload: ""
+      client_path: ""
+      runs-on: '["ubuntu-latest"]'
 
   test:
     name: Run Playwright Tests in Lambda
@@ -130,18 +132,18 @@ jobs:
           role-to-assume: arn:aws:iam::${{ needs.get-env.outputs.account_id }}:role/github
           aws-region: ${{ matrix.region }}
 
+      - name: Create output directory
+        run: |
+          mkdir -p "${{ github.workspace }}/test-output"
+
       - name: Run tests in Lambda
         id: run_tests
+        working-directory: ${{ github.workspace }}
         run: |
-          # Create dedicated output directory with clean path
-          OUTPUT_DIR="${GITHUB_WORKSPACE}/test-output"
-          rm -rf "$OUTPUT_DIR"
-          mkdir -p "$OUTPUT_DIR"
-          
           # Use clean paths for all files
-          RESPONSE_FILE="$OUTPUT_DIR/response.json"
-          LOGS_FILE="$OUTPUT_DIR/lambda.log"
-          LOGS_BASE64="$OUTPUT_DIR/lambda-logs.base64"
+          RESPONSE_FILE="${GITHUB_WORKSPACE}/test-output/response.json"
+          LOGS_FILE="${GITHUB_WORKSPACE}/test-output/lambda.log"
+          LOGS_BASE64="${GITHUB_WORKSPACE}/test-output/lambda-logs.base64"
           
           # Wait for Lambda to be ready
           echo "Waiting for Lambda function to be ready..."
@@ -161,7 +163,7 @@ jobs:
             "$LOGS_BASE64" \
             > "$RESPONSE_FILE" 2>&1 || { echo "Lambda execution failed"; exit 1; }
 
-          # Decode and save Lambda logs
+          # Process and check results as before...
           if [ -f "$LOGS_BASE64" ]; then
             base64 -d "$LOGS_BASE64" > "$LOGS_FILE"
             echo "Lambda execution logs:"
@@ -170,12 +172,10 @@ jobs:
             echo "::warning::No Lambda logs found"
           fi
 
-          # Check test results
           if [ -f "$RESPONSE_FILE" ]; then
             echo "Test results:"
             cat "$RESPONSE_FILE"
             
-            # More detailed error checking
             if grep -q "error" "$RESPONSE_FILE" || \
                grep -q "statusCode.:.*500" "$RESPONSE_FILE" || \
                grep -q "FunctionError" "$RESPONSE_FILE" || \
@@ -192,20 +192,21 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-results-${{ matrix.env }}-${{ matrix.region }}-${{ github.run_id }}
-          path: test-output
+          name: test-results-${{ matrix.env }}-${{ matrix.region }}
+          path: ${{ github.workspace }}/test-output/**/*
           if-no-files-found: warn
           retention-days: 7
 
       - name: Cleanup temporary files
         if: always()
+        working-directory: ${{ github.workspace }}
         run: |
           echo "Cleaning up temporary files..."
-          rm -rf "${GITHUB_WORKSPACE}/test-output"
-          find "${GITHUB_WORKSPACE}" -name "*.zip" -type f -delete || true
-          rm -rf "${GITHUB_WORKSPACE}/node_modules" || true
-          rm -rf "${GITHUB_WORKSPACE}/.cache" || true
-          rm -rf "${GITHUB_WORKSPACE}/playwright-report" || true
+          rm -rf test-output
+          find . -maxdepth 1 -name "*.zip" -type f -delete || true
+          rm -rf node_modules || true
+          rm -rf .cache || true
+          rm -rf playwright-report || true
           echo "Cleanup completed"
 
       - name: Delete Lambda function
