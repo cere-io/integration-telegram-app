@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Проверяем наличие необходимых переменных окружения
+# Check for required environment variables
 if [ -z "$AWS_REGION" ]; then
     echo "Error: AWS region not set"
     exit 1
 fi
 
-# Параметры
+# Parameters
 ENV=$1
 REGION=$2
 FUNCTION_NAME="playwright-test-$ENV"
@@ -17,16 +17,16 @@ if [ -z "$ENV" ] || [ -z "$REGION" ]; then
     exit 1
 fi
 
-# Проверяем существование функции
+# Check if function exists
 if aws lambda get-function --function-name $FUNCTION_NAME --region $REGION 2>/dev/null; then
     echo "Function $FUNCTION_NAME already exists in region $REGION"
     exit 0
 fi
 
-# Используем существующую роль
+# Use existing role
 ROLE_ARN="arn:aws:iam::015722374928:role/AWSReservedSSO_Developer_57e371c2541a8c58"
 
-# Создаем Lambda функцию
+# Create Lambda function
 echo "Creating Lambda function $FUNCTION_NAME in region $REGION..."
 aws lambda create-function \
     --function-name $FUNCTION_NAME \

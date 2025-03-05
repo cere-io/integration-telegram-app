@@ -1,20 +1,20 @@
 name: Playwright Lambda Tests
 
 on:
-  # Запуск при мерже в stage/prod
+  # Run on merge to stage/prod
   push:
     branches:
       - stage
       - prod
-  # Запуск по расписанию (каждый день в 00:00 UTC для stage и 12:00 UTC для prod)
+  # Run on schedule (daily at 00:00 UTC for stage and 12:00 UTC for prod)
   schedule:
-    - cron: '0 0 * * *'  # Запуск stage тестов в 00:00 UTC
-    - cron: '0 12 * * *'  # Запуск prod тестов в 12:00 UTC
-  # Ручной запуск
+    - cron: '0 0 * * *'  # Run stage tests at 00:00 UTC
+    - cron: '0 12 * * *'  # Run prod tests at 12:00 UTC
+  # Manual run
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Окружение для запуска тестов'
+        description: 'Environment to run tests in'
         required: true
         default: 'stage'
         type: choice
@@ -22,7 +22,7 @@ on:
           - stage
           - prod
       regions:
-        description: 'Регионы для запуска тестов'
+        description: 'Regions to run tests in'
         required: true
         default: 'all'
         type: choice
@@ -111,7 +111,7 @@ jobs:
           if [ "${{ github.event_name }}" = "push" ]; then
             echo "env=['${{ github.ref_name }}']" >> $GITHUB_OUTPUT
           elif [ "${{ github.event_name }}" = "schedule" ]; then
-            # Определяем окружение на основе времени запуска
+            # Determine environment based on run time
             if [ "${{ github.event.schedule }}" = "0 0 * * *" ]; then
               echo "env=['stage']" >> $GITHUB_OUTPUT
             else
