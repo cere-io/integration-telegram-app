@@ -127,26 +127,26 @@ jobs:
             --function-name "playwright-test-${{ matrix.env }}" \
             --payload '{}' \
             --cli-binary-format raw-in-base64-out \
-            response.json
+            "$GITHUB_WORKSPACE/test-results.json"
 
-          if [ -f response.json ]; then
+          if [ -f "$GITHUB_WORKSPACE/test-results.json" ]; then
             echo "Test results:"
-            cat response.json
+            cat "$GITHUB_WORKSPACE/test-results.json"
           fi
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.env }}-${{ matrix.region }}
-          path: response.json
+          path: test-results.json
           if-no-files-found: warn
           retention-days: 2
 
       - name: Cleanup temporary files
         if: always()
         run: |
-          rm -f response.json
-          rm -f lambda-function.zip
+          rm -f "$GITHUB_WORKSPACE/test-results.json"
+          rm -f "$GITHUB_WORKSPACE/lambda-function.zip"
 
       - name: Delete Lambda function
         if: always()
