@@ -127,15 +127,17 @@ jobs:
             --function-name "playwright-test-${{ matrix.env }}" \
             --payload '{}' \
             --cli-binary-format raw-in-base64-out \
-            "lambda-test-results-${{ matrix.env }}-${{ matrix.region }}.json"
-          
-          echo "Test results:"
-          cat "lambda-test-results-${{ matrix.env }}-${{ matrix.region }}.json"
+            response.json
+
+          if [ -f response.json ]; then
+            echo "Test results:"
+            cat response.json
+          fi
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.env }}-${{ matrix.region }}
-          path: lambda-test-results-${{ matrix.env }}-${{ matrix.region }}.json
+          path: response.json
           if-no-files-found: warn
           retention-days: 2
