@@ -32,59 +32,11 @@ on:
           - eu-west-2
           - ap-southeast-1
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
-  test:
-    name: Run Playwright Tests in Lambda
-    runs-on: ubuntu-latest
-    needs: [get-regions, get-env]
-
-    strategy:
-      matrix:
-        region: ${{ fromJson(needs.get-regions.outputs.regions) }}
-        env: ${{ fromJson(needs.get-env.outputs.env) }}
-      fail-fast: false
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ matrix.region }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Prepare Lambda package
-        run: npm run prepare:lambda
-
-      - name: Create Lambda function if not exists
-        run: npm run create:lambda:${{ matrix.env }}
-
-      - name: Run tests in Lambda
-        run: |
-          aws lambda invoke \
-            --function-name "playwright-test-${{ matrix.env }}" \
-            --payload '{}' \
-            --cli-binary-format raw-in-base64-out \
-            "lambda-test-results-${{ matrix.env }}-${{ matrix.region }}.json"
-          
-          echo "Test results:"
-          cat "lambda-test-results-${{ matrix.env }}-${{ matrix.region }}.json"
-
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results-${{ matrix.env }}-${{ matrix.region }}
-          path: lambda-test-results-${{ matrix.env }}-${{ matrix.region }}.json
-
   get-regions:
     name: Get regions to test
     runs-on: ubuntu-latest
@@ -105,19 +57,83 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       env: ${{ steps.set-env.outputs.env }}
+      account_id: ${{ steps.set-env.outputs.account_id }}
     steps:
       - name: Set environment
         id: set-env
         run: |
           if [ "${{ github.event_name }}" = "push" ]; then
-            echo "env=['${{ github.ref_name }}']" >> $GITHUB_OUTPUT
-          elif [ "${{ github.event_name }}" = "schedule" ]; then
-            # Determine environment based on run time
-            if [ "${{ github.event.schedule }}" = "0 0 * * *" ]; then
-              echo "env=['stage']" >> $GITHUB_OUTPUT
+            echo "env=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+            if [ "${{ github.ref_name }}" = "prod" ]; then
+              echo "account_id=${{ vars.PRD_NETWORK_AWS_ACCOUNT_ID }}" >> $GITHUB_OUTPUT
             else
-              echo "env=['prod']" >> $GITHUB_OUTPUT
+              echo "account_id=${{ vars.STG_NETWORK_AWS_ACCOUNT_ID }}" >> $GITHUB_OUTPUT
+            fi
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            if [ "${{ github.event.schedule }}" = "0 0 * * *" ]; then
+              echo "env=stage" >> $GITHUB_OUTPUT
+              echo "account_id=${{ vars.STG_NETWORK_AWS_ACCOUNT_ID }}" >> $GITHUB_OUTPUT
+            else
+              echo "env=prod" >> $GITHUB_OUTPUT
+              echo "account_id=${{ vars.PRD_NETWORK_AWS_ACCOUNT_ID }}" >> $GITHUB_OUTPUT
             fi
           else
-            echo "env=['${{ inputs.environment }}']" >> $GITHUB_OUTPUT
+            echo "env=${{ inputs.environment }}" >> $GITHUB_OUTPUT
+            if [ "${{ inputs.environment }}" = "prod" ]; then
+              echo "account_id=${{ vars.PRD_NETWORK_AWS_ACCOUNT_ID }}" >> $GITHUB_OUTPUT
+            else
+              echo "account_id=${{ vars.STG_NETWORK_AWS_ACCOUNT_ID }}" >> $GITHUB_OUTPUT
+            fi
           fi
+
+  deploy-lambda:
+    name: Deploy Lambda Function
+    needs: [get-regions, get-env]
+    strategy:
+      matrix:
+        region: ${{ fromJson(needs.get-regions.outputs.regions) }}
+    uses: cere-io/reusable-workflows/.github/workflows/deploy-lambda.yml@master
+    with:
+      aws_account_id: ${{ needs.get-env.outputs.account_id }}
+      function_name: playwright-test-${{ needs.get-env.outputs.env }}
+      aws_region: ${{ matrix.region }}
+      build_files: true
+      build_container: node:20
+      install_packages_command: npm ci
+      build_command: npm run prepare:lambda
+      path_to_application_files_to_upload: lambda-build
+
+  test:
+    name: Run Playwright Tests in Lambda
+    needs: [get-regions, get-env, deploy-lambda]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        region: ${{ fromJson(needs.get-regions.outputs.regions) }}
+        env: ${{ needs.get-env.outputs.env }}
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ needs.get-env.outputs.account_id }}:role/github
+          aws-region: ${{ matrix.region }}
+
+      - name: Run tests in Lambda
+        run: |
+          aws lambda invoke \
+            --function-name "playwright-test-${{ matrix.env }}" \
+            --payload '{}' \
+            --cli-binary-format raw-in-base64-out \
+            "lambda-test-results-${{ matrix.env }}-${{ matrix.region }}.json"
+          
+          echo "Test results:"
+          cat "lambda-test-results-${{ matrix.env }}-${{ matrix.region }}.json"
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.env }}-${{ matrix.region }}
+          path: lambda-test-results-${{ matrix.env }}-${{ matrix.region }}.json
