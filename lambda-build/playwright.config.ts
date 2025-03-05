@@ -6,12 +6,14 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Загружаем переменные окружения
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 const env = process.env.TEST_ENV || 'dev';
 const isCI = process.env.CI === 'true';
 const isLambda = process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined;
 
+// Конфигурация для разных окружений
 const envConfigs = {
   dev: {
     baseURL: 'https://telegram-viewer-app.stage.cere.io',

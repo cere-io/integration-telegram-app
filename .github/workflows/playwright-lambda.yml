@@ -1,0 +1,122 @@
+name: Playwright Lambda Tests
+
+on:
+  # Run on merge to stage/prod
+  push:
+    branches:
+      - stage
+      - prod
+  # Run on schedule (daily at 00:00 UTC for stage and 12:00 UTC for prod)
+  schedule:
+    - cron: '0 0 * * *'  # Run stage tests at 00:00 UTC
+    - cron: '0 12 * * *'  # Run prod tests at 12:00 UTC
+  # Manual run
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to run tests in'
+        required: true
+        default: 'stage'
+        type: choice
+        options:
+          - stage
+          - prod
+      regions:
+        description: 'Regions to run tests in'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - us-east-1
+          - eu-west-2
+          - ap-southeast-1
+
+jobs:
+  test:
+    name: Run Playwright Tests in Lambda
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        region: ${{ fromJson(needs.get-regions.outputs.regions) }}
+        env: ${{ fromJson(needs.get-env.outputs.env) }}
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ matrix.region }}
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Prepare Lambda package
+        run: npm run prepare:lambda
+        
+      - name: Create Lambda function if not exists
+        run: npm run create:lambda:${{ matrix.env }}
+        
+      - name: Run tests in Lambda
+        run: |
+          aws lambda invoke \
+            --function-name "playwright-test-${{ matrix.env }}" \
+            --payload '{}' \
+            --cli-binary-format raw-in-base64-out \
+            "lambda-test-results-${{ matrix.env }}-${{ matrix.region }}.json"
+          
+          echo "Test results:"
+          cat "lambda-test-results-${{ matrix.env }}-${{ matrix.region }}.json"
+          
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.env }}-${{ matrix.region }}
+          path: lambda-test-results-${{ matrix.env }}-${{ matrix.region }}.json
+          
+  get-regions:
+    name: Get regions to test
+    runs-on: ubuntu-latest
+    outputs:
+      regions: ${{ steps.set-regions.outputs.regions }}
+    steps:
+      - name: Set regions
+        id: set-regions
+        run: |
+          if [ "${{ inputs.regions }}" = "all" ]; then
+            echo "regions=['us-east-1', 'eu-west-2', 'ap-southeast-1']" >> $GITHUB_OUTPUT
+          else
+            echo "regions=['${{ inputs.regions }}']" >> $GITHUB_OUTPUT
+          fi
+          
+  get-env:
+    name: Get environment
+    runs-on: ubuntu-latest
+    outputs:
+      env: ${{ steps.set-env.outputs.env }}
+    steps:
+      - name: Set environment
+        id: set-env
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "env=['${{ github.ref_name }}']" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            # Determine environment based on run time
+            if [ "${{ github.event.schedule }}" = "0 0 * * *" ]; then
+              echo "env=['stage']" >> $GITHUB_OUTPUT
+            else
+              echo "env=['prod']" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "env=['${{ inputs.environment }}']" >> $GITHUB_OUTPUT
+          fi 

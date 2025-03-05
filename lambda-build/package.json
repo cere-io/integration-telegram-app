@@ -11,12 +11,19 @@
     "build": "npm run build --ws --if-present",
     "analyze": "vite-bundle-visualizer",
     "test": "playwright test tests/integration.spec.ts",
-    "test:dev": "cp .env.dev .env && TEST_ENV=dev playwright test tests/integration.spec.ts",
+    "test:dev": "TEST_ENV=dev playwright test tests/integration.spec.ts",
     "test:stage": "cp .env.stage .env && TEST_ENV=stage playwright test tests/integration.spec.ts",
     "test:prod": "cp .env.prod .env && TEST_ENV=prod playwright test tests/integration.spec.ts",
+    "test:lambda": "AWS_LAMBDA_FUNCTION_NAME=true playwright test tests/integration.spec.ts",
+    "test:lambda:stage": "cp .env.stage .env && AWS_LAMBDA_FUNCTION_NAME=true TEST_ENV=stage REGION=us-east-1 playwright test tests/integration.spec.ts",
+    "test:lambda:prod": "cp .env.prod .env && AWS_LAMBDA_FUNCTION_NAME=true TEST_ENV=prod REGION=us-east-1 playwright test tests/integration.spec.ts",
+    "test:lambda:all-regions": "chmod +x scripts/run-tests-regions.sh && ./scripts/run-tests-regions.sh",
+    "deploy:lambda:stage": "chmod +x scripts/deploy-lambda.sh && ./scripts/deploy-lambda.sh stage us-east-1",
+    "deploy:lambda:prod": "chmod +x scripts/deploy-lambda.sh && ./scripts/deploy-lambda.sh prod us-east-1",
     "prepare:lambda": "chmod +x scripts/prepare-lambda.sh && ./scripts/prepare-lambda.sh",
     "create:lambda:stage": "npm run prepare:lambda && chmod +x scripts/create-lambda.sh && ./scripts/create-lambda.sh stage us-east-1",
-    "create:lambda:prod": "npm run prepare:lambda && chmod +x scripts/create-lambda.sh && ./scripts/create-lambda.sh prod us-east-1"
+    "create:lambda:prod": "npm run prepare:lambda && chmod +x scripts/create-lambda.sh && ./scripts/create-lambda.sh prod us-east-1",
+    "create:iam": "chmod +x scripts/create-iam-role.sh && ./scripts/create-iam-role.sh"
   },
   "dependencies": {
     "@cere-activity-sdk/ciphers": "^0.1.6",
