@@ -1,3 +1,12 @@
+# Playwright Lambda Tests
+#
+# Path handling rules:
+# 1. Use ${{ github.workspace }} for absolute paths in commands
+# 2. Never use ./ or ../ in paths
+# 3. Use clean filenames without paths for artifacts
+# 4. Always use forward slashes in paths
+# 5. Create dedicated directories for outputs
+
 name: Playwright Lambda Tests
 
 on:
@@ -122,35 +131,95 @@ jobs:
           aws-region: ${{ matrix.region }}
 
       - name: Run tests in Lambda
+        id: run_tests
         run: |
-          aws lambda invoke \
+          # Create dedicated output directory with clean path
+          OUTPUT_DIR="${GITHUB_WORKSPACE}/test-output"
+          rm -rf "$OUTPUT_DIR"
+          mkdir -p "$OUTPUT_DIR"
+          
+          # Use clean paths for all files
+          RESPONSE_FILE="$OUTPUT_DIR/response.json"
+          LOGS_FILE="$OUTPUT_DIR/lambda.log"
+          LOGS_BASE64="$OUTPUT_DIR/lambda-logs.base64"
+          
+          # Wait for Lambda to be ready
+          echo "Waiting for Lambda function to be ready..."
+          aws lambda wait function-active \
             --function-name "playwright-test-${{ matrix.env }}" \
-            --payload '{}' \
+            --region ${{ matrix.region }}
+          
+          # Run Lambda with timeout and capture logs
+          echo "Running tests in Lambda..."
+          timeout 900 aws lambda invoke \
+            --function-name "playwright-test-${{ matrix.env }}" \
+            --payload '{"region": "${{ matrix.region }}", "environment": "${{ matrix.env }}"}' \
             --cli-binary-format raw-in-base64-out \
-            "$GITHUB_WORKSPACE/test-results.json"
+            --log-type Tail \
+            --query 'LogResult' \
+            --output text \
+            "$LOGS_BASE64" \
+            > "$RESPONSE_FILE" 2>&1 || { echo "Lambda execution failed"; exit 1; }
 
-          if [ -f "$GITHUB_WORKSPACE/test-results.json" ]; then
+          # Decode and save Lambda logs
+          if [ -f "$LOGS_BASE64" ]; then
+            base64 -d "$LOGS_BASE64" > "$LOGS_FILE"
+            echo "Lambda execution logs:"
+            cat "$LOGS_FILE"
+          else
+            echo "::warning::No Lambda logs found"
+          fi
+
+          # Check test results
+          if [ -f "$RESPONSE_FILE" ]; then
             echo "Test results:"
-            cat "$GITHUB_WORKSPACE/test-results.json"
+            cat "$RESPONSE_FILE"
+            
+            # More detailed error checking
+            if grep -q "error" "$RESPONSE_FILE" || \
+               grep -q "statusCode.:.*500" "$RESPONSE_FILE" || \
+               grep -q "FunctionError" "$RESPONSE_FILE" || \
+               grep -q "Task timed out" "$RESPONSE_FILE"; then
+              echo "::error::Tests failed in region ${{ matrix.region }} for environment ${{ matrix.env }}"
+              exit 1
+            fi
+          else
+            echo "::error::No test results found"
+            exit 1
           fi
 
       - name: Upload test results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ matrix.env }}-${{ matrix.region }}
-          path: test-results.json
+          name: playwright-results-${{ matrix.env }}-${{ matrix.region }}-${{ github.run_id }}
+          path: test-output
           if-no-files-found: warn
-          retention-days: 2
+          retention-days: 7
 
       - name: Cleanup temporary files
         if: always()
         run: |
-          rm -f "$GITHUB_WORKSPACE/test-results.json"
-          rm -f "$GITHUB_WORKSPACE/lambda-function.zip"
+          echo "Cleaning up temporary files..."
+          rm -rf "${GITHUB_WORKSPACE}/test-output"
+          find "${GITHUB_WORKSPACE}" -name "*.zip" -type f -delete || true
+          rm -rf "${GITHUB_WORKSPACE}/node_modules" || true
+          rm -rf "${GITHUB_WORKSPACE}/.cache" || true
+          rm -rf "${GITHUB_WORKSPACE}/playwright-report" || true
+          echo "Cleanup completed"
 
       - name: Delete Lambda function
         if: always()
         run: |
-          aws lambda delete-function \
+          echo "Checking if Lambda function exists..."
+          if aws lambda get-function \
             --function-name "playwright-test-${{ matrix.env }}" \
-            --region ${{ matrix.region }} || true
+            --region ${{ matrix.region }} >/dev/null 2>&1; then
+            echo "Deleting Lambda function..."
+            aws lambda delete-function \
+              --function-name "playwright-test-${{ matrix.env }}" \
+              --region ${{ matrix.region }}
+            echo "Lambda function deleted"
+          else
+            echo "Lambda function not found, skipping deletion"
+          fi
