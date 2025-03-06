@@ -6,8 +6,8 @@ echo "➡ Removing old directory and creating new one..."
 rm -rf lambda-build lambda-package.zip
 mkdir -p lambda-build/tests
 
-echo "➡ Compiling TypeScript locally..."
-npx tsc tests/integration.spec.ts --outDir lambda-build/tests
+echo "➡ Copying test files..."
+cp tests/integration.spec.js lambda-build/tests/
 
 echo "➡ Creating package.json..."
 cat > lambda-build/package.json << EOL
