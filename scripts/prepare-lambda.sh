@@ -13,16 +13,7 @@ cat > lambda-build/package.json << EOL
   "version": "1.0.0",
   "private": true,
   "dependencies": {
-    "playwright-core": "^1.40.0",
-    "tsx": "^4.7.1",
-    "typescript": "^5.3.3",
-    "@types/node": "^20.11.19",
-    "tslib": "^2.6.2",
-    "diff": "^5.1.0",
-    "make-error": "^1.1.1",
-    "source-map-support": "^0.5.21",
-    "yn": "^3.1.1",
-    "v8-compile-cache-lib": "^3.0.1"
+    "playwright-core": "^1.40.0"
   }
 }
 EOL
@@ -61,7 +52,7 @@ exports.handler = async () => {
       console.log("⚠️ Chromium not found in /opt/chromium, skipping copy");
     }
 
-    execSync('./node_modules/.bin/tsx tests/integration.spec.ts', { stdio: 'inherit' });
+    execSync('node tests/integration.spec.js', { stdio: 'inherit' });
 
     return { statusCode: 200, body: JSON.stringify({ message: 'Tests passed ✅' }) };
   } catch (error) {
@@ -73,11 +64,32 @@ EOL
 
 cd lambda-build
 
-echo "➡ Removing old dependencies..."
-rm -rf node_modules package-lock.json
-
-echo "➡ Installing dependencies and creating package-lock.json..."
+echo "➡ Installing dependencies..."
 npm install
+
+echo "➡ Installing TypeScript and ts-jest..."
+npm install --save-dev typescript ts-jest @types/jest @types/node
+
+echo "➡ Creating tsconfig.json..."
+cat > tsconfig.json << EOL
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "outDir": ".",
+    "rootDir": "."
+  },
+  "include": ["tests/**/*"],
+  "exclude": ["node_modules"]
+}
+EOL
+
+echo "➡ Compiling TypeScript..."
+npx tsc
 
 echo "➡ Installing production dependencies..."
 npm ci --omit=dev
