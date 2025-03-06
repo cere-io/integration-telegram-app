@@ -8,6 +8,7 @@ mkdir -p lambda-build/tests
 
 echo "➡ Copying test files..."
 cp tests/integration.spec.js lambda-build/tests/
+cp playwright.config.js lambda-build/
 
 echo "➡ Creating package.json..."
 cat > lambda-build/package.json << EOL
@@ -16,7 +17,7 @@ cat > lambda-build/package.json << EOL
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test": "node tests/integration.spec.js"
+    "test": "playwright test"
   },
   "dependencies": {
     "@playwright/test": "^1.50.1",
@@ -44,8 +45,8 @@ exports.handler = async (event) => {
       execSync(\`cp -r \${chromiumDir} /tmp/\`, { stdio: 'inherit' });
     }
 
-    // Запускаем тесты
-    execSync('npm test', { stdio: 'inherit' });
+    // Запускаем тесты через Playwright CLI
+    execSync('npx playwright test --reporter=list', { stdio: 'inherit' });
 
     return {
       statusCode: 200,
