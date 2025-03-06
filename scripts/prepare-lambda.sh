@@ -77,9 +77,6 @@ npm install
 echo "➡ Installing production dependencies..."
 npm ci --omit=dev
 
-echo "➡ Installing ts-node..."
-npm install --save-dev ts-node typescript @types/node
-
 echo "➡ Preparing directory for Chromium..."
 mkdir -p node_modules/.cache/playwright-core/chromium-*
 
