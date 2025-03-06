@@ -73,24 +73,24 @@ jobs:
           if [ "${{ github.event_name }}" = "push" ]; then
             echo "env=${{ github.ref_name }}" >> $GITHUB_OUTPUT
             if [ "${{ github.ref_name }}" = "prod" ]; then
-              echo "account_id=${{ vars.PRD_NETWORK_AWS_ACCOUNT_ID }}" >> $GITHUB_OUTPUT
+              echo "account_id=${{ vars.PRD_CORE_AWS_ACCOUNT_ID }}" >> $GITHUB_OUTPUT
             else
-              echo "account_id=${{ vars.STG_NETWORK_AWS_ACCOUNT_ID }}" >> $GITHUB_OUTPUT
+              echo "account_id=${{ vars.STG_CORE_AWS_ACCOUNT_ID }}" >> $GITHUB_OUTPUT
             fi
           elif [ "${{ github.event_name }}" = "schedule" ]; then
             if [ "${{ github.event.schedule }}" = "0 0 * * *" ]; then
               echo "env=stage" >> $GITHUB_OUTPUT
-              echo "account_id=${{ vars.STG_NETWORK_AWS_ACCOUNT_ID }}" >> $GITHUB_OUTPUT
+              echo "account_id=${{ vars.STG_CORE_AWS_ACCOUNT_ID }}" >> $GITHUB_OUTPUT
             else
               echo "env=prod" >> $GITHUB_OUTPUT
-              echo "account_id=${{ vars.PRD_NETWORK_AWS_ACCOUNT_ID }}" >> $GITHUB_OUTPUT
+              echo "account_id=${{ vars.PRD_CORE_AWS_ACCOUNT_ID }}" >> $GITHUB_OUTPUT
             fi
           else
             echo "env=${{ inputs.environment }}" >> $GITHUB_OUTPUT
             if [ "${{ inputs.environment }}" = "prod" ]; then
-              echo "account_id=${{ vars.PRD_NETWORK_AWS_ACCOUNT_ID }}" >> $GITHUB_OUTPUT
+              echo "account_id=${{ vars.PRD_CORE_AWS_ACCOUNT_ID }}" >> $GITHUB_OUTPUT
             else
-              echo "account_id=${{ vars.STG_NETWORK_AWS_ACCOUNT_ID }}" >> $GITHUB_OUTPUT
+              echo "account_id=${{ vars.STG_CORE_AWS_ACCOUNT_ID }}" >> $GITHUB_OUTPUT
             fi
           fi
 
