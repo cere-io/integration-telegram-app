@@ -72,7 +72,7 @@ cat > tsconfig.json << EOL
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "outDir": ".",
+    "outDir": "dist",
     "rootDir": "."
   },
   "include": ["tests/**/*"],
@@ -82,6 +82,10 @@ EOL
 
 echo "➡ Compiling TypeScript..."
 npx tsc
+
+echo "➡ Moving compiled files..."
+mv dist/tests/* tests/
+rm -rf dist
 
 echo "➡ Installing production dependencies..."
 npm ci --omit=dev
@@ -99,7 +103,6 @@ fi
 echo "➡ Removing unnecessary files..."
 find node_modules -name "*.map" -delete
 find node_modules -name "*.d.ts" -delete
-find node_modules -name "*.ts" -delete
 find node_modules -name "*.md" -delete
 find node_modules -name "LICENSE*" -delete
 find node_modules -name "CHANGELOG*" -delete
