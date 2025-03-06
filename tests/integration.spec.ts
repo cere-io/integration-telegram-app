@@ -12,14 +12,26 @@ const logTime = (testName: string, time: number) => {
 };
 
 const login = async (page: Page, userName: string, otp: string) => {
+  await page.waitForSelector('#torusIframe', { timeout: 30000 });
   const torusFrame = await page.frameLocator('#torusIframe');
+
+  await page.waitForSelector('iframe[title="Embedded browser"]', { timeout: 30000 });
   const embeddedFrame = await torusFrame.frameLocator('iframe[title="Embedded browser"]');
 
+  await embeddedFrame.locator('button:has-text("I already have a wallet")').waitFor({ timeout: 30000 });
   await embeddedFrame.getByRole('button', { name: 'I already have a wallet' }).click();
+
+  await embeddedFrame.locator('input[type="email"]').waitFor({ timeout: 30000 });
   await embeddedFrame.getByRole('textbox', { name: 'Email' }).fill(userName);
+
+  await embeddedFrame.locator('button:has-text("Sign In")').waitFor({ timeout: 30000 });
   await embeddedFrame.getByRole('button', { name: 'Sign In' }).click();
+
   await page.waitForTimeout(2000);
+  await embeddedFrame.locator('input[type="text"]').waitFor({ timeout: 30000 });
   await embeddedFrame.getByRole('textbox', { name: 'OTP input' }).fill(otp);
+
+  await embeddedFrame.locator('button:has-text("Verify")').waitFor({ timeout: 30000 });
   await embeddedFrame.getByRole('button', { name: 'Verify' }).click();
 };
 
@@ -74,7 +86,8 @@ test.describe('Integration Tests', () => {
     await login(page, userName, otp);
 
     await page.getByRole('button', { name: 'Leaderboard' }).click();
-    await page.locator('iframe[title="Leaderboard"]').contentFrame().getByRole('img').click();
+    const leaderboardFrame = await page.frameLocator('iframe[title="Leaderboard"]');
+    await leaderboardFrame.locator('img').click();
 
     const timeTaken = Date.now() - start;
     console.log(`Time to load leaderboard screen: ${timeTaken}ms`);

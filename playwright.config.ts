@@ -51,6 +51,9 @@ export default defineConfig({
     video: 'retain-on-failure',
     navigationTimeout: 30000,
     actionTimeout: 15000,
+    launchOptions: {
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    }
   },
 
   /* Configure projects for major browsers */

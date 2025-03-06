@@ -10,10 +10,10 @@
     "check-types": "npm run check-types --ws --if-present",
     "build": "npm run build --ws --if-present",
     "analyze": "vite-bundle-visualizer",
-    "test": "playwright test tests/integration.spec.ts",
-    "test:dev": "cp .env.dev .env && TEST_ENV=dev playwright test tests/integration.spec.ts",
-    "test:stage": "cp .env.stage .env && TEST_ENV=stage playwright test tests/integration.spec.ts",
-    "test:prod": "cp .env.prod .env && TEST_ENV=prod playwright test tests/integration.spec.ts",
+    "test": "PLAYWRIGHT_BROWSERS_PATH=.cache/ms-playwright playwright test tests/integration.spec.ts",
+    "test:dev": "cp .env.dev .env && PLAYWRIGHT_BROWSERS_PATH=.cache/ms-playwright TEST_ENV=dev playwright test tests/integration.spec.ts",
+    "test:stage": "cp .env.stage .env && PLAYWRIGHT_BROWSERS_PATH=.cache/ms-playwright TEST_ENV=stage playwright test tests/integration.spec.ts",
+    "test:prod": "cp .env.prod .env && PLAYWRIGHT_BROWSERS_PATH=.cache/ms-playwright TEST_ENV=prod playwright test tests/integration.spec.ts",
     "prepare:lambda": "chmod +x scripts/prepare-lambda.sh && ./scripts/prepare-lambda.sh"
   },
   "dependencies": {
@@ -22,13 +22,13 @@
     "@cere-activity-sdk/signers": "^0.1.6",
     "@cere/embed-wallet": "^0.23.4",
     "@cere/media-sdk-react": "^1.6.0-rc.18",
+    "@playwright/test": "^1.40.0",
     "@vkruglikov/react-telegram-web-app": "^2.1.9",
     "handlebars": "^4.7.8",
     "lucide-react": "^0.468.0",
     "swiper": "^11.2.1"
   },
   "devDependencies": {
-    "@playwright/test": "^1.50.1",
     "@preact/preset-vite": "^2.9.0",
     "@types/node": "^22.1.0",
     "@types/react": "^18.3.4",
