@@ -94,7 +94,7 @@ rm -rf node_modules/playwright-core/lib/transform
 
 cd ..
 echo "➡ Creating ZIP archive..."
-zip -rq lambda-package.zip lambda-build
+cd lambda-build && zip -r ../lambda-package.zip . && cd ..
 
 echo "➡ Cleaning up temporary files..."
 rm -rf lambda-build
