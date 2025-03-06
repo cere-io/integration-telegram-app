@@ -37,9 +37,8 @@ on:
         type: choice
         options:
           - all
-          - us-east-1
-          - eu-west-2
-          - ap-southeast-1
+          - us-west-2
+          - eu-central-1
 
 permissions:
   id-token: write
