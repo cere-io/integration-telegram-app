@@ -17,7 +17,11 @@ cat > lambda-build/package.json << EOL
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
     "@types/node": "^20.11.19",
-    "tslib": "^2.6.2"
+    "tslib": "^2.6.2",
+    "diff": "^5.1.0",
+    "make-error": "^1.1.1",
+    "source-map-support": "^0.5.21",
+    "yn": "^3.1.1"
   }
 }
 EOL
@@ -92,10 +96,41 @@ rm -rf node_modules/playwright-core/types
 rm -rf node_modules/playwright-core/lib/vite
 rm -rf node_modules/playwright-core/lib/utilsBundleImpl
 rm -rf node_modules/playwright-core/lib/transform
+rm -rf node_modules/playwright-core/lib/server/trace
+rm -rf node_modules/playwright-core/lib/server/recorder
+rm -rf node_modules/playwright-core/lib/server/codegen
+rm -rf node_modules/playwright-core/lib/server/bidi
+rm -rf node_modules/playwright-core/lib/server/android
+rm -rf node_modules/playwright-core/lib/server/electron
+rm -rf node_modules/playwright-core/lib/server/firefox
+rm -rf node_modules/playwright-core/lib/server/webkit
+
+find node_modules -name "*.map" -delete
+find node_modules -name "*.d.ts" -delete
+find node_modules -name "*.ts" -delete
+find node_modules -name "*.md" -delete
+find node_modules -name "LICENSE*" -delete
+find node_modules -name "CHANGELOG*" -delete
+find node_modules -name "README*" -delete
+
+rm -rf node_modules/typescript/lib/lib.*.d.ts
+rm -rf node_modules/typescript/lib/pl
+rm -rf node_modules/typescript/lib/ja
+rm -rf node_modules/typescript/lib/it
+rm -rf node_modules/typescript/lib/cs
+rm -rf node_modules/typescript/lib/ru
+rm -rf node_modules/typescript/lib/zh-cn
+rm -rf node_modules/typescript/lib/zh-tw
+rm -rf node_modules/typescript/lib/pt-br
+rm -rf node_modules/typescript/lib/de
+rm -rf node_modules/typescript/lib/ko
+rm -rf node_modules/typescript/lib/fr
+rm -rf node_modules/typescript/lib/es
+rm -rf node_modules/typescript/lib/tr
 
 cd ..
 echo "➡ Creating ZIP archive..."
-cd lambda-build && zip -r ../lambda-package.zip . && cd ..
+cd lambda-build && zip -9 -r ../lambda-package.zip . && cd ..
 
 echo "➡ Cleaning up temporary files..."
 rm -rf lambda-build
