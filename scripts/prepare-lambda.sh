@@ -50,6 +50,15 @@ find node_modules -type d -name "examples" -exec rm -rf {} +
 find node_modules -type d -name "src" -exec rm -rf {} +
 find node_modules -type d -name "dist" -exec rm -rf {} +
 
+find node_modules -type d -name "cjs" -exec rm -rf {} +
+find node_modules -type d -name "esm" -exec rm -rf {} +
+find node_modules -type d -name "es" -exec rm -rf {} +
+
+find node_modules -type d -name "locale" -exec rm -rf {} +
+
+find node_modules -type d -name "firefox" -exec rm -rf {} +
+find node_modules -type d -name "webkit" -exec rm -rf {} +
+
 cd ..
 zip -r lambda-package.zip lambda-build/*
 
