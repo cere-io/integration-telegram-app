@@ -13,7 +13,11 @@ cat > lambda-build/package.json << EOL
   "version": "1.0.0",
   "private": true,
   "dependencies": {
-    "playwright-core": "^1.40.0"
+    "playwright-core": "^1.40.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3",
+    "@types/node": "^20.11.19",
+    "tslib": "^2.6.2"
   }
 }
 EOL
