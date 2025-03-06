@@ -6,6 +6,9 @@ echo "➡ Removing old directory and creating new one..."
 rm -rf lambda-build lambda-package.zip
 mkdir -p lambda-build/tests
 
+echo "➡ Compiling TypeScript locally..."
+npx tsc tests/integration.spec.ts --outDir lambda-build/tests
+
 echo "➡ Creating package.json..."
 cat > lambda-build/package.json << EOL
 {
@@ -13,23 +16,14 @@ cat > lambda-build/package.json << EOL
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "tsc",
     "test": "node tests/integration.spec.js"
   },
   "dependencies": {
     "@playwright/test": "^1.50.1",
     "playwright-core": "^1.50.1"
-  },
-  "devDependencies": {
-    "@types/node": "^22.13.9",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.8.2"
   }
 }
 EOL
-
-echo "➡ Copying existing tests..."
-cp -r tests/* lambda-build/tests/
 
 echo "➡ Creating Lambda handler..."
 cat > lambda-build/index.js << EOL
@@ -49,9 +43,6 @@ exports.handler = async (event) => {
       // Копируем файлы Chromium в /tmp
       execSync(\`cp -r \${chromiumDir} /tmp/\`, { stdio: 'inherit' });
     }
-
-    // Компилируем TypeScript
-    execSync('npm run build', { stdio: 'inherit' });
 
     // Запускаем тесты
     execSync('npm test', { stdio: 'inherit' });
@@ -74,24 +65,6 @@ cd lambda-build
 
 echo "➡ Installing dependencies..."
 npm install
-
-echo "➡ Creating tsconfig.json..."
-cat > tsconfig.json << EOL
-{
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "commonjs",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "outDir": "./",
-    "rootDir": "./"
-  },
-  "include": ["tests/**/*"],
-  "exclude": ["node_modules"]
-}
-EOL
 
 echo "➡ Preparing directory for Chromium..."
 mkdir -p .cache/ms-playwright/chromium-1091
