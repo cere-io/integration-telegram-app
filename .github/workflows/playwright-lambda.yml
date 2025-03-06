@@ -152,7 +152,7 @@ jobs:
             echo "Updating existing Lambda function..."
             aws lambda update-function-code \
               --function-name "playwright-test-${{ needs.get-env.outputs.env }}" \
-              --s3-bucket "cere-io-playwright-test-results" \
+              --s3-bucket "cere-playwright-tests-results" \
               --s3-key "${PACKAGE_S3_KEY}" \
               --region ${{ matrix.region }}
           else
@@ -165,7 +165,7 @@ jobs:
               --role "arn:aws:iam::${{ needs.get-env.outputs.account_id }}:role/lambda-playwright-test" \
               --timeout 900 \
               --memory-size 2048 \
-              --code 'S3Bucket=cere-playwright-tests-results,S3Key='"${PACKAGE_S3_KEY}" \
+              --code "S3Bucket=cere-playwright-tests-results,S3Key=${PACKAGE_S3_KEY}" \
               --region ${{ matrix.region }}
           fi
           
