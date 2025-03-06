@@ -1,71 +1,91 @@
 #!/bin/bash
 
-rm -rf lambda-build
+set -e
 
-mkdir -p lambda-build
+echo "➡ Removing old directory and creating new one..."
+rm -rf lambda-build lambda-package.zip
+mkdir -p lambda-build/tests
 
-cp package.json package-lock.json lambda-build/
-cp -r tests lambda-build/
+echo "➡ Creating package.json..."
+cat > lambda-build/package.json << EOL
+{
+  "name": "lambda-tests",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@playwright/test": "^1.40.0",
+    "playwright-core": "^1.40.0"
+  }
+}
+EOL
 
-cat > lambda-build/index.js << 'EOL'
+echo "➡ Creating Playwright test..."
+cat > lambda-build/tests/integration.spec.ts << EOL
+import { test, expect } from '@playwright/test';
+
+test('basic test', async ({ page }) => {
+  await page.goto('https://example.com');
+  await expect(page).toHaveTitle(/Example Domain/);
+});
+EOL
+
+echo "➡ Creating Lambda handler..."
+cat > lambda-build/index.js << EOL
 const { execSync } = require('child_process');
+const fs = require('fs');
 
-exports.handler = async (event) => {
+exports.handler = async () => {
   try {
-    process.env.PLAYWRIGHT_BROWSERS_PATH = '/tmp';
+    console.log("➡ Running Playwright tests...");
+    
+    process.env.PLAYWRIGHT_BROWSERS_PATH = '/tmp/ms-playwright';
     process.env.PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = '1';
 
-    execSync('npx playwright test tests/integration.spec.ts', { stdio: 'inherit' });
+    const browserDir = '/tmp/ms-playwright';
+    if (!fs.existsSync(browserDir)) fs.mkdirSync(browserDir, { recursive: true });
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ message: 'Tests completed successfully' })
-    };
+    if (fs.existsSync('/opt/chromium')) {
+      execSync('cp -r /opt/chromium/* /tmp/ms-playwright/chromium-*');
+    } else {
+      console.log("⚠️ Chromium not found in /opt/chromium, skipping copy");
+    }
+
+    execSync('npx playwright test', { stdio: 'inherit' });
+
+    return { statusCode: 200, body: JSON.stringify({ message: 'Tests passed ✅' }) };
   } catch (error) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: error.message })
-    };
+    console.error("❌ Error:", error);
+    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
   }
 };
 EOL
 
 cd lambda-build
-npm install --omit=dev playwright-core @playwright/test
 
-mkdir -p node_modules/@playwright/test/.cache/chromium
-cp -r ../node_modules/@playwright/test/.cache/chromium/* node_modules/@playwright/test/.cache/chromium/
+echo "➡ Removing old dependencies..."
+rm -rf node_modules package-lock.json
 
-find node_modules -type f -name "*.d.ts" -delete
-find node_modules -type f -name "*.map" -delete
-find node_modules -type f -name "*.ts" -delete
-find node_modules -type f -name "*.tsx" -delete
-find node_modules -type f -name "*.jsx" -delete
-find node_modules -type f -name "*.md" -delete
-find node_modules -type f -name "*.txt" -delete
-find node_modules -type f -name "*.wasm" -delete
-find node_modules -type f -name "*.wasm.js" -delete
-find node_modules -type f -name "*.wasm.map" -delete
+echo "➡ Installing dependencies and creating package-lock.json..."
+npm install
 
-find node_modules -type d -name "test" -exec rm -rf {} +
-find node_modules -type d -name "tests" -exec rm -rf {} +
-find node_modules -type d -name "docs" -exec rm -rf {} +
-find node_modules -type d -name "examples" -exec rm -rf {} +
-find node_modules -type d -name "src" -exec rm -rf {} +
-find node_modules -type d -name "dist" -exec rm -rf {} +
-find node_modules -type d -name "cjs" -exec rm -rf {} +
-find node_modules -type d -name "esm" -exec rm -rf {} +
-find node_modules -type d -name "es" -exec rm -rf {} +
-find node_modules -type d -name "locale" -exec rm -rf {} +
-find node_modules -type d -name "firefox" -exec rm -rf {} +
-find node_modules -type d -name "webkit" -exec rm -rf {} +
+echo "➡ Installing production dependencies..."
+npm ci --omit=dev
 
-find node_modules -type d -empty -delete
+echo "➡ Preparing directory for Chromium..."
+mkdir -p node_modules/.cache/playwright-core/chromium-*
+
+if [ -d "/opt/chromium" ]; then
+  echo "➡ Copying Chromium..."
+  cp -r /opt/chromium/* node_modules/.cache/playwright-core/chromium-*/
+else
+  echo "⚠️ Chromium not found in /opt/chromium, skipping copy"
+fi
 
 cd ..
+echo "➡ Creating ZIP archive..."
+zip -rq lambda-package.zip lambda-build
 
-zip -r lambda-package.zip lambda-build/
-
+echo "➡ Cleaning up temporary files..."
 rm -rf lambda-build
 
-echo "Package for Lambda prepared successfully"
+echo "✅ Lambda package built successfully!"
