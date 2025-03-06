@@ -136,8 +136,16 @@ jobs:
         echo "aws_account_id: ${{ needs.get-env.outputs.account_id }}"
         echo "aws_region: ${{ matrix.region }}"
         npm ci
-      build_command: npm run prepare:lambda
-      path_to_application_files_to_upload: "${{ github.workspace }}"
+      build_command: |
+        echo "Building Lambda package..."
+        npm run prepare:lambda
+        echo "Contents of workspace:"
+        ls -la
+        echo "Creating deployment package..."
+        zip -r lambda-build.zip .
+        echo "Deployment package created:"
+        ls -la lambda-build.zip
+      path_to_application_files_to_upload: "lambda-build.zip"
       client_path: ""
       runs-on: '["ubuntu-latest"]'
 
