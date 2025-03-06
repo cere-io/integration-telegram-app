@@ -167,6 +167,7 @@ jobs:
               --region ${{ matrix.region }}
           else
             echo "Creating new Lambda function..."
+            echo "${{ needs.get-env.outputs.account_id }}"
             aws lambda create-function \
               --function-name "playwright-test-${{ needs.get-env.outputs.env }}" \
               --runtime nodejs20.x \
@@ -174,7 +175,7 @@ jobs:
               --role "arn:aws:iam::${{ needs.get-env.outputs.account_id }}:role/lambda-playwright-test" \
               --timeout 900 \
               --memory-size 2048 \
-              --code 'S3Bucket=cere-io-playwright-test-results,S3Key='"${PACKAGE_S3_KEY}" \
+              --code 'S3Bucket=cere-playwright-tests-results,S3Key='"${PACKAGE_S3_KEY}" \
               --region ${{ matrix.region }}
           fi
           
