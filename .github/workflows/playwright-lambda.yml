@@ -143,7 +143,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-skip-session-tagging: true
-          role-to-assume: arn:aws:iam::${{ needs.get-env.outputs.account_id }}:role/github
+          role-to-assume: arn:aws:iam::${{ vars.STG_CORE_AWS_ACCOUNT_ID }}:role/github
           role-session-name: ${{ github.event.repository.name }}
           aws-region: ${{ matrix.region }}
           audience: sts.amazonaws.com
