@@ -123,6 +123,7 @@ jobs:
     strategy:
       matrix:
         region: ${{ fromJson(needs.get-regions.outputs.regions) }}
+      fail-fast: false
     uses: cere-io/reusable-workflows/.github/workflows/build-to-lambda.yaml@master
     with:
       aws_account_id: ${{ needs.get-env.outputs.account_id }}
@@ -135,17 +136,21 @@ jobs:
         echo "lambda_function_name: playwright-test-${{ needs.get-env.outputs.env }}"
         echo "aws_account_id: ${{ needs.get-env.outputs.account_id }}"
         echo "aws_region: ${{ matrix.region }}"
+        echo "Installing dependencies..."
         npm ci
+        echo "Dependencies installed successfully"
       build_command: |
         echo "Building Lambda package..."
         npm run prepare:lambda
-        echo "Contents of workspace:"
-        ls -la
-        echo "Creating deployment package..."
-        zip -r lambda-build.zip .
-        echo "Deployment package created:"
-        ls -la lambda-build.zip
-      path_to_application_files_to_upload: "lambda-build.zip"
+        echo "Creating build directory..."
+        mkdir -p lambda-build
+        echo "Copying files to build directory..."
+        cp -r * lambda-build/ 2>/dev/null || true
+        cp -r .* lambda-build/ 2>/dev/null || true
+        echo "Contents of build directory:"
+        ls -la lambda-build
+        echo "Build completed successfully"
+      path_to_application_files_to_upload: "lambda-build"
       client_path: ""
       runs-on: '["ubuntu-latest"]'
 
@@ -153,6 +158,7 @@ jobs:
     name: Run Playwright Tests in Lambda
     needs: [get-regions, get-env, deploy-lambda]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       matrix:
         region: ${{ fromJson(needs.get-regions.outputs.regions) }}
@@ -187,7 +193,12 @@ jobs:
           echo "Waiting for Lambda function to be ready..."
           aws lambda wait function-active \
             --function-name "playwright-test-${{ matrix.env }}" \
-            --region ${{ matrix.region }}
+            --region ${{ matrix.region }} || {
+              echo "::error::Lambda function not ready after waiting"
+              exit 1
+            }
+          
+          echo "Lambda function is ready, starting tests..."
           
           # Run Lambda with timeout and capture logs
           echo "Running tests in Lambda..."
@@ -199,9 +210,16 @@ jobs:
             --query 'LogResult' \
             --output text \
             "$LOGS_BASE64" \
-            > "$RESPONSE_FILE" 2>&1 || { echo "Lambda execution failed"; exit 1; }
+            > "$RESPONSE_FILE" 2>&1 || {
+              echo "::error::Lambda invocation failed"
+              if [ -f "$RESPONSE_FILE" ]; then
+                echo "Error details:"
+                cat "$RESPONSE_FILE"
+              fi
+              exit 1
+            }
 
-          # Process and check results as before...
+          # Process and check results
           if [ -f "$LOGS_BASE64" ]; then
             base64 -d "$LOGS_BASE64" > "$LOGS_FILE"
             echo "Lambda execution logs:"
@@ -219,8 +237,12 @@ jobs:
                grep -q "FunctionError" "$RESPONSE_FILE" || \
                grep -q "Task timed out" "$RESPONSE_FILE"; then
               echo "::error::Tests failed in region ${{ matrix.region }} for environment ${{ matrix.env }}"
+              echo "Full response:"
+              cat "$RESPONSE_FILE"
               exit 1
             fi
+            
+            echo "Tests completed successfully"
           else
             echo "::error::No test results found"
             exit 1
@@ -233,7 +255,7 @@ jobs:
           aws s3 cp \
             "$GITHUB_WORKSPACE/test-output/" \
             "s3://cere-io-playwright-test-results/telegram/${{ matrix.env }}/${{ matrix.region }}/${{ github.run_id }}/" \
-            --recursive
+            --recursive || echo "::warning::Failed to upload test results to S3"
 
           echo "Test results uploaded to s3://cere-io-playwright-test-results/${{ matrix.env }}/${{ matrix.region }}/${{ github.run_id }}/"
 
@@ -268,7 +290,7 @@ jobs:
             echo "Deleting Lambda function..."
             aws lambda delete-function \
               --function-name "playwright-test-${{ matrix.env }}" \
-              --region ${{ matrix.region }}
+              --region ${{ matrix.region }} || echo "::warning::Failed to delete Lambda function"
             echo "Lambda function deleted"
           else
             echo "Lambda function not found, skipping deletion"
