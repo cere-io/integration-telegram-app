@@ -56,7 +56,7 @@ exports.handler = async () => {
       console.log("⚠️ Chromium not found in /opt/chromium, skipping copy");
     }
 
-    execSync('npx ts-node tests/integration.spec.ts', { stdio: 'inherit' });
+    execSync('./node_modules/.bin/ts-node tests/integration.spec.ts', { stdio: 'inherit' });
 
     return { statusCode: 200, body: JSON.stringify({ message: 'Tests passed ✅' }) };
   } catch (error) {
