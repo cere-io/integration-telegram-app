@@ -126,17 +126,7 @@ jobs:
         run: |
           echo "Building Lambda package..."
           npm run prepare:lambda
-          echo "Creating build directory..."
-          mkdir -p lambda-build
-          echo "Copying files to build directory..."
-          cp -r * lambda-build/ 2>/dev/null || true
-          cp -r .* lambda-build/ 2>/dev/null || true
-          echo "Creating deployment package..."
-          cd lambda-build
-          zip -r ../lambda-package.zip .
-          cd ..
-          echo "Contents of workspace:"
-          ls -la
+          echo "Lambda package built successfully"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4

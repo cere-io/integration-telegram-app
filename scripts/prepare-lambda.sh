@@ -13,7 +13,6 @@ cat > lambda-build/package.json << EOL
   "version": "1.0.0",
   "private": true,
   "dependencies": {
-    "@playwright/test": "^1.40.0",
     "playwright-core": "^1.40.0"
   }
 }
@@ -21,11 +20,14 @@ EOL
 
 echo "➡ Creating Playwright test..."
 cat > lambda-build/tests/integration.spec.ts << EOL
-import { test, expect } from '@playwright/test';
+import { chromium } from 'playwright-core';
 
-test('basic test', async ({ page }) => {
+test('basic test', async () => {
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
   await page.goto('https://example.com');
-  await expect(page).toHaveTitle(/Example Domain/);
+  await expect(page.title()).resolves.toMatch(/Example Domain/);
+  await browser.close();
 });
 EOL
 
@@ -50,7 +52,7 @@ exports.handler = async () => {
       console.log("⚠️ Chromium not found in /opt/chromium, skipping copy");
     }
 
-    execSync('npx playwright test', { stdio: 'inherit' });
+    execSync('npx ts-node tests/integration.spec.ts', { stdio: 'inherit' });
 
     return { statusCode: 200, body: JSON.stringify({ message: 'Tests passed ✅' }) };
   } catch (error) {
@@ -71,6 +73,9 @@ npm install
 echo "➡ Installing production dependencies..."
 npm ci --omit=dev
 
+echo "➡ Installing ts-node..."
+npm install --save-dev ts-node typescript @types/node
+
 echo "➡ Preparing directory for Chromium..."
 mkdir -p node_modules/.cache/playwright-core/chromium-*
 
@@ -80,6 +85,12 @@ if [ -d "/opt/chromium" ]; then
 else
   echo "⚠️ Chromium not found in /opt/chromium, skipping copy"
 fi
+
+echo "➡ Removing unnecessary files..."
+rm -rf node_modules/playwright-core/types
+rm -rf node_modules/playwright-core/lib/vite
+rm -rf node_modules/playwright-core/lib/utilsBundleImpl
+rm -rf node_modules/playwright-core/lib/transform
 
 cd ..
 echo "➡ Creating ZIP archive..."
