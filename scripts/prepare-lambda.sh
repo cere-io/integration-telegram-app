@@ -14,6 +14,7 @@ cat > lambda-build/package.json << EOL
   "private": true,
   "dependencies": {
     "playwright-core": "^1.40.0",
+    "@playwright/test": "^1.40.0",
     "jest": "^29.7.0"
   }
 }
