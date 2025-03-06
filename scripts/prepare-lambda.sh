@@ -55,9 +55,28 @@ find node_modules -type d -name "esm" -exec rm -rf {} +
 find node_modules -type d -name "es" -exec rm -rf {} +
 
 find node_modules -type d -name "locale" -exec rm -rf {} +
-
 find node_modules -type d -name "firefox" -exec rm -rf {} +
 find node_modules -type d -name "webkit" -exec rm -rf {} +
+
+find node_modules/@polkadot -type f -name "*.wasm" -delete
+find node_modules/@polkadot -type f -name "*.wasm.js" -delete
+find node_modules/@polkadot -type f -name "*.wasm.wasm" -delete
+find node_modules/@polkadot -type f -name "*.wasm.js.map" -delete
+find node_modules/@polkadot -type f -name "*.wasm.wasm.map" -delete
+
+find node_modules/@cere -type f -name "*.wasm" -delete
+find node_modules/@cere -type f -name "*.wasm.js" -delete
+find node_modules/@cere -type f -name "*.wasm.wasm" -delete
+find node_modules/@cere -type f -name "*.wasm.js.map" -delete
+find node_modules/@cere -type f -name "*.wasm.wasm.map" -delete
+
+find node_modules -type f -name "*.wasm" -delete
+find node_modules -type f -name "*.wasm.js" -delete
+find node_modules -type f -name "*.wasm.wasm" -delete
+find node_modules -type f -name "*.wasm.js.map" -delete
+find node_modules -type f -name "*.wasm.wasm.map" -delete
+
+find node_modules -type d -empty -delete
 
 cd ..
 zip -r lambda-package.zip lambda-build/*
