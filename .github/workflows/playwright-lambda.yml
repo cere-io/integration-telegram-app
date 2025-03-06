@@ -153,7 +153,7 @@ jobs:
           # Upload package to S3
           echo "Uploading package to S3..."
           PACKAGE_S3_KEY="lambda-packages/playwright-test-${{ needs.get-env.outputs.env }}-${{ github.run_id }}.zip"
-          aws s3 cp lambda-package.zip "s3://cere-io-playwright-test-results/${PACKAGE_S3_KEY}" || {
+          aws s3 cp lambda-package.zip "s3://cere-playwright-test-results/${PACKAGE_S3_KEY}" || {
             echo "::error::Failed to upload package to S3"
             exit 1
           }
