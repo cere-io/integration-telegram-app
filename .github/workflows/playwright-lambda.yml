@@ -129,8 +129,11 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
+          role-skip-session-tagging: true
           role-to-assume: arn:aws:iam::${{ needs.get-env.outputs.account_id }}:role/github
+          role-session-name: ${{ github.event.repository.name }}
           aws-region: ${{ matrix.region }}
+          audience: sts.amazonaws.com
 
       - name: Create output directory
         run: |
