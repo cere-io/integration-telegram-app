@@ -21,7 +21,8 @@ cat > lambda-build/package.json << EOL
     "diff": "^5.1.0",
     "make-error": "^1.1.1",
     "source-map-support": "^0.5.21",
-    "yn": "^3.1.1"
+    "yn": "^3.1.1",
+    "v8-compile-cache-lib": "^3.0.1"
   }
 }
 EOL
