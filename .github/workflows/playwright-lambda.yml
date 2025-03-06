@@ -233,7 +233,8 @@ jobs:
             --cli-binary-format raw-in-base64-out \
             --log-type Tail \
             --query 'LogResult' \
-            --output text) || {
+            --output text \
+            /dev/stdout) || {
               echo "::error::Lambda invocation failed"
               echo "Error details:"
               echo "$RESPONSE"
