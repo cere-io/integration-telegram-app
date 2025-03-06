@@ -13,23 +13,14 @@ cat > lambda-build/package.json << EOL
   "version": "1.0.0",
   "private": true,
   "dependencies": {
-    "playwright-core": "^1.40.0"
+    "playwright-core": "^1.40.0",
+    "jest": "^29.7.0"
   }
 }
 EOL
 
-echo "➡ Creating Playwright test..."
-cat > lambda-build/tests/integration.spec.ts << EOL
-import { chromium } from 'playwright-core';
-
-test('basic test', async () => {
-  const browser = await chromium.launch();
-  const page = await browser.newPage();
-  await page.goto('https://example.com');
-  await expect(page.title()).resolves.toMatch(/Example Domain/);
-  await browser.close();
-});
-EOL
+echo "➡ Copying existing tests..."
+cp -r tests/* lambda-build/tests/
 
 echo "➡ Creating Lambda handler..."
 cat > lambda-build/index.js << EOL
@@ -105,19 +96,6 @@ else
 fi
 
 echo "➡ Removing unnecessary files..."
-rm -rf node_modules/playwright-core/types
-rm -rf node_modules/playwright-core/lib/vite
-rm -rf node_modules/playwright-core/lib/utilsBundleImpl
-rm -rf node_modules/playwright-core/lib/transform
-rm -rf node_modules/playwright-core/lib/server/trace
-rm -rf node_modules/playwright-core/lib/server/recorder
-rm -rf node_modules/playwright-core/lib/server/codegen
-rm -rf node_modules/playwright-core/lib/server/bidi
-rm -rf node_modules/playwright-core/lib/server/android
-rm -rf node_modules/playwright-core/lib/server/electron
-rm -rf node_modules/playwright-core/lib/server/firefox
-rm -rf node_modules/playwright-core/lib/server/webkit
-
 find node_modules -name "*.map" -delete
 find node_modules -name "*.d.ts" -delete
 find node_modules -name "*.ts" -delete
