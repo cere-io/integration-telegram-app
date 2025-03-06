@@ -101,22 +101,6 @@ jobs:
           echo "account_id: ${{ steps.set-env.outputs.account_id }}"
           echo "lambda_function_name: playwright-test-${{ steps.set-env.outputs.env }}"
 
-  print-params:
-    name: Print Deploy Parameters
-    needs: [get-regions, get-env]
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        region: ${{ fromJson(needs.get-regions.outputs.regions) }}
-    steps:
-      - name: Print parameters
-        run: |
-          echo "Parameters for reusable workflow:"
-          echo "aws_account_id: ${{ needs.get-env.outputs.account_id }}"
-          echo "lambda_function_name: playwright-test-${{ needs.get-env.outputs.env }}"
-          echo "aws_region: ${{ matrix.region }}"
-          echo "env: ${{ needs.get-env.outputs.env }}"
-
   deploy-lambda:
     name: Deploy Lambda Function
     needs: [get-regions, get-env]
@@ -148,19 +132,50 @@ jobs:
           echo "Copying files to build directory..."
           cp -r * lambda-build/ 2>/dev/null || true
           cp -r .* lambda-build/ 2>/dev/null || true
-          echo "Contents of build directory:"
-          ls -la lambda-build
+          echo "Creating deployment package..."
+          cd lambda-build
+          zip -r ../lambda-package.zip .
+          cd ..
+          echo "Contents of workspace:"
+          ls -la
 
-      - name: Deploy Lambda
-        uses: cere-io/reusable-workflows/.github/workflows/build-to-lambda.yaml@master
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws_account_id: ${{ needs.get-env.outputs.account_id }}
-          lambda_function_name: playwright-test-${{ needs.get-env.outputs.env }}
-          aws_region: ${{ matrix.region }}
-          build_files: false
-          path_to_application_files_to_upload: "lambda-build"
-          client_path: ""
-          runs-on: '["ubuntu-latest"]'
+          role-skip-session-tagging: true
+          role-to-assume: arn:aws:iam::${{ needs.get-env.outputs.account_id }}:role/github
+          role-session-name: ${{ github.event.repository.name }}
+          aws-region: ${{ matrix.region }}
+          audience: sts.amazonaws.com
+
+      - name: Deploy Lambda function
+        run: |
+          echo "Creating/updating Lambda function..."
+          if aws lambda get-function --function-name "playwright-test-${{ needs.get-env.outputs.env }}" --region ${{ matrix.region }} >/dev/null 2>&1; then
+            echo "Updating existing Lambda function..."
+            aws lambda update-function-code \
+              --function-name "playwright-test-${{ needs.get-env.outputs.env }}" \
+              --zip-file fileb://lambda-package.zip \
+              --region ${{ matrix.region }}
+          else
+            echo "Creating new Lambda function..."
+            aws lambda create-function \
+              --function-name "playwright-test-${{ needs.get-env.outputs.env }}" \
+              --runtime nodejs20.x \
+              --handler index.handler \
+              --role "arn:aws:iam::${{ needs.get-env.outputs.account_id }}:role/lambda-playwright-test" \
+              --timeout 900 \
+              --memory-size 2048 \
+              --zip-file fileb://lambda-package.zip \
+              --region ${{ matrix.region }}
+          fi
+          
+          echo "Waiting for Lambda function to be ready..."
+          aws lambda wait function-active \
+            --function-name "playwright-test-${{ needs.get-env.outputs.env }}" \
+            --region ${{ matrix.region }}
+          
+          echo "Lambda function deployed successfully"
 
   test:
     name: Run Playwright Tests in Lambda
@@ -170,7 +185,6 @@ jobs:
     strategy:
       matrix:
         region: ${{ fromJson(needs.get-regions.outputs.regions) }}
-        env: ["${{ needs.get-env.outputs.env }}"]
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -200,7 +214,7 @@ jobs:
           # Wait for Lambda to be ready
           echo "Waiting for Lambda function to be ready..."
           aws lambda wait function-active \
-            --function-name "playwright-test-${{ matrix.env }}" \
+            --function-name "playwright-test-${{ needs.get-env.outputs.env }}" \
             --region ${{ matrix.region }} || {
               echo "::error::Lambda function not ready after waiting"
               exit 1
@@ -211,8 +225,8 @@ jobs:
           # Run Lambda with timeout and capture logs
           echo "Running tests in Lambda..."
           timeout 900 aws lambda invoke \
-            --function-name "playwright-test-${{ matrix.env }}" \
-            --payload '{"region": "${{ matrix.region }}", "environment": "${{ matrix.env }}"}' \
+            --function-name "playwright-test-${{ needs.get-env.outputs.env }}" \
+            --payload '{"region": "${{ matrix.region }}", "environment": "${{ needs.get-env.outputs.env }}"}' \
             --cli-binary-format raw-in-base64-out \
             --log-type Tail \
             --query 'LogResult' \
@@ -244,7 +258,7 @@ jobs:
                grep -q "statusCode.:.*500" "$RESPONSE_FILE" || \
                grep -q "FunctionError" "$RESPONSE_FILE" || \
                grep -q "Task timed out" "$RESPONSE_FILE"; then
-              echo "::error::Tests failed in region ${{ matrix.region }} for environment ${{ matrix.env }}"
+              echo "::error::Tests failed in region ${{ matrix.region }} for environment ${{ needs.get-env.outputs.env }}"
               echo "Full response:"
               cat "$RESPONSE_FILE"
               exit 1
@@ -262,16 +276,16 @@ jobs:
           echo "Uploading test results to S3..."
           aws s3 cp \
             "$GITHUB_WORKSPACE/test-output/" \
-            "s3://cere-io-playwright-test-results/telegram/${{ matrix.env }}/${{ matrix.region }}/${{ github.run_id }}/" \
+            "s3://cere-io-playwright-test-results/telegram/${{ needs.get-env.outputs.env }}/${{ matrix.region }}/${{ github.run_id }}/" \
             --recursive || echo "::warning::Failed to upload test results to S3"
 
-          echo "Test results uploaded to s3://cere-io-playwright-test-results/${{ matrix.env }}/${{ matrix.region }}/${{ github.run_id }}/"
+          echo "Test results uploaded to s3://cere-io-playwright-test-results/${{ needs.get-env.outputs.env }}/${{ matrix.region }}/${{ github.run_id }}/"
 
       - name: Upload test results as artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ matrix.env }}-${{ matrix.region }}
+          name: test-results-${{ needs.get-env.outputs.env }}-${{ matrix.region }}
           path: ${{ github.workspace }}/test-output/**/*
           if-no-files-found: warn
           retention-days: 7
@@ -293,11 +307,11 @@ jobs:
         run: |
           echo "Checking if Lambda function exists..."
           if aws lambda get-function \
-            --function-name "playwright-test-${{ matrix.env }}" \
+            --function-name "playwright-test-${{ needs.get-env.outputs.env }}" \
             --region ${{ matrix.region }} >/dev/null 2>&1; then
             echo "Deleting Lambda function..."
             aws lambda delete-function \
-              --function-name "playwright-test-${{ matrix.env }}" \
+              --function-name "playwright-test-${{ needs.get-env.outputs.env }}" \
               --region ${{ matrix.region }} || echo "::warning::Failed to delete Lambda function"
             echo "Lambda function deleted"
           else
