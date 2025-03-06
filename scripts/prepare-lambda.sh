@@ -1,62 +1,58 @@
 #!/bin/bash
 
-# Create temporary build directory
-BUILD_DIR="lambda-build"
-rm -rf $BUILD_DIR
-mkdir -p $BUILD_DIR
+rm -rf lambda-build
+mkdir lambda-build
 
-# Copy necessary files
-cp package.json $BUILD_DIR/
-cp package-lock.json $BUILD_DIR/
-cp -r tests $BUILD_DIR/
-cp playwright.config.ts $BUILD_DIR/
+cp package.json package-lock.json lambda-build/
+cp -r tests lambda-build/
 
-# Create index.js for Lambda
-cat > $BUILD_DIR/index.js << 'EOL'
+cat > lambda-build/index.js << 'EOL'
 const { execSync } = require('child_process');
-const path = require('path');
 
 exports.handler = async (event) => {
-    try {
-        // Set environment variables
-        process.env.AWS_LAMBDA_FUNCTION_NAME = process.env.AWS_LAMBDA_FUNCTION_NAME;
-        process.env.TEST_ENV = process.env.TEST_ENV;
-        process.env.REGION = process.env.REGION;
+  try {
+    process.env.PLAYWRIGHT_BROWSERS_PATH = '/tmp';
+    process.env.PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = '1';
 
-        // Run tests
-        execSync('npx playwright test tests/integration.spec.ts', {
-            stdio: 'inherit',
-            cwd: path.dirname(__filename)
-        });
+    execSync('npx playwright test tests/integration.spec.ts', { stdio: 'inherit' });
 
-        return {
-            statusCode: 200,
-            body: JSON.stringify({ message: 'Tests completed successfully' })
-        };
-    } catch (error) {
-        console.error('Error:', error);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: error.message })
-        };
-    }
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ message: 'Tests completed successfully' })
+    };
+  } catch (error) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: error.message })
+    };
+  }
 };
 EOL
 
-# Install dependencies
-cd $BUILD_DIR
-npm ci --production
+cd lambda-build
+npm install --omit=dev playwright-core @playwright/test
 
-# Install Playwright
-npx playwright install chromium --with-deps
+mkdir -p .cache/ms-playwright/chromium-1091/chrome-mac/Chromium.app/Contents/MacOS/
+cp ../.cache/ms-playwright/chromium-1091/chrome-mac/Chromium.app/Contents/MacOS/Chromium .cache/ms-playwright/chromium-1091/chrome-mac/Chromium.app/Contents/MacOS/
 
-# Create ZIP archive
-zip -r ../lambda-function.zip .
+find node_modules -type f -name "*.d.ts" -delete
+find node_modules -type f -name "*.map" -delete
+find node_modules -type f -name "*.ts" -delete
+find node_modules -type f -name "*.tsx" -delete
+find node_modules -type f -name "*.jsx" -delete
+find node_modules -type f -name "*.md" -delete
+find node_modules -type f -name "*.txt" -delete
+find node_modules -type f -name "*.json" ! -name "package.json" -delete
+find node_modules -type d -name "test" -exec rm -rf {} +
+find node_modules -type d -name "tests" -exec rm -rf {} +
+find node_modules -type d -name "docs" -exec rm -rf {} +
+find node_modules -type d -name "examples" -exec rm -rf {} +
+find node_modules -type d -name "src" -exec rm -rf {} +
+find node_modules -type d -name "dist" -exec rm -rf {} +
 
-# Return to root directory
 cd ..
+zip -r lambda-package.zip lambda-build/*
 
-# Remove temporary directory
-rm -rf $BUILD_DIR
+rm -rf lambda-build
 
-echo "Lambda package prepared successfully!" 
+echo "Package for Lambda prepared successfully"
