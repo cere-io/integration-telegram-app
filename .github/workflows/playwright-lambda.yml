@@ -137,7 +137,7 @@ jobs:
         echo "aws_region: ${{ matrix.region }}"
         npm ci
       build_command: npm run prepare:lambda
-      path_to_application_files_to_upload: ""
+      path_to_application_files_to_upload: "${{ github.workspace }}"
       client_path: ""
       runs-on: '["ubuntu-latest"]'
 
