@@ -120,39 +120,47 @@ jobs:
   deploy-lambda:
     name: Deploy Lambda Function
     needs: [get-regions, get-env]
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         region: ${{ fromJson(needs.get-regions.outputs.regions) }}
       fail-fast: false
-    uses: cere-io/reusable-workflows/.github/workflows/build-to-lambda.yaml@master
-    with:
-      aws_account_id: ${{ needs.get-env.outputs.account_id }}
-      lambda_function_name: playwright-test-${{ needs.get-env.outputs.env }}
-      aws_region: ${{ matrix.region }}
-      build_files: true
-      build_container: node:20
-      install_packages_command: |
-        echo "Using parameters:"
-        echo "lambda_function_name: playwright-test-${{ needs.get-env.outputs.env }}"
-        echo "aws_account_id: ${{ needs.get-env.outputs.account_id }}"
-        echo "aws_region: ${{ matrix.region }}"
-        echo "Installing dependencies..."
-        npm ci
-        echo "Dependencies installed successfully"
-      build_command: |
-        echo "Building Lambda package..."
-        npm run prepare:lambda
-        echo "Creating build directory..."
-        mkdir -p lambda-build
-        echo "Copying files to build directory..."
-        cp -r * lambda-build/ 2>/dev/null || true
-        cp -r .* lambda-build/ 2>/dev/null || true
-        echo "Contents of build directory:"
-        ls -la lambda-build
-        echo "Build completed successfully"
-      path_to_application_files_to_upload: "lambda-build"
-      client_path: ""
-      runs-on: '["ubuntu-latest"]'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          echo "Installing dependencies..."
+          npm ci
+          echo "Dependencies installed successfully"
+
+      - name: Prepare Lambda package
+        run: |
+          echo "Building Lambda package..."
+          npm run prepare:lambda
+          echo "Creating build directory..."
+          mkdir -p lambda-build
+          echo "Copying files to build directory..."
+          cp -r * lambda-build/ 2>/dev/null || true
+          cp -r .* lambda-build/ 2>/dev/null || true
+          echo "Contents of build directory:"
+          ls -la lambda-build
+
+      - name: Deploy Lambda
+        uses: cere-io/reusable-workflows/.github/workflows/build-to-lambda.yaml@master
+        with:
+          aws_account_id: ${{ needs.get-env.outputs.account_id }}
+          lambda_function_name: playwright-test-${{ needs.get-env.outputs.env }}
+          aws_region: ${{ matrix.region }}
+          build_files: false
+          path_to_application_files_to_upload: "lambda-build"
+          client_path: ""
+          runs-on: '["ubuntu-latest"]'
 
   test:
     name: Run Playwright Tests in Lambda
