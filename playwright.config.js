@@ -15,4 +15,6 @@ module.exports = defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
+  reporter: [['list', { outputDir: '/tmp/test-results' }]],
+  outputDir: '/tmp/test-results',
 }); 

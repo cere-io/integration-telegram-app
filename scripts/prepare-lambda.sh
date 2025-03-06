@@ -38,6 +38,9 @@ exports.handler = async (event) => {
     process.env.PLAYWRIGHT_BROWSERS_PATH = '/tmp';
     process.env.PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = '1';
 
+    // Создаем директорию для результатов тестов
+    fs.mkdirSync('/tmp/test-results', { recursive: true });
+
     // Проверяем наличие директории с Chromium
     const chromiumDir = path.join(__dirname, '.cache', 'ms-playwright', 'chromium-1091');
     if (fs.existsSync(chromiumDir)) {
