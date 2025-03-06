@@ -227,43 +227,34 @@ jobs:
           
           # Run Lambda with timeout and capture logs
           echo "Running tests in Lambda..."
-          timeout 900 aws lambda invoke \
+          RESPONSE=$(timeout 900 aws lambda invoke \
             --function-name "playwright-test-${{ needs.get-env.outputs.env }}" \
             --payload '{"region": "${{ matrix.region }}", "environment": "${{ needs.get-env.outputs.env }}"}' \
             --cli-binary-format raw-in-base64-out \
             --log-type Tail \
             --query 'LogResult' \
-            --output text \
-            "$LOGS_BASE64" \
-            > "$RESPONSE_FILE" 2>&1 || {
+            --output text) || {
               echo "::error::Lambda invocation failed"
-              if [ -f "$RESPONSE_FILE" ]; then
-                echo "Error details:"
-                cat "$RESPONSE_FILE"
-              fi
+              echo "Error details:"
+              echo "$RESPONSE"
               exit 1
             }
 
-          # Process and check results
-          if [ -f "$LOGS_BASE64" ]; then
-            base64 -d "$LOGS_BASE64" > "$LOGS_FILE"
-            echo "Lambda execution logs:"
-            cat "$LOGS_FILE"
-          else
-            echo "::warning::No Lambda logs found"
-          fi
+          # Save response to file
+          echo "$RESPONSE" > "$RESPONSE_FILE"
 
-          if [ -f "$RESPONSE_FILE" ]; then
-            echo "Test results:"
-            cat "$RESPONSE_FILE"
+          # Process and check results
+          if [ -n "$RESPONSE" ]; then
+            echo "Lambda execution logs:"
+            echo "$RESPONSE" | base64 -d || echo "::warning::Failed to decode Lambda logs"
             
-            if grep -q "error" "$RESPONSE_FILE" || \
-               grep -q "statusCode.:.*500" "$RESPONSE_FILE" || \
-               grep -q "FunctionError" "$RESPONSE_FILE" || \
-               grep -q "Task timed out" "$RESPONSE_FILE"; then
+            if echo "$RESPONSE" | grep -q "error" || \
+               echo "$RESPONSE" | grep -q "statusCode.:.*500" || \
+               echo "$RESPONSE" | grep -q "FunctionError" || \
+               echo "$RESPONSE" | grep -q "Task timed out"; then
               echo "::error::Tests failed in region ${{ matrix.region }} for environment ${{ needs.get-env.outputs.env }}"
               echo "Full response:"
-              cat "$RESPONSE_FILE"
+              echo "$RESPONSE"
               exit 1
             fi
             
