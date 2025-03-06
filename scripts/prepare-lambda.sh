@@ -14,7 +14,7 @@ cat > lambda-build/package.json << EOL
   "private": true,
   "dependencies": {
     "playwright-core": "^1.40.0",
-    "ts-node": "^10.9.2",
+    "tsx": "^4.7.1",
     "typescript": "^5.3.3",
     "@types/node": "^20.11.19",
     "tslib": "^2.6.2",
@@ -61,7 +61,7 @@ exports.handler = async () => {
       console.log("⚠️ Chromium not found in /opt/chromium, skipping copy");
     }
 
-    execSync('./node_modules/.bin/ts-node tests/integration.spec.ts', { stdio: 'inherit' });
+    execSync('./node_modules/.bin/tsx tests/integration.spec.ts', { stdio: 'inherit' });
 
     return { statusCode: 200, body: JSON.stringify({ message: 'Tests passed ✅' }) };
   } catch (error) {
