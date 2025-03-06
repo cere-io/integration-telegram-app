@@ -148,7 +148,7 @@ jobs:
     strategy:
       matrix:
         region: ${{ fromJson(needs.get-regions.outputs.regions) }}
-        env: ${{ needs.get-env.outputs.env }}
+        env: ["${{ needs.get-env.outputs.env }}"]
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -224,7 +224,7 @@ jobs:
           echo "Uploading test results to S3..."
           aws s3 cp \
             "$GITHUB_WORKSPACE/test-output/" \
-            "s3://cere-io-playwright-test-results/${{ matrix.env }}/${{ matrix.region }}/${{ github.run_id }}/" \
+            "s3://cere-io-playwright-test-results/telegram/${{ matrix.env }}/${{ matrix.region }}/${{ github.run_id }}/" \
             --recursive
 
           echo "Test results uploaded to s3://cere-io-playwright-test-results/${{ matrix.env }}/${{ matrix.region }}/${{ github.run_id }}/"
