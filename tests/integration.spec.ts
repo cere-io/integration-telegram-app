@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import fs from 'fs';
+import * as fs from 'fs';
 
 const userName = process.env.TEST_USER_EMAIL || 'veronika.filipenko@cere.io';
 const otp = process.env.TEST_USER_OTP || '555555';
