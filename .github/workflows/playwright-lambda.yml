@@ -150,12 +150,21 @@ jobs:
 
       - name: Deploy Lambda function
         run: |
+          # Upload package to S3
+          echo "Uploading package to S3..."
+          PACKAGE_S3_KEY="lambda-packages/playwright-test-${{ needs.get-env.outputs.env }}-${{ github.run_id }}.zip"
+          aws s3 cp lambda-package.zip "s3://cere-io-playwright-test-results/${PACKAGE_S3_KEY}" || {
+            echo "::error::Failed to upload package to S3"
+            exit 1
+          }
+          
           echo "Creating/updating Lambda function..."
           if aws lambda get-function --function-name "playwright-test-${{ needs.get-env.outputs.env }}" --region ${{ matrix.region }} >/dev/null 2>&1; then
             echo "Updating existing Lambda function..."
             aws lambda update-function-code \
               --function-name "playwright-test-${{ needs.get-env.outputs.env }}" \
-              --zip-file fileb://lambda-package.zip \
+              --s3-bucket "cere-io-playwright-test-results" \
+              --s3-key "${PACKAGE_S3_KEY}" \
               --region ${{ matrix.region }}
           else
             echo "Creating new Lambda function..."
@@ -166,7 +175,8 @@ jobs:
               --role "arn:aws:iam::${{ needs.get-env.outputs.account_id }}:role/lambda-playwright-test" \
               --timeout 900 \
               --memory-size 2048 \
-              --zip-file fileb://lambda-package.zip \
+              --s3-bucket "cere-io-playwright-test-results" \
+              --s3-key "${PACKAGE_S3_KEY}" \
               --region ${{ matrix.region }}
           fi
           
@@ -176,6 +186,10 @@ jobs:
             --region ${{ matrix.region }}
           
           echo "Lambda function deployed successfully"
+          
+          # Cleanup S3
+          echo "Cleaning up S3..."
+          aws s3 rm "s3://cere-io-playwright-test-results/${PACKAGE_S3_KEY}" || echo "::warning::Failed to delete package from S3"
 
   test:
     name: Run Playwright Tests in Lambda
