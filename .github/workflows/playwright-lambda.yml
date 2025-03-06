@@ -95,6 +95,28 @@ jobs:
             fi
           fi
 
+          # Print parameters that will be used
+          echo "Parameters that will be used:"
+          echo "env: ${{ steps.set-env.outputs.env }}"
+          echo "account_id: ${{ steps.set-env.outputs.account_id }}"
+          echo "lambda_function_name: playwright-test-${{ steps.set-env.outputs.env }}"
+
+  print-params:
+    name: Print Deploy Parameters
+    needs: [get-regions, get-env]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        region: ${{ fromJson(needs.get-regions.outputs.regions) }}
+    steps:
+      - name: Print parameters
+        run: |
+          echo "Parameters for reusable workflow:"
+          echo "aws_account_id: ${{ needs.get-env.outputs.account_id }}"
+          echo "lambda_function_name: playwright-test-${{ needs.get-env.outputs.env }}"
+          echo "aws_region: ${{ matrix.region }}"
+          echo "env: ${{ needs.get-env.outputs.env }}"
+
   deploy-lambda:
     name: Deploy Lambda Function
     needs: [get-regions, get-env]
@@ -108,7 +130,12 @@ jobs:
       aws_region: ${{ matrix.region }}
       build_files: true
       build_container: node:20
-      install_packages_command: npm ci
+      install_packages_command: |
+        echo "Using parameters:"
+        echo "lambda_function_name: playwright-test-${{ needs.get-env.outputs.env }}"
+        echo "aws_account_id: ${{ needs.get-env.outputs.account_id }}"
+        echo "aws_region: ${{ matrix.region }}"
+        npm ci
       build_command: npm run prepare:lambda
       path_to_application_files_to_upload: ""
       client_path: ""
