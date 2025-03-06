@@ -36,3 +36,4 @@ performance-log.txt
 lambda-function.zip
 lambda-package.zip
 /lambda-build/
+/test-unzip/
