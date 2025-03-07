@@ -29,6 +29,8 @@ export class CereAnalytics {
 
   private user: User | null = null;
   private geo: Geo | null = null;
+  private tags: any | null = null;
+
   constructor(
     private baseUrl: string,
     private appId: string,
@@ -50,13 +52,17 @@ export class CereAnalytics {
     this.geo = geo;
   }
 
-  exception(name: string, tags?: any) {
-    this.sendEvent('EXCEPTION', { name, ...tags }).then(() => {
+  setTags(tags: any) {
+    this.tags = tags;
+  }
+
+  exception(name: string, payload?: any) {
+    this.sendEvent('EXCEPTION', { name, ...payload }).then(() => {
       console.log(`Exception ${name} has been successfully sent to Cere Analytics`);
     });
   }
-  transaction(name: string, duration: number, tags?: any) {
-    this.sendEvent('TRANSACTION', { name, duration, ...tags }).then(() => {
+  transaction(name: string, duration: number, payload?: any) {
+    this.sendEvent('TRANSACTION', { name, duration, ...payload }).then(() => {
       console.log(`Transaction ${name} (${duration} ms) has been successfully sent to Cere Analytics`);
     });
   }
@@ -76,6 +82,9 @@ export class CereAnalytics {
       timestamp: new Date().toISOString(),
       payload: {
         ...payload,
+        tags: {
+          ...this.tags,
+        },
         user: this.user,
         geo: this.geo,
       },

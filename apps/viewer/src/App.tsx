@@ -61,6 +61,7 @@ export const App = () => {
       Reporting.setUser({ id: user.id.toString(), username: user.username });
       Analytics.setUser({ id: user.id.toString(), username: user.username });
     }
+    Analytics.setTags({ campaign_id: campaignId });
   }, [user]);
 
   useEffect(() => {
