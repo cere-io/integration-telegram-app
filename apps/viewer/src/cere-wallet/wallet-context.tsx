@@ -68,25 +68,7 @@ export const CereWalletProvider = ({ children }: PropsWithChildren<NonNullable<u
             const endTime = performance.now();
             const initialisationTime = endTime - startTime;
             console.log(`Cere Wallet initialisation time: ${initialisationTime.toFixed(2)} ms`);
-            Reporting.message(`Cere Wallet Initialised: ${initialisationTime.toFixed(2)}`, {
-              level: 'info',
-              tags: {
-                environment: APP_ENV as WalletEnvironment,
-                wallet: 'Cere Wallet',
-              },
-              context: {
-                performance: {
-                  initialisationTime: `${initialisationTime.toFixed(2)}`,
-                },
-              },
-            });
-
-            wallet.getUserInfo().then((user) => {
-              if (user.isNewWallet) {
-                Analytics.trackEvent(AnalyticsId.cereWalletCreated);
-              }
-              console.log('Cere Wallet details: ', user);
-            });
+            Analytics.transaction('WALLET_INITIALISED', initialisationTime);
           });
         });
       });

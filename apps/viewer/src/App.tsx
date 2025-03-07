@@ -11,7 +11,7 @@ import { useEvents, useStartParam } from './hooks';
 import hbs from 'handlebars';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { useCereWallet } from './cere-wallet';
-import Analytics, { AnalyticsId } from '@tg-app/analytics';
+import Analytics from '@tg-app/analytics';
 import { useData } from './providers';
 
 const tabs = [
@@ -53,10 +53,15 @@ export const App = () => {
 
   const Screen = tabs[activeTab.index].screen;
 
-  useEffect(
-    () => (!user ? Reporting.clearUser() : Reporting.setUser({ id: user.id.toString(), username: user.username })),
-    [user],
-  );
+  useEffect(() => {
+    if (!user) {
+      Reporting.clearUser();
+      Analytics.clearUser();
+    } else {
+      Reporting.setUser({ id: user.id.toString(), username: user.username });
+      Analytics.setUser({ id: user.id.toString(), username: user.username });
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!eventSource) return;
@@ -76,9 +81,6 @@ export const App = () => {
           data: integrationScriptResults,
         });
 
-        Analytics.trackEvent(AnalyticsId.questCompleted, {
-          questId: (integrationScriptResults as Array<any>)[0].questId,
-        });
         setNotificationHtml(compiledHTML);
       }
     };
