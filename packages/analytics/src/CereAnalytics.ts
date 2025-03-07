@@ -4,13 +4,7 @@ import { v4 as uuid } from 'uuid';
 import { blake2bHex } from 'blakejs';
 
 const signingProtocolVersion1 = 0x00;
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const signingSignerUser = 0x00;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const signingSignerDataService = 0x01;
 const signingSignerApp = 0x02;
-
 const signingAlgorithmEd25519 = 0x00;
 
 export type User = {
@@ -33,12 +27,12 @@ export class CereAnalytics {
 
   private signer: UriSigner;
 
-  private user: User | null;
-  private geo: Geo | null;
+  private user: User | null = null;
+  private geo: Geo | null = null;
   constructor(
     private baseUrl: string,
     private appId: string,
-    private appMnemonic: string,
+    appMnemonic: string,
     private dataServicePubKey: string,
   ) {
     this.signer = new UriSigner(appMnemonic, { type: 'ed25519' });
