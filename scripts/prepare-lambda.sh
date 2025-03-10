@@ -305,6 +305,38 @@ async function extractChromium(archivePath, outputDir) {
   }
 }
 
+async function findChrome(startDir) {
+  console.log('Starting Chrome search in:', startDir);
+  
+  function searchRecursively(dir) {
+    console.log('Searching in directory:', dir);
+    const files = fs.readdirSync(dir);
+    console.log('Found files:', files);
+    
+    for (const file of files) {
+      const fullPath = path.join(dir, file);
+      const stat = fs.statSync(fullPath);
+      
+      if (stat.isDirectory()) {
+        const result = searchRecursively(fullPath);
+        if (result) return result;
+      } else if (file === 'chrome' || file === 'chromium') {
+        console.log('Found potential Chrome executable:', fullPath);
+        try {
+          fs.chmodSync(fullPath, 0o755);
+          console.log('Updated permissions for:', fullPath);
+          return fullPath;
+        } catch (error) {
+          console.error('Error setting permissions:', error);
+        }
+      }
+    }
+    return null;
+  }
+  
+  return searchRecursively(startDir);
+}
+
 export const handler = async (event) => {
   console.log('Event:', JSON.stringify(event, null, 2));
   
@@ -317,11 +349,11 @@ export const handler = async (event) => {
     // Подготовка директорий
     const tmpDir = os.tmpdir();
     const browserDir = path.join(tmpDir, 'chromium');
-    const chromePath = path.join(browserDir, 'chromium', 'chrome');
+    let chromePath = path.join(browserDir, 'chrome');
     
     console.log('Temporary directory:', tmpDir);
     console.log('Browser directory:', browserDir);
-    console.log('Chrome path:', chromePath);
+    console.log('Initial Chrome path:', chromePath);
     
     // Установка Chromium если его нет
     if (!fs.existsSync(chromePath)) {
@@ -337,42 +369,15 @@ export const handler = async (event) => {
       await extractChromium(archivePath, browserDir);
       console.log('Extraction completed');
       
-      if (fs.existsSync(chromePath)) {
-        console.log('Chrome executable exists after installation');
-        const stats = fs.statSync(chromePath);
-        console.log('Chrome executable permissions:', stats.mode.toString(8));
-        fs.chmodSync(chromePath, 0o755);
-        console.log('Updated Chrome executable permissions:', fs.statSync(chromePath).mode.toString(8));
+      // Поиск Chrome в любом месте внутри browserDir
+      const foundChromePath = await findChrome(browserDir);
+      if (foundChromePath) {
+        console.log('Found Chrome executable at:', foundChromePath);
+        chromePath = foundChromePath;
       } else {
-        console.log('Chrome executable not found at expected path:', chromePath);
-        function findChrome(dir, level = 0) {
-          const indent = '  '.repeat(level);
-          const files = fs.readdirSync(dir);
-          console.log(`${indent}Searching in directory: ${dir}`);
-          console.log(`${indent}Found files:`, files);
-          
-          for (const file of files) {
-            const fullPath = path.join(dir, file);
-            const stat = fs.statSync(fullPath);
-            
-            if (stat.isDirectory()) {
-              findChrome(fullPath, level + 1);
-            } else if (file === 'chrome') {
-              console.log(`${indent}Found chrome at: ${fullPath}`);
-              fs.chmodSync(fullPath, 0o755);
-              process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = fullPath;
-              console.log('Updated Chrome path to:', fullPath);
-              return;
-            }
-          }
-        }
-        
-        findChrome(browserDir);
+        console.error('Chrome executable not found in:', browserDir);
+        throw new Error('Chrome executable not found after installation');
       }
-    } else {
-      console.log('Chrome executable already exists');
-      const stats = fs.statSync(chromePath);
-      console.log('Chrome executable permissions:', stats.mode.toString(8));
     }
     
     // Настройка переменных окружения для Playwright
