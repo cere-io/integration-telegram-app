@@ -44,7 +44,9 @@ export default defineConfig({
     viewport: { width: 1280, height: 720 },
     ignoreHTTPSErrors: true,
     launchOptions: {
-      executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+      executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      timeout: 60000
     }
   },
   projects: [
@@ -79,7 +81,8 @@ async function runTests() {
     browser = await chromium.launch({
       headless: true,
       executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      timeout: 60000
     }).catch(error => {
       console.error('Error launching browser:', error);
       throw error;
@@ -91,6 +94,9 @@ async function runTests() {
     if (!browser.isConnected()) {
       throw new Error('Browser disconnected immediately after launch');
     }
+
+    // Добавляем задержку после запуска браузера
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     context = await browser.newContext({
       viewport: { width: 1280, height: 720 },
@@ -121,7 +127,6 @@ async function runTests() {
       console.error('Test failed:', error);
       console.error('Error stack:', error.stack);
       
-      // Проверяем состояние браузера после ошибки
       if (browser) {
         console.log('Browser connected after error:', browser.isConnected());
       }
@@ -130,8 +135,11 @@ async function runTests() {
     console.log('Starting cleanup...');
     if (context) {
       try {
-        if (browser.isConnected()) {
-          await context.close();
+        // Добавляем задержку перед закрытием
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        if (browser && browser.isConnected()) {
+          await context.close().catch(e => console.error('Context close error:', e));
           console.log('Context closed successfully');
         } else {
           console.log('Skipping context close - browser already disconnected');
@@ -143,7 +151,10 @@ async function runTests() {
     
     if (browser) {
       try {
-        await browser.close();
+        // Добавляем задержку перед закрытием браузера
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        await browser.close().catch(e => console.error('Browser close error:', e));
         console.log('Browser closed successfully');
       } catch (error) {
         console.error('Error closing browser:', error);
@@ -160,24 +171,25 @@ async function runTests() {
     console.error('Error during test execution:', error);
     console.error('Error stack:', error.stack);
 
-    // Попытка очистки в случае ошибки
-    if (context) {
-      try {
-        if (browser && browser.isConnected()) {
-          await context.close();
+    if (context || browser) {
+      console.log('Attempting cleanup after error...');
+      
+      if (context) {
+        try {
+          await context.close().catch(() => {});
           console.log('Context closed during error handling');
+        } catch (closeError) {
+          console.error('Error closing context during error handling:', closeError);
         }
-      } catch (closeError) {
-        console.error('Error closing context during error handling:', closeError);
       }
-    }
-    
-    if (browser) {
-      try {
-        await browser.close();
-        console.log('Browser closed during error handling');
-      } catch (closeError) {
-        console.error('Error closing browser during error handling:', closeError);
+      
+      if (browser) {
+        try {
+          await browser.close().catch(() => {});
+          console.log('Browser closed during error handling');
+        } catch (closeError) {
+          console.error('Error closing browser during error handling:', closeError);
+        }
       }
     }
 
@@ -191,45 +203,6 @@ async function runTests() {
 }
 
 export { runTests };
-EOL
-
-echo "➡ Creating test file..."
-cat > "$PROJECT_ROOT/lambda-build/tests/integration.spec.js" << 'EOL'
-export default async function runIntegrationTest({ browser, context }) {
-  console.log('Starting integration test...');
-  
-  // Проверяем, что браузер все еще запущен
-  if (!browser.isConnected()) {
-    throw new Error('Browser is not connected before creating page');
-  }
-  
-  console.log('Creating new page...');
-  const page = await context.newPage().catch(error => {
-    console.error('Error creating page:', error);
-    throw error;
-  });
-  
-  try {
-    console.log('Navigating to example.com...');
-    await page.goto('https://example.com', { timeout: 30000 });
-    
-    console.log('Getting page title...');
-    const title = await page.title();
-    console.log('Page title:', title);
-    
-    if (!title.includes('Example Domain')) {
-      throw new Error(`Expected title to include 'Example Domain', got '${title}'`);
-    }
-    console.log('Test passed: title matches expected value');
-  } finally {
-    if (page) {
-      console.log('Closing page...');
-      await page.close().catch(error => {
-        console.error('Error closing page:', error);
-      });
-    }
-  }
-}
 EOL
 
 echo "➡ Creating Lambda handler..."
@@ -428,7 +401,11 @@ async function findChrome(startDir) {
     return null;
   }
   
-  return searchRecursively(startDir);
+  const chromePath = searchRecursively(startDir);
+  if (!chromePath) {
+    throw new Error('Chrome executable not found in: ' + startDir);
+  }
+  return chromePath;
 }
 
 export const handler = async (event) => {
@@ -443,36 +420,22 @@ export const handler = async (event) => {
     // Подготовка директорий
     const tmpDir = os.tmpdir();
     const browserDir = path.join(tmpDir, 'chromium');
-    let chromePath = path.join(browserDir, 'chrome');
-    
-    console.log('Temporary directory:', tmpDir);
-    console.log('Browser directory:', browserDir);
-    console.log('Initial Chrome path:', chromePath);
     
     // Установка Chromium если его нет
-    if (!fs.existsSync(chromePath)) {
-      console.log('Installing Chromium...');
-      const archivePath = path.join(tmpDir, 'chromium.tar');
-      console.log('Archive path:', archivePath);
-      
-      console.log('Downloading Chromium...');
-      await downloadFile(CHROMIUM_URL, archivePath);
-      console.log('Download completed');
-      
-      console.log('Extracting Chromium...');
-      await extractChromium(archivePath, browserDir);
-      console.log('Extraction completed');
-      
-      // Поиск Chrome в любом месте внутри browserDir
-      const foundChromePath = await findChrome(browserDir);
-      if (foundChromePath) {
-        console.log('Found Chrome executable at:', foundChromePath);
-        chromePath = foundChromePath;
-      } else {
-        console.error('Chrome executable not found in:', browserDir);
-        throw new Error('Chrome executable not found after installation');
-      }
-    }
+    const archivePath = path.join(tmpDir, 'chromium.tar');
+    console.log('Archive path:', archivePath);
+    
+    console.log('Downloading Chromium...');
+    await downloadFile(CHROMIUM_URL, archivePath);
+    console.log('Download completed');
+    
+    console.log('Extracting Chromium...');
+    await extractChromium(archivePath, browserDir);
+    console.log('Extraction completed');
+    
+    // Поиск Chrome в любом месте внутри browserDir
+    const chromePath = await findChrome(browserDir);
+    console.log('Found Chrome executable at:', chromePath);
     
     // Настройка путей к библиотекам
     const libPath = path.join(browserDir, 'lib');

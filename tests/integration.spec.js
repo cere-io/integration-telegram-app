@@ -35,6 +35,55 @@ const login = async (page, userName, otp) => {
   await embeddedFrame.getByRole('button', { name: 'Verify' }).click();
 };
 
+export default async function runIntegrationTest({ browser, context }) {
+  console.log('Starting integration test...');
+  
+  // Добавляем задержку после создания контекста
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  // Проверяем состояние браузера
+  if (!browser.isConnected()) {
+    throw new Error('Browser is not connected before creating page');
+  }
+  
+  console.log('Browser connection status:', browser.isConnected());
+  console.log('Creating new page...');
+  
+  let page;
+  try {
+    page = await context.newPage();
+    console.log('Page created successfully');
+    
+    console.log('Navigating to example.com...');
+    await page.goto('https://example.com', { 
+      timeout: 30000,
+      waitUntil: 'networkidle' 
+    });
+    
+    console.log('Getting page title...');
+    const title = await page.title();
+    console.log('Page title:', title);
+    
+    if (!title.includes('Example Domain')) {
+      throw new Error(`Expected title to include 'Example Domain', got '${title}'`);
+    }
+    console.log('Test passed: title matches expected value');
+  } catch (error) {
+    console.error('Test error:', error);
+    console.error('Browser connected:', browser.isConnected());
+    throw error;
+  } finally {
+    if (page) {
+      try {
+        console.log('Closing page...');
+        await page.close().catch(e => console.error('Error closing page:', e));
+      } catch (error) {
+        console.error('Error in finally block:', error);
+      }
+    }
+  }
+}
+
 async function runTests() {
   const browser = await chromium.launch({
     headless: true,
