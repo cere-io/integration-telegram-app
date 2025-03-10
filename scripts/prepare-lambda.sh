@@ -113,22 +113,55 @@ async function downloadFile(url, destination) {
   try {
     await mkdir(path.dirname(destination), { recursive: true });
     
-    const fileStream = fs.createWriteStream(destination);
+    // Максимальное количество перенаправлений
+    const maxRedirects = 5;
+    let redirectCount = 0;
+    let currentUrl = url;
     
-    await new Promise((resolve, reject) => {
-      https.get(url, response => {
-        if (response.statusCode !== 200) {
-          reject(new Error(\`Failed to download: \${response.statusCode} \${response.statusMessage}\`));
-          return;
-        }
+    // Функция для обработки запросов с поддержкой перенаправлений
+    const downloadWithRedirects = async (redirectUrl) => {
+      return new Promise((resolve, reject) => {
+        const request = https.get(redirectUrl, {
+          headers: {
+            'Accept': '*/*',
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+          },
+          followRedirects: true
+        }, response => {
+          // Проверка на перенаправление (коды 301, 302, 303, 307, 308)
+          if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+            if (redirectCount >= maxRedirects) {
+              reject(new Error(`Too many redirects (${redirectCount})`));
+              return;
+            }
+            
+            redirectCount++;
+            const newUrl = new URL(response.headers.location, redirectUrl).toString();
+            console.log(`Redirecting to ${newUrl}`);
+            
+            // Рекурсивно следуем перенаправлению
+            resolve(downloadWithRedirects(newUrl));
+          } else if (response.statusCode !== 200) {
+            reject(new Error(`Failed to download: ${response.statusCode} ${response.statusMessage}`));
+            return;
+          } else {
+            // Успешный запрос, 200 OK
+            const fileStream = fs.createWriteStream(destination);
+            
+            pipeline(response, fileStream)
+              .then(() => resolve())
+              .catch(err => reject(err));
+          }
+        });
         
-        pipeline(response, fileStream)
-          .then(() => resolve())
-          .catch(err => reject(err));
-      }).on('error', err => {
-        reject(err);
+        request.on('error', err => {
+          reject(err);
+        });
       });
-    });
+    };
+    
+    // Начинаем загрузку с поддержкой перенаправлений
+    await downloadWithRedirects(currentUrl);
     
     return true;
   } catch (error) {
