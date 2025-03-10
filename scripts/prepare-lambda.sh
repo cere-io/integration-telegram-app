@@ -148,6 +148,7 @@ import { pipeline } from 'stream/promises';
 import os from 'os';
 import tar from 'tar';
 import { runTests } from './run-tests.js';
+import { execSync } from 'child_process';
 
 const CHROMIUM_URL = 'https://github.com/Sparticuz/chromium/releases/download/v133.0.0/chromium-v133.0.0-pack.tar';
 
@@ -215,11 +216,54 @@ async function extractChromium(archivePath, outputDir) {
     await tar.extract({
       file: archivePath,
       cwd: outputDir,
-      strip: 1,
       onentry: entry => console.log('Extracting:', entry.path)
     });
     
-    console.log('Extraction completed');
+    console.log('Extraction completed, processing Brotli files...');
+    
+    // Распаковка Brotli-файлов
+    const files = fs.readdirSync(outputDir);
+    console.log('Files to process:', files);
+    
+    for (const file of files) {
+      const filePath = path.join(outputDir, file);
+      if (file.endsWith('.br')) {
+        console.log('Processing Brotli file:', file);
+        try {
+          // Установка brotli если его нет
+          try {
+            execSync('which brotli');
+          } catch {
+            console.log('Installing brotli...');
+            execSync('yum install -y brotli || apt-get update && apt-get install -y brotli');
+          }
+          
+          // Распаковка Brotli
+          const outputPath = filePath.slice(0, -3); // Удаляем .br
+          console.log('Decompressing to:', outputPath);
+          execSync(`brotli -d "${filePath}" -o "${outputPath}"`);
+          
+          // Если это tar-архив, распаковываем его
+          if (outputPath.endsWith('.tar')) {
+            console.log('Extracting tar:', outputPath);
+            await tar.extract({
+              file: outputPath,
+              cwd: outputDir,
+              onentry: entry => console.log('Extracting from tar:', entry.path)
+            });
+            // Удаляем промежуточный tar-файл
+            fs.unlinkSync(outputPath);
+          }
+          
+          // Удаляем оригинальный .br файл
+          fs.unlinkSync(filePath);
+        } catch (error) {
+          console.error('Error processing Brotli file:', file, error);
+        }
+      }
+    }
+    
+    console.log('All Brotli files processed');
     console.log('Output directory contents:', fs.readdirSync(outputDir));
     
     const chromePath = path.join(outputDir, 'chrome');
