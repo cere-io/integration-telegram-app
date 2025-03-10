@@ -31,145 +31,130 @@ EOL
 
 echo "➡ Creating Lambda handler..."
 cat > lambda-build/index.js << EOL
-import { spawn } from 'child_process';
+import { readFile, mkdir, writeFile } from 'fs/promises';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import { createWriteStream } from 'fs';
-import { mkdir, rm } from 'fs/promises';
 import https from 'https';
 import AdmZip from 'adm-zip';
+import { spawn } from 'child_process';
+import { pipeline } from 'stream/promises';
+import os from 'os';
+import { promisify } from 'util';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Адрес для загрузки Chromium оптимизированного для AWS Lambda
+const CHROMIUM_URL = 'https://github.com/Sparticuz/chromium/releases/download/v106.0.0/chromium-v106.0.0-pack.tar';
+const mkdir_p = promisify(fs.mkdir);
 
-// URL мини-версии хромиума, специально для AWS Lambda
-const CHROMIUM_URL = 'https://github.com/alixaxel/chrome-aws-lambda/releases/download/v10.1.0/chromium-v10.1.0-linux-x64.zip';
-
-// Функция для загрузки файла
-async function downloadFile(url, outputPath) {
-  return new Promise((resolve, reject) => {
-    const file = createWriteStream(outputPath);
-    const request = https.get(url, response => {
-      if (response.statusCode !== 200) {
-        file.close();
-        fs.unlink(outputPath, () => {});
-        reject(new Error(\`Failed to download file, status code: \${response.statusCode}\`));
-        return;
-      }
-      
-      response.pipe(file);
-      
-      file.on('finish', () => {
-        file.close();
-        resolve();
-      });
-    });
-    
-    request.on('error', err => {
-      file.close();
-      fs.unlink(outputPath, () => {});
-      reject(err);
-    });
-    
-    file.on('error', err => {
-      file.close();
-      fs.unlink(outputPath, () => {});
-      reject(err);
-    });
-  });
-}
-
-// Функция для оптимизации использования диска
+// Функция для очистки диска
 async function freeDiskSpace() {
   try {
-    // Очистка временных файлов
-    const tempDir = '/tmp';
-    const files = await fs.promises.readdir(tempDir);
-    console.log(\`Cleaning up temporary files: \${files.length} files found\`);
-    
-    for (const file of files) {
-      if (file !== 'playwright' && !file.startsWith('.')) {
-        try {
-          await rm(path.join(tempDir, file), { recursive: true, force: true });
-        } catch (err) {
-          console.warn(\`Failed to remove file \${file}: \${err.message}\`);
-        }
-      }
-    }
-    
-    // Проверка доступного места
-    const { stdout } = await new Promise((resolve, reject) => {
-      const process = spawn('df', ['-h', '/tmp']);
+    // Удаляем ненужные файлы из /tmp для освобождения места
+    const tmpDir = os.tmpdir();
+    const { stdout, stderr } = await new Promise((resolve, reject) => {
+      const process = spawn('find', [tmpDir, '-type', 'f', '-atime', '+1', '-delete']);
       let stdout = '';
+      let stderr = '';
+      
       process.stdout.on('data', data => { stdout += data.toString(); });
+      process.stderr.on('data', data => { stderr += data.toString(); });
+      
       process.on('close', code => {
         if (code === 0) {
-          resolve({ stdout });
+          resolve({ stdout, stderr });
         } else {
-          reject(new Error(\`Failed to check disk space, exit code: \${code}\`));
+          console.warn(`Warning: Failed to clean tmp directory: ${stderr}`);
+          resolve({ stdout, stderr }); // Продолжаем работу даже при ошибке
         }
       });
     });
     
-    console.log(\`Disk space after cleanup: \${stdout}\`);
-  } catch (err) {
-    console.warn(\`Error freeing disk space: \${err.message}\`);
+    console.log('Cleaned tmp directory to free up space');
+  } catch (error) {
+    console.warn('Warning during disk cleanup:', error);
+    // Продолжаем работу даже при ошибке
   }
 }
 
-// Функция распаковки архива с использованием adm-zip
-async function extractZip(zipPath, outputDir) {
+// Функция для загрузки файла
+async function downloadFile(url, destination) {
   try {
-    console.log(\`Extracting \${zipPath} to \${outputDir}\`);
-    const zip = new AdmZip(zipPath);
+    await mkdir(path.dirname(destination), { recursive: true });
     
-    // Извлекаем только нужные файлы чтобы сэкономить место
-    const entries = zip.getEntries();
-    console.log(\`Found \${entries.length} entries in archive\`);
+    const fileStream = fs.createWriteStream(destination);
+    
+    await new Promise((resolve, reject) => {
+      https.get(url, response => {
+        if (response.statusCode !== 200) {
+          reject(new Error(\`Failed to download: \${response.statusCode} \${response.statusMessage}\`));
+          return;
+        }
+        
+        pipeline(response, fileStream)
+          .then(() => resolve())
+          .catch(err => reject(err));
+      }).on('error', err => {
+        reject(err);
+      });
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Error downloading file:', error);
+    throw error;
+  }
+}
+
+// Функция распаковки архива
+async function extractTarArchive(archivePath, outputDir) {
+  try {
+    console.log(\`Extracting \${archivePath} to \${outputDir}\`);
     
     // Создаем директорию если ее нет
     await mkdir(outputDir, { recursive: true });
     
-    // Сначала экстрактим только chromium исполняемый файл
-    let extractedMainFile = false;
-    for (const entry of entries) {
-      if (entry.entryName.endsWith('chromium') || 
-          entry.entryName.endsWith('chrome') || 
-          entry.entryName.includes('/chrome-linux/')) {
-        console.log(\`Extracting critical file: \${entry.entryName}\`);
-        zip.extractEntryTo(entry, outputDir, false, true);
-        extractedMainFile = true;
-        
-        // Устанавливаем права на исполнение
-        if (entry.entryName.endsWith('chromium') || entry.entryName.endsWith('chrome')) {
-          const fullPath = path.join(outputDir, entry.entryName);
-          fs.chmodSync(fullPath, 0o755);
+    // Распаковка TAR-архива
+    const { stdout, stderr } = await new Promise((resolve, reject) => {
+      const process = spawn('tar', ['-xf', archivePath, '-C', outputDir]);
+      let stdout = '';
+      let stderr = '';
+      
+      process.stdout.on('data', data => { stdout += data.toString(); });
+      process.stderr.on('data', data => { stderr += data.toString(); });
+      
+      process.on('close', code => {
+        if (code === 0) {
+          resolve({ stdout, stderr });
+        } else {
+          reject(new Error(\`Failed to extract archive, exit code: \${code}\nStderr: \${stderr}\`));
         }
-      }
-    }
+      });
+    });
     
-    // Сообщаем о результате
-    if (extractedMainFile) {
-      console.log('Successfully extracted Chromium executable');
+    console.log('Successfully extracted Chromium');
+    
+    // Находим исполняемый файл и устанавливаем права на исполнение
+    const chromiumPath = path.join(outputDir, 'chrome-linux', 'chrome');
+    if (fs.existsSync(chromiumPath)) {
+      fs.chmodSync(chromiumPath, 0o755);
+      console.log(\`Set permissions for \${chromiumPath}\`);
     } else {
-      console.warn('Critical browser files not found in archive');
+      console.warn('Chrome executable not found at the expected path');
     }
     
-    // Удаляем zip-архив для экономии места
-    await fs.promises.unlink(zipPath);
-    console.log('Removed zip archive to free space');
+    // Удаляем архив для экономии места
+    await fs.promises.unlink(archivePath);
+    console.log('Removed archive to free space');
     
     return true;
   } catch (error) {
-    console.error('Error extracting zip:', error);
+    console.error('Error extracting archive:', error);
     throw error;
   }
 }
 
 // Главная функция обработчика
 export const handler = async (event) => {
-  console.log('Event received:', JSON.stringify(event));
+  console.log('Event:', JSON.stringify(event, null, 2));
   
   try {
     const region = event.region || 'unknown';
@@ -178,54 +163,48 @@ export const handler = async (event) => {
     console.log('Running tests in region:', region);
     console.log('Running tests for environment:', environment);
     
-    // Освобождаем место перед началом работы
+    // Создаем временные директории
+    const tmpDir = os.tmpdir();
+    const browserDir = path.join(tmpDir, 'chromium');
+    
+    // Очищаем диск
     await freeDiskSpace();
     
-    // Создаем временные директории
-    const tmpDir = '/tmp/playwright';
-    const browserDir = \`\${tmpDir}/browser\`;
-    const resultsDir = \`\${tmpDir}/test-results\`;
-    
-    await mkdir(tmpDir, { recursive: true });
-    await mkdir(browserDir, { recursive: true });
-    await mkdir(resultsDir, { recursive: true });
-    
-    // Устанавливаем переменные окружения
-    process.env.PLAYWRIGHT_BROWSERS_PATH = browserDir;
-    process.env.PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = '1';
-    process.env.TEST_ENV = environment;
-    process.env.REGION = region;
-    
-    console.log('Checking for Chromium browser...');
+    // Проверяем наличие Chromium браузера
     const chromiumPath = path.join(browserDir, 'chrome-linux', 'chrome');
     if (!fs.existsSync(chromiumPath)) {
       console.log('Downloading and installing Chromium browser...');
-      const chromiumZip = path.join(tmpDir, 'chromium.zip');
+      const chromiumArchive = path.join(tmpDir, 'chromium.tar');
       
       try {
-        // Загружаем мини-версию хромиума
+        // Загружаем Chromium
         console.log(\`Downloading Chromium from \${CHROMIUM_URL}\`);
-        await downloadFile(CHROMIUM_URL, chromiumZip);
+        await downloadFile(CHROMIUM_URL, chromiumArchive);
         
         // Показываем размер скачанного файла
-        const stats = fs.statSync(chromiumZip);
+        const stats = fs.statSync(chromiumArchive);
         console.log(\`Downloaded file size: \${stats.size / 1024 / 1024} MB\`);
         
-        // Распаковываем архив с использованием adm-zip
+        // Распаковываем архив
         console.log('Extracting Chromium...');
-        await extractZip(chromiumZip, browserDir);
+        await extractTarArchive(chromiumArchive, browserDir);
         
         console.log('Chromium installation complete');
         
         // Записываем путь к исполняемому файлу Chrome
         process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = chromiumPath;
       } catch (err) {
-        console.error('Failed to download or extract Chromium:', err);
-        throw err;
+        console.error('Error installing Chromium:', err);
+        return {
+          statusCode: 500,
+          body: JSON.stringify({
+            success: false,
+            error: 'Failed to install Chromium: ' + err.message
+          })
+        };
       }
     } else {
       console.log('Chromium browser already installed');
-      // Записываем путь к исполняемому файлу Chrome
       process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = chromiumPath;
     }
     
