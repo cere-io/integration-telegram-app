@@ -317,7 +317,7 @@ export const handler = async (event) => {
     // Подготовка директорий
     const tmpDir = os.tmpdir();
     const browserDir = path.join(tmpDir, 'chromium');
-    const chromePath = path.join(browserDir, 'chrome');
+    const chromePath = path.join(browserDir, 'chromium', 'chrome');
     
     console.log('Temporary directory:', tmpDir);
     console.log('Browser directory:', browserDir);
@@ -341,12 +341,38 @@ export const handler = async (event) => {
         console.log('Chrome executable exists after installation');
         const stats = fs.statSync(chromePath);
         console.log('Chrome executable permissions:', stats.mode.toString(8));
+        fs.chmodSync(chromePath, 0o755);
+        console.log('Updated Chrome executable permissions:', fs.statSync(chromePath).mode.toString(8));
       } else {
-        console.log('Chrome executable does not exist after installation!');
-        console.log('Contents of browser directory:', fs.readdirSync(browserDir));
+        console.log('Chrome executable not found at expected path:', chromePath);
+        function findChrome(dir, level = 0) {
+          const indent = '  '.repeat(level);
+          const files = fs.readdirSync(dir);
+          console.log(`${indent}Searching in directory: ${dir}`);
+          console.log(`${indent}Found files:`, files);
+          
+          for (const file of files) {
+            const fullPath = path.join(dir, file);
+            const stat = fs.statSync(fullPath);
+            
+            if (stat.isDirectory()) {
+              findChrome(fullPath, level + 1);
+            } else if (file === 'chrome') {
+              console.log(`${indent}Found chrome at: ${fullPath}`);
+              fs.chmodSync(fullPath, 0o755);
+              process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = fullPath;
+              console.log('Updated Chrome path to:', fullPath);
+              return;
+            }
+          }
+        }
+        
+        findChrome(browserDir);
       }
     } else {
       console.log('Chrome executable already exists');
+      const stats = fs.statSync(chromePath);
+      console.log('Chrome executable permissions:', stats.mode.toString(8));
     }
     
     // Настройка переменных окружения для Playwright
