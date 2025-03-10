@@ -139,7 +139,7 @@ export default async function runIntegrationTest({ browser, context }) {
 EOL
 
 echo "➡ Creating Lambda handler..."
-cat > "$PROJECT_ROOT/lambda-build/index.js" << EOL
+cat > "$PROJECT_ROOT/lambda-build/index.js" << 'EOL'
 import { mkdir } from 'fs/promises';
 import fs from 'fs';
 import path from 'path';
@@ -151,8 +151,8 @@ import { runTests } from './run-tests.js';
 
 const CHROMIUM_URL = 'https://github.com/Sparticuz/chromium/releases/download/v133.0.0/chromium-v133.0.0-pack.tar';
 
-// Функция для загрузки файла с поддержкой редиректов
 async function downloadFile(url, destination) {
+  console.log('Starting download from:', url);
   await mkdir(path.dirname(destination), { recursive: true });
   
   return new Promise((resolve, reject) => {
@@ -163,46 +163,110 @@ async function downloadFile(url, destination) {
       },
       followRedirects: true
     }, response => {
+      console.log('Response status:', response.statusCode);
+      console.log('Response headers:', JSON.stringify(response.headers, null, 2));
+      
       if (response.statusCode === 302 || response.statusCode === 301) {
         const newUrl = new URL(response.headers.location, url).toString();
+        console.log('Following redirect to:', newUrl);
         downloadFile(newUrl, destination).then(resolve).catch(reject);
         return;
       }
       
       if (response.statusCode !== 200) {
-        reject(new Error(\`Failed to download: \${response.statusCode}\`));
+        reject(new Error(`Failed to download: ${response.statusCode}`));
         return;
       }
       
       const fileStream = fs.createWriteStream(destination);
       pipeline(response, fileStream)
-        .then(() => resolve())
+        .then(() => {
+          const stats = fs.statSync(destination);
+          console.log('File downloaded successfully');
+          console.log('File size:', stats.size);
+          resolve();
+        })
         .catch(err => reject(err));
     });
     
-    request.on('error', reject);
+    request.on('error', error => {
+      console.error('Download error:', error);
+      reject(error);
+    });
   });
 }
 
-// Функция для распаковки Chromium
 async function extractChromium(archivePath, outputDir) {
-  await mkdir(outputDir, { recursive: true });
+  console.log('Starting Chromium extraction');
+  console.log('Archive path:', archivePath);
+  console.log('Output directory:', outputDir);
   
-  await tar.extract({
-    file: archivePath,
-    cwd: outputDir,
-    strip: 1
-  });
-  
-  const chromePath = path.join(outputDir, 'chrome');
-  if (fs.existsSync(chromePath)) {
-    fs.chmodSync(chromePath, 0o755);
+  if (!fs.existsSync(archivePath)) {
+    throw new Error('Archive file does not exist!');
   }
   
-  await fs.promises.unlink(archivePath);
+  const archiveStats = fs.statSync(archivePath);
+  console.log('Archive file exists, size:', archiveStats.size);
+  
+  await mkdir(outputDir, { recursive: true });
+  
+  try {
+    console.log('Extracting with tar...');
+    await tar.extract({
+      file: archivePath,
+      cwd: outputDir,
+      strip: 1,
+      onentry: entry => console.log('Extracting:', entry.path)
+    });
+    
+    console.log('Extraction completed');
+    console.log('Output directory contents:', fs.readdirSync(outputDir));
+    
+    const chromePath = path.join(outputDir, 'chrome');
+    if (fs.existsSync(chromePath)) {
+      console.log('Chrome executable exists');
+      const stats = fs.statSync(chromePath);
+      console.log('Chrome executable size:', stats.size);
+      console.log('Chrome executable permissions:', stats.mode.toString(8));
+      fs.chmodSync(chromePath, 0o755);
+      console.log('Updated Chrome executable permissions:', fs.statSync(chromePath).mode.toString(8));
+    } else {
+      console.log('Chrome executable not found!');
+      console.log('Contents of output directory:', fs.readdirSync(outputDir));
+      
+      // Рекурсивный поиск chrome
+      function findChrome(dir) {
+        const files = fs.readdirSync(dir);
+        console.log('Searching in directory:', dir);
+        console.log('Found files:', files);
+        
+        for (const file of files) {
+          const fullPath = path.join(dir, file);
+          const stat = fs.statSync(fullPath);
+          
+          if (stat.isDirectory()) {
+            findChrome(fullPath);
+          } else if (file === 'chrome') {
+            console.log('Found chrome at:', fullPath);
+          }
+        }
+      }
+      
+      findChrome(outputDir);
+    }
+  } catch (error) {
+    console.error('Extraction error:', error);
+    throw error;
+  }
+  
+  try {
+    await fs.promises.unlink(archivePath);
+    console.log('Archive file deleted');
+  } catch (error) {
+    console.error('Failed to delete archive:', error);
+  }
 }
 
-// Главная функция
 export const handler = async (event) => {
   console.log('Event:', JSON.stringify(event, null, 2));
   
@@ -210,7 +274,7 @@ export const handler = async (event) => {
     const region = event.region || 'unknown';
     const environment = event.environment || 'unknown';
     
-    console.log(\`Running tests in \${region} for \${environment}\`);
+    console.log(`Running tests in ${region} for ${environment}`);
     
     // Подготовка директорий
     const tmpDir = os.tmpdir();
