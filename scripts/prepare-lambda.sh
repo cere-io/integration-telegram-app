@@ -266,7 +266,7 @@ export const handler = async (event) => {
     console.log('Running Playwright tests...');
     
     return new Promise((resolve, reject) => {
-      const playwright = spawn('node', ['node_modules/.bin/playwright', 'test', '--reporter=list'], {
+      const playwright = spawn('node', ['node_modules/@playwright/test/cli.js', 'test', '--reporter=list'], {
         env: {
           ...process.env,
           PLAYWRIGHT_BROWSERS_PATH: browserDir,
