@@ -59,55 +59,84 @@ export default defineConfig({
 EOL
 
 echo "➡ Creating run-tests.js..."
-cat > "$PROJECT_ROOT/lambda-build/run-tests.js" << EOL
-import { spawn } from 'child_process';
+cat > "$PROJECT_ROOT/lambda-build/run-tests.js" << 'EOL'
+import { test as base, chromium } from '@playwright/test';
 import path from 'path';
 
 async function runTests() {
-  return new Promise((resolve) => {
-    const playwright = spawn('npx', [
-      'playwright',
-      'test',
-      '--config=playwright.config.js'
-    ], { 
-      env: {
-        ...process.env,
-        PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH,
-        PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
-        PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1',
-        NODE_PATH: process.env.NODE_PATH || '/var/task/node_modules'
-      },
-      cwd: process.cwd(),
-      stdio: 'pipe'
+  try {
+    console.log('Initializing browser...');
+    const browser = await chromium.launch({
+      headless: true,
+      executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
     });
-    
+
+    console.log('Creating new context...');
+    const context = await browser.newContext({
+      viewport: { width: 1280, height: 720 },
+      ignoreHTTPSErrors: true
+    });
+
+    console.log('Loading test file...');
+    const testFile = path.join(process.cwd(), 'tests', 'integration.spec.js');
+    const testModule = await import(testFile);
+
+    console.log('Running tests...');
+    let success = true;
     let output = '';
     let errorOutput = '';
-    
-    playwright.stdout.on('data', (data) => {
-      const chunk = data.toString();
-      output += chunk;
-      console.log(chunk);
-    });
-    
-    playwright.stderr.on('data', (data) => {
-      const chunk = data.toString();
-      errorOutput += chunk;
-      console.error(chunk);
-    });
-    
-    playwright.on('close', (code) => {
-      resolve({
-        success: code === 0,
-        output,
-        errorOutput,
-        code
-      });
-    });
-  });
+
+    try {
+      const testFn = testModule.default;
+      await testFn({ browser, context });
+      output = 'Tests completed successfully';
+    } catch (error) {
+      success = false;
+      errorOutput = error.message;
+      console.error('Test failed:', error);
+    }
+
+    console.log('Cleaning up...');
+    await context.close();
+    await browser.close();
+
+    return {
+      success,
+      output,
+      errorOutput,
+      code: success ? 0 : 1
+    };
+  } catch (error) {
+    console.error('Error during test execution:', error);
+    return {
+      success: false,
+      output: '',
+      errorOutput: error.message,
+      code: 1
+    };
+  }
 }
 
 export { runTests };
+EOL
+
+echo "➡ Creating test file..."
+cat > "$PROJECT_ROOT/lambda-build/tests/integration.spec.js" << 'EOL'
+import { test, expect } from '@playwright/test';
+
+export default async function runIntegrationTest({ browser, context }) {
+  const page = await context.newPage();
+  
+  try {
+    await page.goto('https://example.com');
+    await expect(page).toHaveTitle(/Example Domain/);
+    
+    // Здесь ваши тесты...
+    
+  } finally {
+    await page.close();
+  }
+}
 EOL
 
 echo "➡ Creating Lambda handler..."
@@ -262,6 +291,9 @@ chmod +x "$PROJECT_ROOT/lambda-build/bootstrap"
 echo "➡ Installing dependencies..."
 cd "$PROJECT_ROOT/lambda-build"
 npm install
+
+echo "➡ Installing Playwright globally..."
+npm install -g playwright
 
 echo "➡ Cleaning up unnecessary files..."
 find node_modules -name "*.map" -delete 2>/dev/null || true
