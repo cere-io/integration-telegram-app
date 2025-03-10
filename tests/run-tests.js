@@ -1,11 +1,34 @@
 import { chromium } from 'playwright';
 import path from 'path';
 
+async function checkSystemResources() {
+  try {
+    const totalMemory = process.memoryUsage().heapTotal / 1024 / 1024;
+    const usedMemory = process.memoryUsage().heapUsed / 1024 / 1024;
+    console.log(`Memory usage - Total: ${totalMemory.toFixed(2)}MB, Used: ${usedMemory.toFixed(2)}MB`);
+    
+    if (usedMemory > 900) {
+      throw new Error('Memory usage is too high');
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error checking system resources:', error);
+    return false;
+  }
+}
+
 async function runTests() {
   let browser = null;
   let context = null;
 
   try {
+    console.log('Checking system resources...');
+    const resourcesOk = await checkSystemResources();
+    if (!resourcesOk) {
+      throw new Error('System resources check failed');
+    }
+
     console.log('Browser launch configuration:', {
       headless: true,
       executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
@@ -14,52 +37,88 @@ async function runTests() {
       },
     });
 
-    // Увеличиваем таймаут запуска и добавляем больше аргументов для стабильности
-    browser = await chromium
-      .launch({
-        headless: true,
-        executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
-        timeout: 120000,
-      })
-      .catch((error) => {
-        console.error('Error launching browser:', error);
-        throw error;
-      });
+    // Конфигурация запуска браузера с дополнительными опциями
+    const launchOptions = {
+      headless: true,
+      executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--no-zygote',
+        '--single-process',
+        '--disable-web-security',
+        '--disable-features=site-per-process',
+        '--disable-features=IsolateOrigins',
+        '--disable-site-isolation-trials'
+      ],
+      timeout: 120000,
+      env: {
+        ...process.env,
+        DISPLAY: process.env.DISPLAY || ':0',
+      },
+    };
+
+    console.log('Launching browser with options:', launchOptions);
+    browser = await chromium.launch(launchOptions).catch((error) => {
+      console.error('Error launching browser:', error);
+      throw error;
+    });
 
     console.log('Browser launched successfully');
     console.log('Browser version:', await browser.version());
-    console.log('Browser process pid:', browser.process().pid);
-
+    
+    const pid = browser.process().pid;
+    console.log('Browser process pid:', pid);
+    
     if (!browser.isConnected()) {
       throw new Error('Browser disconnected immediately after launch');
     }
 
-    // Увеличиваем задержку после запуска браузера
+    // Увеличенная задержка после запуска браузера
     console.log('Waiting for browser to stabilize...');
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+    await new Promise((resolve) => setTimeout(resolve, 10000));
 
+    // Проверка состояния браузера после задержки
     if (!browser.isConnected()) {
       throw new Error('Browser disconnected after initial delay');
     }
     console.log('Browser is still connected after delay');
 
-    console.log('Creating browser context...');
-    context = await browser
-      .newContext({
-        viewport: { width: 1280, height: 720 },
-        ignoreHTTPSErrors: true,
-        bypassCSP: true,
-      })
-      .catch((error) => {
-        console.error('Error creating context:', error);
-        throw error;
-      });
-    console.log('Browser context created successfully');
+    // Проверка процесса браузера
+    try {
+      process.kill(pid, 0);
+      console.log('Browser process is still running');
+    } catch (e) {
+      throw new Error('Browser process is not running');
+    }
 
-    // Проверяем, что контекст создан успешно
+    // Проверяем ресурсы после запуска браузера
+    const resourcesAfterLaunch = await checkSystemResources();
+    if (!resourcesAfterLaunch) {
+      throw new Error('System resources check failed after browser launch');
+    }
+
+    console.log('Creating browser context...');
+    context = await browser.newContext({
+      viewport: { width: 1280, height: 720 },
+      ignoreHTTPSErrors: true,
+      bypassCSP: true,
+      userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36',
+    }).catch((error) => {
+      console.error('Error creating context:', error);
+      throw error;
+    });
+
+    console.log('Browser context created successfully');
     const contexts = browser.contexts();
     console.log(`Number of active contexts: ${contexts.length}`);
+
+    // Проверка состояния браузера после создания контекста
+    if (!browser.isConnected()) {
+      throw new Error('Browser disconnected after context creation');
+    }
 
     console.log('Loading test file...');
     const testFile = path.join(process.cwd(), 'tests', 'integration.spec.js');

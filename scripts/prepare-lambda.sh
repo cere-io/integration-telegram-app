@@ -12,6 +12,7 @@ mkdir -p "$PROJECT_ROOT/lambda-build/tests"
 
 echo "➡ Copying test files..."
 cp "$PROJECT_ROOT/tests/integration.spec.js" "$PROJECT_ROOT/lambda-build/tests/"
+cp "$PROJECT_ROOT/tests/run-tests.js" "$PROJECT_ROOT/lambda-build/"
 
 echo "➡ Creating package.json..."
 cat > "$PROJECT_ROOT/lambda-build/package.json" << EOL
@@ -38,15 +39,26 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
-  timeout: 60000,
+  timeout: 120000,
   use: {
     headless: true,
     viewport: { width: 1280, height: 720 },
     ignoreHTTPSErrors: true,
     launchOptions: {
       executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      timeout: 60000
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--no-zygote',
+        '--single-process',
+        '--disable-web-security',
+        '--disable-features=site-per-process',
+        '--disable-features=IsolateOrigins',
+        '--disable-site-isolation-trials'
+      ],
+      timeout: 120000
     }
   },
   projects: [
