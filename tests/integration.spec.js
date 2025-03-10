@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { chromium } from 'playwright';
 import fs from 'fs';
 
 const userName = process.env.TEST_USER_EMAIL || 'veronika.filipenko@cere.io';
@@ -35,75 +35,97 @@ const login = async (page, userName, otp) => {
   await embeddedFrame.getByRole('button', { name: 'Verify' }).click();
 };
 
-test('Environment and Geolocation Check', async ({ page }) => {
-  const env = process.env.TEST_ENV || 'dev';
-  const isLambda = process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined;
-  const region = process.env.REGION || 'local';
+async function runTests() {
+  const browser = await chromium.launch({
+    headless: true,
+    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+  });
+  
+  const context = await browser.newContext({
+    viewport: { width: 1280, height: 720 },
+    ignoreHTTPSErrors: true
+  });
+  
+  const page = await context.newPage();
+  let hasErrors = false;
 
-  console.log(`Running in environment: ${env}`);
-  console.log(`Is Lambda: ${isLambda}`);
-  console.log(`Region: ${region}`);
+  try {
+    // Environment and Geolocation Check
+    const env = process.env.TEST_ENV || 'dev';
+    const isLambda = process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined;
+    const region = process.env.REGION || 'local';
 
-  // Check IP and country
-  await page.goto('https://api64.ipify.org?format=json');
-  const ipResponse = await page.locator('pre').textContent();
-  const { ip } = JSON.parse(ipResponse || '{}');
-  console.log(`Detected IP: ${ip}`);
+    console.log(`Running in environment: ${env}`);
+    console.log(`Is Lambda: ${isLambda}`);
+    console.log(`Region: ${region}`);
 
-  await page.goto('https://ipapi.co/json/');
-  const locationResponse = await page.locator('pre').textContent();
-  const { country_name, country } = JSON.parse(locationResponse || '{}');
-  console.log(`Detected Country: ${country_name} (${country})`);
-});
+    await page.goto('https://api64.ipify.org?format=json');
+    const ipResponse = await page.locator('pre').textContent();
+    const { ip } = JSON.parse(ipResponse || '{}');
+    console.log(`Detected IP: ${ip}`);
 
-test('Active Quests Screen Performance', async ({ page }) => {
-  const start = Date.now();
-  await page.goto(`${appUrl}/?campaignId=${campaignId}`);
-  await page.waitForLoadState('networkidle');
+    await page.goto('https://ipapi.co/json/');
+    const locationResponse = await page.locator('pre').textContent();
+    const { country_name, country } = JSON.parse(locationResponse || '{}');
+    console.log(`Detected Country: ${country_name} (${country})`);
 
-  await page.locator('.tgui-bca5056bf34297b0').click();
-  await page.locator('.welcom-cta-text').click();
+    // Active Quests Screen Performance
+    let start = Date.now();
+    await page.goto(`${appUrl}/?campaignId=${campaignId}`);
+    await page.waitForLoadState('networkidle');
 
-  await login(page, userName, otp);
+    await page.locator('.tgui-bca5056bf34297b0').click();
+    await page.locator('.welcom-cta-text').click();
 
-  const timeTaken = Date.now() - start;
-  console.log(`Time to load active quests screen: ${timeTaken}ms`);
-  logTime('Active Quests Screen', timeTaken);
-  expect(timeTaken).toBeLessThan(60000);
-});
+    await login(page, userName, otp);
 
-test('Leaderboard Screen Performance', async ({ page }) => {
-  const start = Date.now();
-  await page.goto(`${appUrl}/?campaignId=${campaignId}`);
-  await page.waitForLoadState('networkidle');
+    let timeTaken = Date.now() - start;
+    console.log(`Time to load active quests screen: ${timeTaken}ms`);
+    logTime('Active Quests Screen', timeTaken);
+    if (timeTaken >= 60000) throw new Error('Active Quests Screen test failed: took too long');
 
-  await page.locator('.tgui-bca5056bf34297b0').click();
-  await page.locator('.welcom-cta-text').click();
+    // Leaderboard Screen Performance
+    start = Date.now();
+    await page.goto(`${appUrl}/?campaignId=${campaignId}`);
+    await page.waitForLoadState('networkidle');
 
-  await login(page, userName, otp);
+    await page.locator('.tgui-bca5056bf34297b0').click();
+    await page.locator('.welcom-cta-text').click();
 
-  await page.getByRole('button', { name: 'Leaderboard' }).click();
-  const leaderboardFrame = await page.frameLocator('iframe[title="Leaderboard"]');
-  await leaderboardFrame.locator('img').click();
+    await login(page, userName, otp);
 
-  const timeTaken = Date.now() - start;
-  console.log(`Time to load leaderboard screen: ${timeTaken}ms`);
-  logTime('Leaderboard Screen', timeTaken);
-  expect(timeTaken).toBeLessThan(60000);
-});
+    await page.getByRole('button', { name: 'Leaderboard' }).click();
+    const leaderboardFrame = await page.frameLocator('iframe[title="Leaderboard"]');
+    await leaderboardFrame.locator('img').click();
 
-test('Library Screen Performance', async ({ page }) => {
-  const start = Date.now();
-  await page.goto(`${appUrl}/?campaignId=${campaignId}`);
-  await page.waitForLoadState('networkidle');
+    timeTaken = Date.now() - start;
+    console.log(`Time to load leaderboard screen: ${timeTaken}ms`);
+    logTime('Leaderboard Screen', timeTaken);
+    if (timeTaken >= 60000) throw new Error('Leaderboard Screen test failed: took too long');
 
-  await page.locator('.tgui-bca5056bf34297b0').click();
-  await page.locator('.welcom-cta-text').click();
+    // Library Screen Performance
+    start = Date.now();
+    await page.goto(`${appUrl}/?campaignId=${campaignId}`);
+    await page.waitForLoadState('networkidle');
 
-  await page.getByRole('button', { name: 'Library' }).click();
+    await page.locator('.tgui-bca5056bf34297b0').click();
+    await page.locator('.welcom-cta-text').click();
 
-  const timeTaken = Date.now() - start;
-  console.log(`Time to load library screen: ${timeTaken}ms`);
-  logTime('Library Screen', timeTaken);
-  expect(timeTaken).toBeLessThan(60000);
-}); 
+    await page.getByRole('button', { name: 'Library' }).click();
+
+    timeTaken = Date.now() - start;
+    console.log(`Time to load library screen: ${timeTaken}ms`);
+    logTime('Library Screen', timeTaken);
+    if (timeTaken >= 60000) throw new Error('Library Screen test failed: took too long');
+
+  } catch (error) {
+    console.error('Test failed:', error);
+    hasErrors = true;
+  } finally {
+    await browser.close();
+  }
+
+  process.exit(hasErrors ? 1 : 0);
+}
+
+runTests(); 

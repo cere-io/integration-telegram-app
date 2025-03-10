@@ -27,7 +27,6 @@ cat > "$PROJECT_ROOT/lambda-build/package.json" << EOL
     "@playwright/test": "^1.40.0",
     "playwright": "^1.40.0",
     "playwright-core": "^1.40.0",
-    "adm-zip": "^0.5.10",
     "tar": "^6.2.0"
   }
 }
@@ -61,17 +60,23 @@ EOL
 
 echo "➡ Creating run-tests.js..."
 cat > "$PROJECT_ROOT/lambda-build/run-tests.js" << EOL
-import { test as setup } from '@playwright/test';
 import { spawn } from 'child_process';
+import path from 'path';
 
 async function runTests() {
   return new Promise((resolve) => {
     const playwright = spawn('npx', [
       'playwright',
       'test',
-      '--reporter=list'
+      '--config=playwright.config.js'
     ], { 
-      env: process.env,
+      env: {
+        ...process.env,
+        PLAYWRIGHT_BROWSERS_PATH: process.env.PLAYWRIGHT_BROWSERS_PATH,
+        PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+        PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1',
+        NODE_PATH: process.env.NODE_PATH || '/var/task/node_modules'
+      },
       cwd: process.cwd(),
       stdio: 'pipe'
     });
