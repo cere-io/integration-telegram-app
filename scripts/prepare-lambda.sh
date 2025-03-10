@@ -78,13 +78,26 @@ async function runTests() {
 
     browser = await chromium.launch({
       headless: true,
-      executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+      executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    }).catch(error => {
+      console.error('Error launching browser:', error);
+      throw error;
     });
+    
     console.log('Browser launched successfully');
+    console.log('Browser version:', await browser.version());
+
+    if (!browser.isConnected()) {
+      throw new Error('Browser disconnected immediately after launch');
+    }
 
     context = await browser.newContext({
       viewport: { width: 1280, height: 720 },
       ignoreHTTPSErrors: true
+    }).catch(error => {
+      console.error('Error creating context:', error);
+      throw error;
     });
     console.log('Browser context created successfully');
 
@@ -107,13 +120,22 @@ async function runTests() {
       errorOutput = error.message;
       console.error('Test failed:', error);
       console.error('Error stack:', error.stack);
+      
+      // Проверяем состояние браузера после ошибки
+      if (browser) {
+        console.log('Browser connected after error:', browser.isConnected());
+      }
     }
 
     console.log('Starting cleanup...');
     if (context) {
       try {
-        await context.close();
-        console.log('Context closed successfully');
+        if (browser.isConnected()) {
+          await context.close();
+          console.log('Context closed successfully');
+        } else {
+          console.log('Skipping context close - browser already disconnected');
+        }
       } catch (error) {
         console.error('Error closing context:', error);
       }
@@ -141,8 +163,10 @@ async function runTests() {
     // Попытка очистки в случае ошибки
     if (context) {
       try {
-        await context.close();
-        console.log('Context closed during error handling');
+        if (browser && browser.isConnected()) {
+          await context.close();
+          console.log('Context closed during error handling');
+        }
       } catch (closeError) {
         console.error('Error closing context during error handling:', closeError);
       }
@@ -172,17 +196,38 @@ EOL
 echo "➡ Creating test file..."
 cat > "$PROJECT_ROOT/lambda-build/tests/integration.spec.js" << 'EOL'
 export default async function runIntegrationTest({ browser, context }) {
-  const page = await context.newPage();
+  console.log('Starting integration test...');
+  
+  // Проверяем, что браузер все еще запущен
+  if (!browser.isConnected()) {
+    throw new Error('Browser is not connected before creating page');
+  }
+  
+  console.log('Creating new page...');
+  const page = await context.newPage().catch(error => {
+    console.error('Error creating page:', error);
+    throw error;
+  });
   
   try {
-    await page.goto('https://example.com');
+    console.log('Navigating to example.com...');
+    await page.goto('https://example.com', { timeout: 30000 });
+    
+    console.log('Getting page title...');
     const title = await page.title();
+    console.log('Page title:', title);
+    
     if (!title.includes('Example Domain')) {
       throw new Error(`Expected title to include 'Example Domain', got '${title}'`);
     }
     console.log('Test passed: title matches expected value');
   } finally {
-    await page.close();
+    if (page) {
+      console.log('Closing page...');
+      await page.close().catch(error => {
+        console.error('Error closing page:', error);
+      });
+    }
   }
 }
 EOL
