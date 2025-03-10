@@ -64,18 +64,29 @@ import { chromium } from 'playwright';
 import path from 'path';
 
 async function runTests() {
+  let browser = null;
+  let context = null;
+  
   try {
-    console.log('Initializing browser...');
-    const browser = await chromium.launch({
+    console.log('Browser launch configuration:', {
+      headless: true,
+      executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+      env: {
+        LD_LIBRARY_PATH: process.env.LD_LIBRARY_PATH
+      }
+    });
+
+    browser = await chromium.launch({
       headless: true,
       executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
     });
+    console.log('Browser launched successfully');
 
-    console.log('Creating new context...');
-    const context = await browser.newContext({
+    context = await browser.newContext({
       viewport: { width: 1280, height: 720 },
       ignoreHTTPSErrors: true
     });
+    console.log('Browser context created successfully');
 
     console.log('Loading test file...');
     const testFile = path.join(process.cwd(), 'tests', 'integration.spec.js');
@@ -90,15 +101,32 @@ async function runTests() {
       const testFn = testModule.default;
       await testFn({ browser, context });
       output = 'Tests completed successfully';
+      console.log(output);
     } catch (error) {
       success = false;
       errorOutput = error.message;
       console.error('Test failed:', error);
+      console.error('Error stack:', error.stack);
     }
 
-    console.log('Cleaning up...');
-    await context.close();
-    await browser.close();
+    console.log('Starting cleanup...');
+    if (context) {
+      try {
+        await context.close();
+        console.log('Context closed successfully');
+      } catch (error) {
+        console.error('Error closing context:', error);
+      }
+    }
+    
+    if (browser) {
+      try {
+        await browser.close();
+        console.log('Browser closed successfully');
+      } catch (error) {
+        console.error('Error closing browser:', error);
+      }
+    }
 
     return {
       success,
@@ -108,10 +136,31 @@ async function runTests() {
     };
   } catch (error) {
     console.error('Error during test execution:', error);
+    console.error('Error stack:', error.stack);
+
+    // Попытка очистки в случае ошибки
+    if (context) {
+      try {
+        await context.close();
+        console.log('Context closed during error handling');
+      } catch (closeError) {
+        console.error('Error closing context during error handling:', closeError);
+      }
+    }
+    
+    if (browser) {
+      try {
+        await browser.close();
+        console.log('Browser closed during error handling');
+      } catch (closeError) {
+        console.error('Error closing browser during error handling:', closeError);
+      }
+    }
+
     return {
       success: false,
       output: '',
-      errorOutput: error.message,
+      errorOutput: `${error.message}\nStack: ${error.stack}`,
       code: 1
     };
   }
