@@ -354,21 +354,22 @@ npm install --omit=dev
 
 echo "➡ Removing unnecessary files to reduce package size..."
 # Remove dev dependencies and extras to reduce size
-find node_modules -name "*.map" -delete
-find node_modules -name "*.d.ts" -delete
-find node_modules -name "*.md" -delete
-find node_modules -name "LICENSE*" -delete
-find node_modules -name "CHANGELOG*" -delete
-find node_modules -name "README*" -delete
-find node_modules -name "example*" -delete
-find node_modules -name "test" -type d -exec rm -rf {} +
-find node_modules -name "docs" -type d -exec rm -rf {} +
-find node_modules -name ".github" -type d -exec rm -rf {} +
+find node_modules -name "*.map" -delete 2>/dev/null || true
+find node_modules -name "*.d.ts" -delete 2>/dev/null || true
+find node_modules -name "*.md" -delete 2>/dev/null || true
+find node_modules -name "LICENSE*" -delete 2>/dev/null || true
+find node_modules -name "CHANGELOG*" -delete 2>/dev/null || true
+find node_modules -name "README*" -delete 2>/dev/null || true
+# Используем -exec rm -rf вместо -delete для директорий
+find node_modules -name "example*" -type d -exec rm -rf {} \; 2>/dev/null || true
+find node_modules -name "test" -type d -exec rm -rf {} \; 2>/dev/null || true
+find node_modules -name "docs" -type d -exec rm -rf {} \; 2>/dev/null || true
+find node_modules -name ".github" -type d -exec rm -rf {} \; 2>/dev/null || true
 
 # Удаляем ненужные бинарные файлы и браузеры
 echo "➡ Removing pre-bundled browsers to save space..."
-find node_modules -path "*/playwright*/browsers" -type d -exec rm -rf {} +
-find node_modules -path "*/.cache/ms-playwright" -type d -exec rm -rf {} +
+find node_modules -path "*/playwright*/browsers" -type d -exec rm -rf {} \; 2>/dev/null || true
+find node_modules -path "*/.cache/ms-playwright" -type d -exec rm -rf {} \; 2>/dev/null || true
 
 # Log the package size before compression
 echo "➡ Package size before compression:"
