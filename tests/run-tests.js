@@ -1,9 +1,5 @@
 import { chromium } from 'playwright';
 import path from 'path';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
 
 async function checkSystemResources() {
   try {
@@ -24,34 +20,12 @@ async function checkSystemResources() {
 
 async function findChromePid() {
   try {
-    const { stdout } = await execAsync('ps aux | grep -v grep | grep chromium');
-    console.log('Chrome processes:', stdout);
-
-    const lines = stdout.split('\n').filter((line) => line.includes('chromium'));
-    if (lines.length > 0) {
-      const firstLine = lines[0];
-      const parts = firstLine.trim().split(/\s+/);
-      if (parts.length > 1) {
-        const pid = parseInt(parts[1], 10);
-        console.log('Found Chrome PID:', pid);
-        return pid;
-      }
-    }
+    // Skip PID check in Lambda environment and rely on browser.isConnected()
+    console.log('Running in Lambda environment, skipping PID check');
     return null;
   } catch (e) {
     console.error('Error finding Chrome PID:', e);
     return null;
-  }
-}
-
-async function checkBrowserProcess(pid) {
-  if (!pid) return false;
-
-  try {
-    await execAsync(`ps -p ${pid}`);
-    return true;
-  } catch (e) {
-    return false;
   }
 }
 
@@ -99,33 +73,28 @@ async function runTests() {
     console.log('Browser launched successfully');
     console.log('Browser version:', await browser.version());
 
-    // Проверяем состояние браузера
     if (!browser.isConnected()) {
       throw new Error('Browser disconnected immediately after launch');
     }
 
-    // Находим PID браузера альтернативным способом
     chromePid = await findChromePid();
     console.log('Browser PID:', chromePid);
 
-    if (!chromePid || !(await checkBrowserProcess(chromePid))) {
+    if (!chromePid) {
       console.warn('Browser process not found or not running, but continuing anyway');
     }
 
-    // Увеличенная задержка после запуска браузера
     console.log('Waiting for browser to stabilize...');
     await new Promise((resolve) => setTimeout(resolve, 10000));
 
-    // Проверяем, что браузер все еще работает
     if (!browser.isConnected()) {
       throw new Error('Browser disconnected during stabilization period');
     }
 
-    if (chromePid && !(await checkBrowserProcess(chromePid))) {
+    if (chromePid) {
       console.warn('Browser process not running after stabilization, but browser is still connected');
     }
 
-    // Проверяем ресурсы после запуска браузера
     const resourcesAfterLaunch = await checkSystemResources();
     if (!resourcesAfterLaunch) {
       throw new Error('System resources check failed after browser launch');
@@ -145,7 +114,6 @@ async function runTests() {
         throw error;
       });
 
-    // Проверяем количество активных контекстов
     const contexts = browser.contexts();
     console.log('Active contexts:', contexts.length);
 
@@ -171,9 +139,6 @@ async function runTests() {
 
       if (browser) {
         console.log('Browser connected after error:', browser.isConnected());
-        if (chromePid) {
-          console.log('Browser process still running:', await checkBrowserProcess(chromePid));
-        }
       }
     }
 

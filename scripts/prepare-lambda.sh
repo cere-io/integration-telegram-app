@@ -2,7 +2,7 @@
 
 set -e
 
-# Определяем корень проекта для корректных путей
+# Define project root for correct paths
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
@@ -102,19 +102,8 @@ async function checkSystemResources() {
 
 async function findChromePid() {
   try {
-    const { stdout } = await execAsync('ps aux | grep -v grep | grep chromium');
-    console.log('Chrome processes:', stdout);
-    
-    const lines = stdout.split('\n').filter(line => line.includes('chromium'));
-    if (lines.length > 0) {
-      const firstLine = lines[0];
-      const parts = firstLine.trim().split(/\s+/);
-      if (parts.length > 1) {
-        const pid = parseInt(parts[1], 10);
-        console.log('Found Chrome PID:', pid);
-        return pid;
-      }
-    }
+    // Skip PID check in Lambda environment and rely on browser.isConnected()
+    console.log('Running in Lambda environment, skipping PID check');
     return null;
   } catch (e) {
     console.error('Error finding Chrome PID:', e);
@@ -123,14 +112,8 @@ async function findChromePid() {
 }
 
 async function checkBrowserProcess(pid) {
-  if (!pid) return false;
-  
-  try {
-    await execAsync(`ps -p ${pid}`);
-    return true;
-  } catch (e) {
-    return false;
-  }
+  // Always return true in Lambda as we rely on browser.isConnected()
+  return true;
 }
 
 async function runTests() {
@@ -587,7 +570,7 @@ export PATH="\${LAMBDA_TASK_ROOT}/node_modules/.bin:\${PATH}"
 export NODE_PATH="\${LAMBDA_TASK_ROOT}/node_modules"
 export DISPLAY=":0"
 
-# Создаем виртуальный дисплей
+# Create virtual display
 Xvfb :0 -screen 0 1280x720x24 -ac +extension GLX +render -noreset &
 sleep 2
 
