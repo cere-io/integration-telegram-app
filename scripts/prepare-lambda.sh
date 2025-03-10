@@ -2,16 +2,20 @@
 
 set -e
 
+# Определяем корень проекта для корректных путей
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
 echo "➡ Removing old directory and creating new one..."
-rm -rf lambda-build lambda-package.zip
-mkdir -p lambda-build/tests
+rm -rf "$PROJECT_ROOT/lambda-build" "$PROJECT_ROOT/lambda-package.zip"
+mkdir -p "$PROJECT_ROOT/lambda-build/tests"
 
 echo "➡ Copying test files..."
-cp tests/integration.spec.js lambda-build/tests/
-cp playwright.config.js lambda-build/
+cp "$PROJECT_ROOT/tests/integration.spec.js" "$PROJECT_ROOT/lambda-build/tests/"
+cp "$PROJECT_ROOT/playwright.config.js" "$PROJECT_ROOT/lambda-build/"
 
 echo "➡ Creating package.json..."
-cat > lambda-build/package.json << EOL
+cat > "$PROJECT_ROOT/lambda-build/package.json" << EOL
 {
   "name": "lambda-tests",
   "version": "1.0.0",
@@ -24,13 +28,14 @@ cat > lambda-build/package.json << EOL
     "@playwright/test": "^1.40.0",
     "playwright-core": "^1.40.0",
     "adm-zip": "^0.5.10",
-    "puppeteer-core": "^21.10.0"
+    "puppeteer-core": "^21.10.0",
+    "tar": "^6.2.0"
   }
 }
 EOL
 
 echo "➡ Creating Lambda handler..."
-cat > lambda-build/index.js << EOL
+cat > "$PROJECT_ROOT/lambda-build/index.js" << EOL
 import { readFile, mkdir, writeFile } from 'fs/promises';
 import fs from 'fs';
 import path from 'path';
@@ -40,6 +45,7 @@ import { spawn } from 'child_process';
 import { pipeline } from 'stream/promises';
 import os from 'os';
 import { promisify } from 'util';
+import tar from 'tar';
 
 // Адрес для загрузки Chromium оптимизированного для AWS Lambda
 const CHROMIUM_URL = 'https://github.com/Sparticuz/chromium/releases/download/v106.0.0/chromium-v106.0.0-pack.tar';
@@ -48,29 +54,56 @@ const mkdir_p = promisify(fs.mkdir);
 // Функция для очистки диска
 async function freeDiskSpace() {
   try {
-    // Удаляем ненужные файлы из /tmp для освобождения места
+    // Используем нативные методы Node.js вместо команды find
     const tmpDir = os.tmpdir();
-    const { stdout, stderr } = await new Promise((resolve, reject) => {
-      const process = spawn('find', [tmpDir, '-type', 'f', '-atime', '+1', '-delete']);
-      let stdout = '';
-      let stderr = '';
-      
-      process.stdout.on('data', data => { stdout += data.toString(); });
-      process.stderr.on('data', data => { stderr += data.toString(); });
-      
-      process.on('close', code => {
-        if (code === 0) {
-          resolve({ stdout, stderr });
-        } else {
-          console.warn(`Warning: Failed to clean tmp directory: ${stderr}`);
-          resolve({ stdout, stderr }); // Продолжаем работу даже при ошибке
-        }
-      });
-    });
+    console.log(`Cleaning up temporary directory: ${tmpDir}`);
     
-    console.log('Cleaned tmp directory to free up space');
+    // Проверяем если директория существует
+    if (!fs.existsSync(tmpDir)) {
+      console.log('Temporary directory does not exist, nothing to clean');
+      return;
+    }
+    
+    // Получаем список файлов
+    const files = await fs.promises.readdir(tmpDir);
+    console.log(`Found ${files.length} files/directories in temp directory`);
+    
+    // Устанавливаем порог времени (файлы старше 1 дня)
+    const now = new Date();
+    const oneDayAgo = new Date(now - 24 * 60 * 60 * 1000);
+    
+    let deletedCount = 0;
+    
+    // Проходим по файлам и удаляем старые
+    for (const file of files) {
+      try {
+        // Пропускаем системные или специальные файлы
+        if (file.startsWith('.') || file === 'chromium') {
+          continue;
+        }
+        
+        const filePath = path.join(tmpDir, file);
+        const stats = await fs.promises.stat(filePath);
+        
+        // Если файл старше 1 дня, удаляем его
+        if (stats.mtime < oneDayAgo) {
+          if (stats.isDirectory()) {
+            // Рекурсивно удаляем директорию
+            await fs.promises.rm(filePath, { recursive: true, force: true });
+          } else {
+            // Удаляем файл
+            await fs.promises.unlink(filePath);
+          }
+          deletedCount++;
+        }
+      } catch (err) {
+        console.warn(`Failed to process file ${file}: ${err.message}`);
+      }
+    }
+    
+    console.log(`Cleaned ${deletedCount} files/directories from temp directory`);
   } catch (error) {
-    console.warn('Warning during disk cleanup:', error);
+    console.warn(`Warning during disk cleanup: ${error.message}`);
     // Продолжаем работу даже при ошибке
   }
 }
@@ -112,22 +145,10 @@ async function extractTarArchive(archivePath, outputDir) {
     // Создаем директорию если ее нет
     await mkdir(outputDir, { recursive: true });
     
-    // Распаковка TAR-архива
-    const { stdout, stderr } = await new Promise((resolve, reject) => {
-      const process = spawn('tar', ['-xf', archivePath, '-C', outputDir]);
-      let stdout = '';
-      let stderr = '';
-      
-      process.stdout.on('data', data => { stdout += data.toString(); });
-      process.stderr.on('data', data => { stderr += data.toString(); });
-      
-      process.on('close', code => {
-        if (code === 0) {
-          resolve({ stdout, stderr });
-        } else {
-          reject(new Error(\`Failed to extract archive, exit code: \${code}\nStderr: \${stderr}\`));
-        }
-      });
+    // Распаковка TAR-архива с помощью npm-пакета tar
+    await tar.extract({
+      file: archivePath,
+      cwd: outputDir
     });
     
     console.log('Successfully extracted Chromium');
@@ -289,7 +310,7 @@ export const handler = async (event) => {
 EOL
 
 echo "➡ Creating bootstrap script..."
-cat > lambda-build/bootstrap << EOL
+cat > "$PROJECT_ROOT/lambda-build/bootstrap" << EOL
 #!/bin/sh
 
 set -euo pipefail
@@ -323,7 +344,7 @@ do
 done
 EOL
 
-cd lambda-build
+cd "$PROJECT_ROOT/lambda-build"
 
 echo "➡ Making bootstrap executable..."
 chmod +x bootstrap
@@ -356,7 +377,7 @@ du -sh .
 
 cd ..
 echo "➡ Creating ZIP archive..."
-cd lambda-build && zip -9 -r ../lambda-package.zip . && cd ..
+cd "$PROJECT_ROOT/lambda-build" && zip -9 -r ../lambda-package.zip . && cd ..
 
 echo "➡ Final package size:"
 du -sh lambda-package.zip
