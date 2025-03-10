@@ -12,7 +12,6 @@ mkdir -p "$PROJECT_ROOT/lambda-build/tests"
 
 echo "➡ Copying test files..."
 cp "$PROJECT_ROOT/tests/integration.spec.js" "$PROJECT_ROOT/lambda-build/tests/"
-cp "$PROJECT_ROOT/tests/run-tests.js" "$PROJECT_ROOT/lambda-build/"
 
 echo "➡ Creating package.json..."
 cat > "$PROJECT_ROOT/lambda-build/package.json" << EOL
@@ -58,7 +57,10 @@ export default defineConfig({
         '--disable-features=IsolateOrigins',
         '--disable-site-isolation-trials'
       ],
-      timeout: 120000
+      timeout: 120000,
+      env: {
+        DISPLAY: ':0'
+      }
     }
   },
   projects: [
@@ -76,26 +78,73 @@ echo "➡ Creating run-tests.js..."
 cat > "$PROJECT_ROOT/lambda-build/run-tests.js" << 'EOL'
 import { chromium } from 'playwright';
 import path from 'path';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
+
+async function checkSystemResources() {
+  try {
+    const totalMemory = process.memoryUsage().heapTotal / 1024 / 1024;
+    const usedMemory = process.memoryUsage().heapUsed / 1024 / 1024;
+    console.log(`Memory usage - Total: ${totalMemory.toFixed(2)}MB, Used: ${usedMemory.toFixed(2)}MB`);
+
+    if (usedMemory > 900) {
+      throw new Error('Memory usage is too high');
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error checking system resources:', error);
+    return false;
+  }
+}
+
+async function checkBrowserProcess(pid) {
+  try {
+    await execAsync(`ps -p ${pid}`);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
 
 async function runTests() {
   let browser = null;
   let context = null;
-  
-  try {
-    console.log('Browser launch configuration:', {
-      headless: true,
-      executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
-      env: {
-        LD_LIBRARY_PATH: process.env.LD_LIBRARY_PATH
-      }
-    });
 
-    browser = await chromium.launch({
+  try {
+    console.log('Checking system resources...');
+    const resourcesOk = await checkSystemResources();
+    if (!resourcesOk) {
+      throw new Error('System resources check failed');
+    }
+
+    const launchOptions = {
       headless: true,
       executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      timeout: 60000
-    }).catch(error => {
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--no-zygote',
+        '--single-process',
+        '--disable-web-security',
+        '--disable-features=site-per-process',
+        '--disable-features=IsolateOrigins',
+        '--disable-site-isolation-trials'
+      ],
+      timeout: 120000,
+      env: {
+        ...process.env,
+        DISPLAY: ':0'
+      }
+    };
+
+    console.log('Browser launch configuration:', launchOptions);
+
+    browser = await chromium.launch(launchOptions).catch(error => {
       console.error('Error launching browser:', error);
       throw error;
     });
@@ -103,21 +152,49 @@ async function runTests() {
     console.log('Browser launched successfully');
     console.log('Browser version:', await browser.version());
 
+    // Проверяем состояние браузера
     if (!browser.isConnected()) {
       throw new Error('Browser disconnected immediately after launch');
     }
 
-    // Добавляем задержку после запуска браузера
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Получаем и проверяем PID браузера
+    const browserProcess = browser.process();
+    const pid = browserProcess?.pid;
+    console.log('Browser PID:', pid);
 
+    if (!pid || !(await checkBrowserProcess(pid))) {
+      throw new Error('Browser process not found or not running');
+    }
+
+    // Увеличенная задержка после запуска браузера
+    console.log('Waiting for browser to stabilize...');
+    await new Promise(resolve => setTimeout(resolve, 10000));
+
+    // Проверяем, что браузер все еще работает
+    if (!browser.isConnected() || !(await checkBrowserProcess(pid))) {
+      throw new Error('Browser closed during stabilization period');
+    }
+
+    // Проверяем ресурсы после запуска браузера
+    const resourcesAfterLaunch = await checkSystemResources();
+    if (!resourcesAfterLaunch) {
+      throw new Error('System resources check failed after browser launch');
+    }
+
+    console.log('Creating browser context...');
     context = await browser.newContext({
       viewport: { width: 1280, height: 720 },
-      ignoreHTTPSErrors: true
+      ignoreHTTPSErrors: true,
+      bypassCSP: true,
+      userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36'
     }).catch(error => {
       console.error('Error creating context:', error);
       throw error;
     });
-    console.log('Browser context created successfully');
+
+    // Проверяем количество активных контекстов
+    const contexts = browser.contexts();
+    console.log('Active contexts:', contexts.length);
 
     console.log('Loading test file...');
     const testFile = path.join(process.cwd(), 'tests', 'integration.spec.js');
@@ -141,35 +218,9 @@ async function runTests() {
       
       if (browser) {
         console.log('Browser connected after error:', browser.isConnected());
-      }
-    }
-
-    console.log('Starting cleanup...');
-    if (context) {
-      try {
-        // Добавляем задержку перед закрытием
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        if (browser && browser.isConnected()) {
-          await context.close().catch(e => console.error('Context close error:', e));
-          console.log('Context closed successfully');
-        } else {
-          console.log('Skipping context close - browser already disconnected');
+        if (pid) {
+          console.log('Browser process still running:', await checkBrowserProcess(pid));
         }
-      } catch (error) {
-        console.error('Error closing context:', error);
-      }
-    }
-    
-    if (browser) {
-      try {
-        // Добавляем задержку перед закрытием браузера
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        await browser.close().catch(e => console.error('Browser close error:', e));
-        console.log('Browser closed successfully');
-      } catch (error) {
-        console.error('Error closing browser:', error);
       }
     }
 
@@ -183,34 +234,34 @@ async function runTests() {
     console.error('Error during test execution:', error);
     console.error('Error stack:', error.stack);
 
-    if (context || browser) {
-      console.log('Attempting cleanup after error...');
-      
-      if (context) {
-        try {
-          await context.close().catch(() => {});
-          console.log('Context closed during error handling');
-        } catch (closeError) {
-          console.error('Error closing context during error handling:', closeError);
-        }
-      }
-      
-      if (browser) {
-        try {
-          await browser.close().catch(() => {});
-          console.log('Browser closed during error handling');
-        } catch (closeError) {
-          console.error('Error closing browser during error handling:', closeError);
-        }
-      }
-    }
-
     return {
       success: false,
       output: '',
       errorOutput: `${error.message}\nStack: ${error.stack}`,
       code: 1
     };
+  } finally {
+    if (context || browser) {
+      console.log('Starting cleanup...');
+      
+      if (context) {
+        try {
+          await context.close().catch(e => console.error('Context close error:', e));
+          console.log('Context closed successfully');
+        } catch (error) {
+          console.error('Error closing context:', error);
+        }
+      }
+      
+      if (browser) {
+        try {
+          await browser.close().catch(e => console.error('Browser close error:', e));
+          console.log('Browser closed successfully');
+        } catch (error) {
+          console.error('Error closing browser:', error);
+        }
+      }
+    }
   }
 }
 
@@ -293,10 +344,6 @@ async function extractChromium(archivePath, outputDir) {
   const archiveStats = fs.statSync(archivePath);
   console.log('Archive file exists, size:', archiveStats.size);
   
-  // Читаем первые байты файла для определения формата
-  const header = fs.readFileSync(archivePath, { start: 0, end: 10 });
-  console.log('File header bytes:', Buffer.from(header).toString('hex'));
-  
   await mkdir(outputDir, { recursive: true });
   
   try {
@@ -313,7 +360,6 @@ async function extractChromium(archivePath, outputDir) {
     
     console.log('Initial extraction completed, checking for Brotli files...');
     
-    // Рекурсивный поиск и обработка .br файлов
     async function processBrotliFiles(dir) {
       const files = fs.readdirSync(dir);
       console.log('Processing directory:', dir);
@@ -474,6 +520,7 @@ export const handler = async (event) => {
     process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = chromePath;
     process.env.PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = '1';
     process.env.NODE_PATH = '/var/task/node_modules';
+    process.env.DISPLAY = ':0';
     
     // Запуск тестов
     console.log('Starting Playwright tests...');
@@ -510,6 +557,11 @@ set -euo pipefail
 export LAMBDA_TASK_ROOT="/var/task"
 export PATH="\${LAMBDA_TASK_ROOT}/node_modules/.bin:\${PATH}"
 export NODE_PATH="\${LAMBDA_TASK_ROOT}/node_modules"
+export DISPLAY=":0"
+
+# Создаем виртуальный дисплей
+Xvfb :0 -screen 0 1280x720x24 -ac +extension GLX +render -noreset &
+sleep 2
 
 while true
 do

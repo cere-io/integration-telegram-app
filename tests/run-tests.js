@@ -1,5 +1,9 @@
 import { chromium } from 'playwright';
 import path from 'path';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 async function checkSystemResources() {
   try {
@@ -14,6 +18,15 @@ async function checkSystemResources() {
     return true;
   } catch (error) {
     console.error('Error checking system resources:', error);
+    return false;
+  }
+}
+
+async function checkBrowserProcess(pid) {
+  try {
+    await execAsync(`ps -p ${pid}`);
+    return true;
+  } catch (e) {
     return false;
   }
 }
@@ -37,7 +50,6 @@ async function runTests() {
       },
     });
 
-    // Конфигурация запуска браузера с дополнительными опциями
     const launchOptions = {
       headless: true,
       executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
@@ -60,7 +72,8 @@ async function runTests() {
       },
     };
 
-    console.log('Launching browser with options:', launchOptions);
+    console.log('Browser launch configuration:', launchOptions);
+
     browser = await chromium.launch(launchOptions).catch((error) => {
       console.error('Error launching browser:', error);
       throw error;
@@ -69,29 +82,27 @@ async function runTests() {
     console.log('Browser launched successfully');
     console.log('Browser version:', await browser.version());
 
-    const pid = browser.process().pid;
-    console.log('Browser process pid:', pid);
-
+    // Проверяем состояние браузера
     if (!browser.isConnected()) {
       throw new Error('Browser disconnected immediately after launch');
+    }
+
+    // Получаем и проверяем PID браузера
+    const browserProcess = browser.process();
+    const pid = browserProcess?.pid;
+    console.log('Browser PID:', pid);
+
+    if (!pid || !(await checkBrowserProcess(pid))) {
+      throw new Error('Browser process not found or not running');
     }
 
     // Увеличенная задержка после запуска браузера
     console.log('Waiting for browser to stabilize...');
     await new Promise((resolve) => setTimeout(resolve, 10000));
 
-    // Проверка состояния браузера после задержки
-    if (!browser.isConnected()) {
-      throw new Error('Browser disconnected after initial delay');
-    }
-    console.log('Browser is still connected after delay');
-
-    // Проверка процесса браузера
-    try {
-      process.kill(pid, 0);
-      console.log('Browser process is still running');
-    } catch (e) {
-      throw new Error('Browser process is not running');
+    // Проверяем, что браузер все еще работает
+    if (!browser.isConnected() || !(await checkBrowserProcess(pid))) {
+      throw new Error('Browser closed during stabilization period');
     }
 
     // Проверяем ресурсы после запуска браузера
@@ -107,18 +118,18 @@ async function runTests() {
         ignoreHTTPSErrors: true,
         bypassCSP: true,
         userAgent:
-          'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36',
+          'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
       })
       .catch((error) => {
         console.error('Error creating context:', error);
         throw error;
       });
 
-    console.log('Browser context created successfully');
+    // Проверяем количество активных контекстов
     const contexts = browser.contexts();
-    console.log(`Number of active contexts: ${contexts.length}`);
+    console.log('Active contexts:', contexts.length);
 
-    // Проверка состояния браузера после создания контекста
+    // Проверяем состояние браузера после создания контекста
     if (!browser.isConnected()) {
       throw new Error('Browser disconnected after context creation');
     }
@@ -145,44 +156,14 @@ async function runTests() {
 
       if (browser) {
         console.log('Browser connected after error:', browser.isConnected());
-        if (browser.isConnected()) {
-          console.log('Active browser contexts:', browser.contexts().length);
+        if (pid) {
+          console.log('Browser process still running:', await checkBrowserProcess(pid));
         }
       }
     }
 
-    console.log('Starting cleanup...');
-    if (context) {
-      try {
-        console.log('Preparing to close context...');
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        if (browser && browser.isConnected()) {
-          await context.close().catch((e) => console.error('Context close error:', e));
-          console.log('Context closed successfully');
-        } else {
-          console.log('Skipping context close - browser already disconnected');
-        }
-      } catch (error) {
-        console.error('Error closing context:', error);
-      }
-    }
-
-    if (browser) {
-      try {
-        console.log('Preparing to close browser...');
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        if (browser.isConnected()) {
-          await browser.close().catch((e) => console.error('Browser close error:', e));
-          console.log('Browser closed successfully');
-        } else {
-          console.log('Browser already disconnected');
-        }
-      } catch (error) {
-        console.error('Error closing browser:', error);
-      }
-    }
+    // Добавляем задержку перед закрытием
+    await new Promise((resolve) => setTimeout(resolve, 5000));
 
     return {
       success,
@@ -226,6 +207,28 @@ async function runTests() {
       errorOutput: `${error.message}\nStack: ${error.stack}`,
       code: 1,
     };
+  } finally {
+    if (context || browser) {
+      console.log('Starting cleanup...');
+
+      if (context) {
+        try {
+          await context.close().catch((e) => console.error('Context close error:', e));
+          console.log('Context closed successfully');
+        } catch (error) {
+          console.error('Error closing context:', error);
+        }
+      }
+
+      if (browser) {
+        try {
+          await browser.close().catch((e) => console.error('Browser close error:', e));
+          console.log('Browser closed successfully');
+        } catch (error) {
+          console.error('Error closing browser:', error);
+        }
+      }
+    }
   }
 }
 
