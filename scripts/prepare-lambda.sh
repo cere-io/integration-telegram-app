@@ -26,6 +26,7 @@ cat > "$PROJECT_ROOT/lambda-build/package.json" << EOL
   },
   "dependencies": {
     "@playwright/test": "^1.40.0",
+    "playwright": "^1.40.0",
     "playwright-core": "^1.40.0",
     "adm-zip": "^0.5.10",
     "puppeteer-core": "^21.10.0",
@@ -383,7 +384,7 @@ echo "➡ Making bootstrap executable..."
 chmod +x bootstrap
 
 echo "➡ Installing dependencies..."
-npm install --omit=dev
+npm install
 
 echo "➡ Removing unnecessary files to reduce package size..."
 # Remove dev dependencies and extras to reduce size
