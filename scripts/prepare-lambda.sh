@@ -160,12 +160,13 @@ async function downloadFile(url, destination) {
     const request = https.get(url, {
       headers: {
         'Accept': '*/*',
+        'Accept-Encoding': 'gzip, deflate, br',
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
       },
       followRedirects: true
     }, response => {
-      console.log('Response status:', response.statusCode);
-      console.log('Response headers:', JSON.stringify(response.headers, null, 2));
+      console.log('Initial response status:', response.statusCode);
+      console.log('Initial response headers:', JSON.stringify(response.headers, null, 2));
       
       if (response.statusCode === 302 || response.statusCode === 301) {
         const newUrl = new URL(response.headers.location, url).toString();
@@ -184,10 +185,14 @@ async function downloadFile(url, destination) {
         .then(() => {
           const stats = fs.statSync(destination);
           console.log('File downloaded successfully');
-          console.log('File size:', stats.size);
+          console.log('Downloaded file size:', stats.size);
+          console.log('Downloaded file path:', destination);
           resolve();
         })
-        .catch(err => reject(err));
+        .catch(err => {
+          console.error('Pipeline error:', err);
+          reject(err);
+        });
     });
     
     request.on('error', error => {
@@ -209,6 +214,10 @@ async function extractChromium(archivePath, outputDir) {
   const archiveStats = fs.statSync(archivePath);
   console.log('Archive file exists, size:', archiveStats.size);
   
+  // Читаем первые байты файла для определения формата
+  const header = fs.readFileSync(archivePath, { start: 0, end: 10 });
+  console.log('File header bytes:', Buffer.from(header).toString('hex'));
+  
   await mkdir(outputDir, { recursive: true });
   
   try {
@@ -216,103 +225,83 @@ async function extractChromium(archivePath, outputDir) {
     await tar.extract({
       file: archivePath,
       cwd: outputDir,
-      onentry: entry => console.log('Extracting:', entry.path)
+      onentry: entry => {
+        console.log('Extracting file:', entry.path);
+        console.log('File size:', entry.size);
+        console.log('File type:', entry.type);
+      }
     });
     
-    console.log('Extraction completed, processing Brotli files...');
+    console.log('Initial extraction completed, checking for Brotli files...');
     
-    // Распаковка Brotli-файлов
-    const files = fs.readdirSync(outputDir);
-    console.log('Files to process:', files);
-    
-    for (const file of files) {
-      const filePath = path.join(outputDir, file);
-      if (file.endsWith('.br')) {
-        console.log('Processing Brotli file:', file);
-        try {
-          // Читаем Brotli файл
-          const brContent = fs.readFileSync(filePath);
-          console.log('Read Brotli file, size:', brContent.length);
-          
-          // Распаковываем
-          const decompressed = brotliDecompressSync(brContent);
-          console.log('Decompressed size:', decompressed.length);
-          
-          // Сохраняем распакованный файл
-          const outputPath = filePath.slice(0, -3); // Удаляем .br
-          fs.writeFileSync(outputPath, decompressed);
-          console.log('Wrote decompressed file:', outputPath);
-          
-          // Если это tar-архив, распаковываем его
-          if (outputPath.endsWith('.tar')) {
-            console.log('Extracting tar:', outputPath);
-            await tar.extract({
-              file: outputPath,
-              cwd: outputDir,
-              onentry: entry => console.log('Extracting from tar:', entry.path)
-            });
-            // Удаляем промежуточный tar-файл
-            fs.unlinkSync(outputPath);
-            console.log('Removed intermediate tar file:', outputPath);
-          }
-          
-          // Удаляем оригинальный .br файл
-          fs.unlinkSync(filePath);
-          console.log('Removed original .br file:', filePath);
-        } catch (error) {
-          console.error('Error processing Brotli file:', file, error);
-          console.error('Error details:', error.stack);
-        }
-      }
-    }
-    
-    console.log('All Brotli files processed');
-    console.log('Output directory contents:', fs.readdirSync(outputDir));
-    
-    const chromePath = path.join(outputDir, 'chrome');
-    if (fs.existsSync(chromePath)) {
-      console.log('Chrome executable exists');
-      const stats = fs.statSync(chromePath);
-      console.log('Chrome executable size:', stats.size);
-      console.log('Chrome executable permissions:', stats.mode.toString(8));
-      fs.chmodSync(chromePath, 0o755);
-      console.log('Updated Chrome executable permissions:', fs.statSync(chromePath).mode.toString(8));
-    } else {
-      console.log('Chrome executable not found!');
-      console.log('Contents of output directory:', fs.readdirSync(outputDir));
+    // Рекурсивный поиск и обработка .br файлов
+    async function processBrotliFiles(dir) {
+      const files = fs.readdirSync(dir);
+      console.log('Processing directory:', dir);
+      console.log('Found files:', files);
       
-      // Рекурсивный поиск chrome
-      function findChrome(dir) {
-        const files = fs.readdirSync(dir);
-        console.log('Searching in directory:', dir);
-        console.log('Found files:', files);
+      for (const file of files) {
+        const filePath = path.join(dir, file);
+        const stat = fs.statSync(filePath);
         
-        for (const file of files) {
-          const fullPath = path.join(dir, file);
-          const stat = fs.statSync(fullPath);
-          
-          if (stat.isDirectory()) {
-            findChrome(fullPath);
-          } else if (file === 'chrome') {
-            console.log('Found chrome at:', fullPath);
+        if (stat.isDirectory()) {
+          await processBrotliFiles(filePath);
+        } else if (file.endsWith('.br')) {
+          console.log('Processing Brotli file:', filePath);
+          try {
+            const brContent = fs.readFileSync(filePath);
+            console.log('Brotli file size:', brContent.length);
+            
+            const decompressed = brotliDecompressSync(brContent);
+            console.log('Decompressed size:', decompressed.length);
+            
+            const outputPath = filePath.slice(0, -3);
+            fs.writeFileSync(outputPath, decompressed);
+            console.log('Wrote decompressed file:', outputPath);
+            
+            if (outputPath.endsWith('.tar')) {
+              console.log('Found tar after Brotli:', outputPath);
+              await tar.extract({
+                file: outputPath,
+                cwd: path.dirname(outputPath),
+                onentry: entry => console.log('Extracting from inner tar:', entry.path)
+              });
+              fs.unlinkSync(outputPath);
+              console.log('Removed intermediate tar:', outputPath);
+            }
+            
+            fs.unlinkSync(filePath);
+            console.log('Removed Brotli file:', filePath);
+          } catch (error) {
+            console.error('Error processing Brotli file:', filePath);
+            console.error('Error details:', error);
+            throw error;
           }
         }
       }
-      
-      findChrome(outputDir);
     }
+    
+    await processBrotliFiles(outputDir);
+    
+    console.log('All files processed, final directory contents:');
+    function listDirRecursive(dir, level = 0) {
+      const indent = '  '.repeat(level);
+      const files = fs.readdirSync(dir);
+      files.forEach(file => {
+        const fullPath = path.join(dir, file);
+        const stat = fs.statSync(fullPath);
+        console.log(`${indent}- ${file} (${stat.size} bytes)`);
+        if (stat.isDirectory()) {
+          listDirRecursive(fullPath, level + 1);
+        }
+      });
+    }
+    listDirRecursive(outputDir);
+    
   } catch (error) {
     console.error('Extraction error:', error);
-    console.error('Error details:', error.stack);
+    console.error('Stack trace:', error.stack);
     throw error;
-  }
-  
-  try {
-    await fs.promises.unlink(archivePath);
-    console.log('Archive file deleted');
-  } catch (error) {
-    console.error('Failed to delete archive:', error);
-    console.error('Error details:', error.stack);
   }
 }
 
