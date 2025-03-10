@@ -22,7 +22,8 @@ cat > lambda-build/package.json << EOL
   },
   "dependencies": {
     "@playwright/test": "^1.40.0",
-    "playwright-core": "^1.40.0"
+    "playwright-core": "^1.40.0",
+    "adm-zip": "^0.5.10"
   }
 }
 EOL
@@ -33,11 +34,10 @@ import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { promisify } from 'util';
 import { createWriteStream } from 'fs';
-import { pipeline } from 'stream/promises';
 import { mkdir } from 'fs/promises';
 import https from 'https';
+import AdmZip from 'adm-zip';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -79,23 +79,18 @@ async function downloadFile(url, outputPath) {
   });
 }
 
-// Функция распаковки архива
+// Функция распаковки архива с использованием adm-zip
 async function extractZip(zipPath, outputDir) {
-  return new Promise((resolve, reject) => {
-    const unzip = spawn('unzip', ['-q', '-o', zipPath, '-d', outputDir]);
-    
-    unzip.on('close', code => {
-      if (code === 0) {
-        resolve();
-      } else {
-        reject(new Error(\`unzip process exited with code \${code}\`));
-      }
-    });
-    
-    unzip.on('error', err => {
-      reject(err);
-    });
-  });
+  try {
+    console.log(\`Extracting \${zipPath} to \${outputDir}\`);
+    const zip = new AdmZip(zipPath);
+    zip.extractAllTo(outputDir, true);
+    console.log('Extraction complete');
+    return true;
+  } catch (error) {
+    console.error('Error extracting zip:', error);
+    throw error;
+  }
 }
 
 // Главная функция обработчика
@@ -135,7 +130,7 @@ export const handler = async (event) => {
         console.log(\`Downloading Chromium from \${CHROMIUM_URL}\`);
         await downloadFile(CHROMIUM_URL, chromiumZip);
         
-        // Распаковываем архив
+        // Распаковываем архив с использованием adm-zip
         console.log('Extracting Chromium...');
         await extractZip(chromiumZip, browserDir);
         
