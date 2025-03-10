@@ -59,16 +59,62 @@ export default defineConfig({
 });
 EOL
 
+echo "➡ Creating run-tests.js..."
+cat > "$PROJECT_ROOT/lambda-build/run-tests.js" << EOL
+import { test as setup } from '@playwright/test';
+import { spawn } from 'child_process';
+
+async function runTests() {
+  return new Promise((resolve) => {
+    const playwright = spawn('npx', [
+      'playwright',
+      'test',
+      '--reporter=list'
+    ], { 
+      env: process.env,
+      cwd: process.cwd(),
+      stdio: 'pipe'
+    });
+    
+    let output = '';
+    let errorOutput = '';
+    
+    playwright.stdout.on('data', (data) => {
+      const chunk = data.toString();
+      output += chunk;
+      console.log(chunk);
+    });
+    
+    playwright.stderr.on('data', (data) => {
+      const chunk = data.toString();
+      errorOutput += chunk;
+      console.error(chunk);
+    });
+    
+    playwright.on('close', (code) => {
+      resolve({
+        success: code === 0,
+        output,
+        errorOutput,
+        code
+      });
+    });
+  });
+}
+
+export { runTests };
+EOL
+
 echo "➡ Creating Lambda handler..."
 cat > "$PROJECT_ROOT/lambda-build/index.js" << EOL
 import { mkdir } from 'fs/promises';
 import fs from 'fs';
 import path from 'path';
 import https from 'https';
-import { spawn } from 'child_process';
 import { pipeline } from 'stream/promises';
 import os from 'os';
 import tar from 'tar';
+import { runTests } from './run-tests.js';
 
 const CHROMIUM_URL = 'https://github.com/Sparticuz/chromium/releases/download/v133.0.0/chromium-v133.0.0-pack.tar';
 
@@ -150,57 +196,25 @@ export const handler = async (event) => {
     }
     
     // Настройка переменных окружения для Playwright
-    const env = {
-      ...process.env,
-      PLAYWRIGHT_BROWSERS_PATH: browserDir,
-      PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: chromePath,
-      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1',
-      NODE_PATH: '/var/task/node_modules'
-    };
+    process.env.PLAYWRIGHT_BROWSERS_PATH = browserDir;
+    process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = chromePath;
+    process.env.PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = '1';
+    process.env.NODE_PATH = '/var/task/node_modules';
     
     // Запуск тестов
-    return new Promise((resolve) => {
-      console.log('Starting Playwright tests...');
-      
-      const playwright = spawn('node', [
-        'node_modules/@playwright/test/cli.js',
-        'test',
-        '--reporter=list'
-      ], { 
-        env,
-        cwd: '/var/task'
-      });
-      
-      let output = '';
-      let errorOutput = '';
-      
-      playwright.stdout.on('data', (data) => {
-        const chunk = data.toString();
-        output += chunk;
-        console.log(chunk);
-      });
-      
-      playwright.stderr.on('data', (data) => {
-        const chunk = data.toString();
-        errorOutput += chunk;
-        console.error(chunk);
-      });
-      
-      playwright.on('close', (code) => {
-        console.log(\`Tests finished with code \${code}\`);
-        
-        resolve({
-          statusCode: code === 0 ? 200 : 500,
-          body: JSON.stringify({
-            success: code === 0,
-            output,
-            errorOutput,
-            region,
-            environment
-          })
-        });
-      });
-    });
+    console.log('Starting Playwright tests...');
+    const result = await runTests();
+    
+    return {
+      statusCode: result.success ? 200 : 500,
+      body: JSON.stringify({
+        success: result.success,
+        output: result.output,
+        errorOutput: result.errorOutput,
+        region,
+        environment
+      })
+    };
   } catch (error) {
     console.error('Error:', error);
     return {
@@ -232,7 +246,7 @@ do
   
   REQUEST_ID=\$(grep -Fi Lambda-Runtime-Aws-Request-Id "\$HEADERS" | tr -d '[:space:]' | cut -d: -f2)
   
-  node --input-type=module -e "import { handler } from './index.js'; handler(JSON.parse(process.argv[1]))" "\$(cat \$EVENT_DATA)" > /tmp/output.json || true
+  node --experimental-vm-modules --input-type=module -e "import { handler } from './index.js'; handler(JSON.parse(process.argv[1]))" "\$(cat \$EVENT_DATA)" > /tmp/output.json || true
   
   curl -s -X POST "http://\${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/\$REQUEST_ID/response" -d "\$(cat /tmp/output.json)"
 done
