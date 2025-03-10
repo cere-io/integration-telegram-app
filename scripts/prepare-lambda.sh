@@ -148,7 +148,7 @@ import { pipeline } from 'stream/promises';
 import os from 'os';
 import tar from 'tar';
 import { runTests } from './run-tests.js';
-import { execSync } from 'child_process';
+import { brotliDecompressSync } from 'zlib';
 
 const CHROMIUM_URL = 'https://github.com/Sparticuz/chromium/releases/download/v133.0.0/chromium-v133.0.0-pack.tar';
 
@@ -230,18 +230,18 @@ async function extractChromium(archivePath, outputDir) {
       if (file.endsWith('.br')) {
         console.log('Processing Brotli file:', file);
         try {
-          // Установка brotli если его нет
-          try {
-            execSync('which brotli');
-          } catch {
-            console.log('Installing brotli...');
-            execSync('yum install -y brotli || apt-get update && apt-get install -y brotli');
-          }
+          // Читаем Brotli файл
+          const brContent = fs.readFileSync(filePath);
+          console.log('Read Brotli file, size:', brContent.length);
           
-          // Распаковка Brotli
+          // Распаковываем
+          const decompressed = brotliDecompressSync(brContent);
+          console.log('Decompressed size:', decompressed.length);
+          
+          // Сохраняем распакованный файл
           const outputPath = filePath.slice(0, -3); // Удаляем .br
-          console.log('Decompressing to:', outputPath);
-          execSync(`brotli -d "${filePath}" -o "${outputPath}"`);
+          fs.writeFileSync(outputPath, decompressed);
+          console.log('Wrote decompressed file:', outputPath);
           
           // Если это tar-архив, распаковываем его
           if (outputPath.endsWith('.tar')) {
@@ -253,12 +253,15 @@ async function extractChromium(archivePath, outputDir) {
             });
             // Удаляем промежуточный tar-файл
             fs.unlinkSync(outputPath);
+            console.log('Removed intermediate tar file:', outputPath);
           }
           
           // Удаляем оригинальный .br файл
           fs.unlinkSync(filePath);
+          console.log('Removed original .br file:', filePath);
         } catch (error) {
           console.error('Error processing Brotli file:', file, error);
+          console.error('Error details:', error.stack);
         }
       }
     }
@@ -300,6 +303,7 @@ async function extractChromium(archivePath, outputDir) {
     }
   } catch (error) {
     console.error('Extraction error:', error);
+    console.error('Error details:', error.stack);
     throw error;
   }
   
@@ -308,6 +312,7 @@ async function extractChromium(archivePath, outputDir) {
     console.log('Archive file deleted');
   } catch (error) {
     console.error('Failed to delete archive:', error);
+    console.error('Error details:', error.stack);
   }
 }
 
