@@ -48,7 +48,7 @@ import { promisify } from 'util';
 import tar from 'tar';
 
 // Адрес для загрузки Chromium оптимизированного для AWS Lambda
-const CHROMIUM_URL = 'https://github.com/Sparticuz/chromium/releases/download/v106.0.0/chromium-v106.0.0-pack.tar';
+const CHROMIUM_URL = 'https://github.com/Sparticuz/chromium/releases/download/v133.0.0/chromium-v133.0.0-pack.tar';
 const mkdir_p = promisify(fs.mkdir);
 
 // Функция для очистки диска
