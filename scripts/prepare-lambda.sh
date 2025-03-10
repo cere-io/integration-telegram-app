@@ -16,83 +16,275 @@ cat > lambda-build/package.json << EOL
   "name": "lambda-tests",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "test": "playwright test"
   },
   "dependencies": {
-    "@playwright/test": "^1.50.1",
-    "playwright-core": "^1.50.1"
+    "@playwright/test": "^1.40.0",
+    "playwright-core": "^1.40.0"
   }
 }
 EOL
 
 echo "➡ Creating Lambda handler..."
 cat > lambda-build/index.js << EOL
-const { execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
+import { spawn } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { promisify } from 'util';
+import { createWriteStream } from 'fs';
+import { pipeline } from 'stream';
+import { createGunzip } from 'zlib';
+import { mkdir } from 'fs/promises';
+import https from 'https';
 
-exports.handler = async (event) => {
+const pipelineAsync = promisify(pipeline);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// URL мини-версии хромиума, оптимизированного для Playwright
+const CHROMIUM_URL = 'https://playwright.azureedge.net/builds/chromium/1060/chromium-linux-arm64.zip';
+
+// Функция для загрузки файла
+async function downloadFile(url, outputPath) {
+  const file = createWriteStream(outputPath);
+  return new Promise((resolve, reject) => {
+    https.get(url, response => {
+      if (response.statusCode !== 200) {
+        reject(new Error(\`Failed to download file, status code: \${response.statusCode}\`));
+        return;
+      }
+      
+      pipeline(response, file)
+        .then(() => resolve())
+        .catch(err => reject(err));
+    }).on('error', err => {
+      fs.unlink(outputPath, () => {}); // Удаляем файл в случае ошибки
+      reject(err);
+    });
+  });
+}
+
+// Функция распаковки архива
+async function extractZip(zipPath, outputDir) {
+  return new Promise((resolve, reject) => {
+    const unzip = spawn('unzip', ['-q', '-o', zipPath, '-d', outputDir]);
+    
+    unzip.on('close', code => {
+      if (code === 0) {
+        resolve();
+      } else {
+        reject(new Error(\`unzip process exited with code \${code}\`));
+      }
+    });
+    
+    unzip.on('error', err => {
+      reject(err);
+    });
+  });
+}
+
+// Главная функция обработчика
+export const handler = async (event) => {
+  console.log('Event received:', JSON.stringify(event));
+  
   try {
-    // Установка переменных окружения для Playwright
-    process.env.PLAYWRIGHT_BROWSERS_PATH = '/tmp';
+    const region = event.region || 'unknown';
+    const environment = event.environment || 'unknown';
+    
+    console.log('Running tests in region:', region);
+    console.log('Running tests for environment:', environment);
+    
+    // Создаем временные директории
+    const tmpDir = '/tmp/playwright';
+    const browserDir = \`\${tmpDir}/browser\`;
+    const resultsDir = \`\${tmpDir}/test-results\`;
+    
+    await mkdir(tmpDir, { recursive: true });
+    await mkdir(browserDir, { recursive: true });
+    await mkdir(resultsDir, { recursive: true });
+    
+    // Устанавливаем переменные окружения
+    process.env.PLAYWRIGHT_BROWSERS_PATH = browserDir;
     process.env.PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = '1';
-
-    // Создаем директорию для результатов тестов
-    fs.mkdirSync('/tmp/test-results', { recursive: true });
-
-    // Проверяем наличие директории с Chromium
-    const chromiumDir = path.join(__dirname, '.cache', 'ms-playwright', 'chromium-1091');
-    if (fs.existsSync(chromiumDir)) {
-      // Копируем файлы Chromium в /tmp
-      execSync(\`cp -r \${chromiumDir} /tmp/\`, { stdio: 'inherit' });
+    process.env.TEST_ENV = environment;
+    process.env.REGION = region;
+    
+    console.log('Checking for Chromium browser...');
+    const chromiumPath = path.join(browserDir, 'chromium-1060');
+    if (!fs.existsSync(chromiumPath)) {
+      console.log('Downloading and installing Chromium browser...');
+      const chromiumZip = path.join(tmpDir, 'chromium.zip');
+      
+      try {
+        // Загружаем мини-версию хромиума
+        console.log(\`Downloading Chromium from \${CHROMIUM_URL}\`);
+        await downloadFile(CHROMIUM_URL, chromiumZip);
+        
+        // Распаковываем архив
+        console.log('Extracting Chromium...');
+        await extractZip(chromiumZip, browserDir);
+        
+        console.log('Chromium installation complete');
+      } catch (err) {
+        console.error('Failed to download or extract Chromium:', err);
+        throw err;
+      }
+    } else {
+      console.log('Chromium browser already installed');
     }
-
-    // Запускаем тесты через Playwright CLI
-    execSync('npx playwright test --reporter=list', { stdio: 'inherit' });
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ message: 'Tests completed successfully' })
-    };
+    
+    // Запуск тестов
+    console.log('Running Playwright tests...');
+    
+    return new Promise((resolve, reject) => {
+      const playwright = spawn('npx', ['playwright', 'test', '--reporter=list'], {
+        env: {
+          ...process.env,
+          PLAYWRIGHT_BROWSERS_PATH: browserDir
+        }
+      });
+      
+      let output = '';
+      let errorOutput = '';
+      
+      playwright.stdout.on('data', data => {
+        const chunk = data.toString();
+        output += chunk;
+        console.log(chunk);
+      });
+      
+      playwright.stderr.on('data', data => {
+        const chunk = data.toString();
+        errorOutput += chunk;
+        console.error(chunk);
+      });
+      
+      playwright.on('close', code => {
+        console.log(\`Playwright process exited with code \${code}\`);
+        
+        if (code === 0) {
+          resolve({
+            statusCode: 200,
+            body: JSON.stringify({
+              message: 'Tests completed successfully',
+              region: region,
+              environment: environment,
+              output: output
+            })
+          });
+        } else {
+          resolve({
+            statusCode: 500,
+            body: JSON.stringify({
+              error: 'Tests failed',
+              exitCode: code,
+              output: output,
+              errorOutput: errorOutput,
+              region: region,
+              environment: environment
+            })
+          });
+        }
+      });
+      
+      playwright.on('error', err => {
+        console.error('Error running Playwright:', err);
+        reject({
+          statusCode: 500,
+          body: JSON.stringify({
+            error: err.message,
+            stack: err.stack
+          })
+        });
+      });
+    });
+    
   } catch (error) {
     console.error('Error:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message })
+      body: JSON.stringify({
+        error: error.message,
+        stack: error.stack
+      })
     };
   }
 };
 EOL
 
+echo "➡ Creating bootstrap script..."
+cat > lambda-build/bootstrap << EOL
+#!/bin/sh
+
+set -euo pipefail
+
+# Handler format: <script_name>.<function_name>
+# Uses the AWS Lambda Node.js runtime interface
+# See: https://docs.aws.amazon.com/lambda/latest/dg/nodejs-handler.html
+
+# Initialization - load function handler
+# shellcheck disable=SC2155
+export LAMBDA_TASK_ROOT="/var/task"
+export PATH="\${LAMBDA_TASK_ROOT}/node_modules/.bin:\${PATH}"
+
+# Processing
+while true
+do
+  HEADERS="\$(mktemp)"
+  EVENT_DATA="\$(mktemp)"
+  
+  # Get an event. The HTTP request will block until one is received
+  curl -sS -LD "\$HEADERS" -o "\$EVENT_DATA" "http://\${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/next"
+  
+  # Extract request ID by scraping response headers received above
+  REQUEST_ID=\$(grep -Fi Lambda-Runtime-Aws-Request-Id "\$HEADERS" | tr -d '[:space:]' | cut -d: -f2)
+  
+  # Run the handler function from the script
+  node --input-type=module -e "import { handler } from './index.js'; handler(JSON.parse(process.argv[1]))" "\$(cat \$EVENT_DATA)" > /tmp/output.json || true
+  
+  # Send the response
+  curl -s -X POST "http://\${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/\$REQUEST_ID/response" -d "\$(cat /tmp/output.json)"
+done
+EOL
+
 cd lambda-build
 
+echo "➡ Making bootstrap executable..."
+chmod +x bootstrap
+
 echo "➡ Installing dependencies..."
-npm install
+npm install --omit=dev
 
-echo "➡ Preparing directory for Chromium..."
-mkdir -p .cache/ms-playwright/chromium-1091
-
-if [ -d "/opt/chromium" ]; then
-  echo "➡ Copying Chromium..."
-  cp -r /opt/chromium/* .cache/ms-playwright/chromium-1091/
-else
-  echo "⚠️ Chromium not found in /opt/chromium, skipping copy"
-fi
-
-echo "➡ Removing unnecessary files..."
+echo "➡ Removing unnecessary files to reduce package size..."
+# Remove dev dependencies and extras to reduce size
 find node_modules -name "*.map" -delete
 find node_modules -name "*.d.ts" -delete
 find node_modules -name "*.md" -delete
 find node_modules -name "LICENSE*" -delete
 find node_modules -name "CHANGELOG*" -delete
 find node_modules -name "README*" -delete
+find node_modules -name "example*" -delete
+find node_modules -name "test" -type d -exec rm -rf {} +
+find node_modules -name "docs" -type d -exec rm -rf {} +
+find node_modules -name ".github" -type d -exec rm -rf {} +
+
+# Удаляем ненужные бинарные файлы и браузеры
+echo "➡ Removing pre-bundled browsers to save space..."
+find node_modules -path "*/playwright*/browsers" -type d -exec rm -rf {} +
+find node_modules -path "*/.cache/ms-playwright" -type d -exec rm -rf {} +
+
+# Log the package size before compression
+echo "➡ Package size before compression:"
+du -sh .
 
 cd ..
 echo "➡ Creating ZIP archive..."
 cd lambda-build && zip -9 -r ../lambda-package.zip . && cd ..
 
-echo "➡ Cleaning up temporary files..."
-rm -rf lambda-build
+echo "➡ Final package size:"
+du -sh lambda-package.zip
 
 echo "✅ Lambda package built successfully!"

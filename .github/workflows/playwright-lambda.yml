@@ -165,7 +165,7 @@ jobs:
               --role "arn:aws:iam::${{ needs.get-env.outputs.account_id }}:role/lambda-playwright-test" \
               --timeout 900 \
               --memory-size 2048 \
-              --code "S3Bucket=cere-playwright-tests-results,S3Key=${PACKAGE_S3_KEY}" \
+              --code S3Bucket=cere-playwright-tests-results,S3Key=${PACKAGE_S3_KEY} \
               --region ${{ matrix.region }}
           fi
           
@@ -178,7 +178,7 @@ jobs:
           
           # Cleanup S3
           echo "Cleaning up S3..."
-          aws s3 rm "s3://cere-io-playwright-test-results/${PACKAGE_S3_KEY}" || echo "::warning::Failed to delete package from S3"
+          aws s3 rm "s3://cere-playwright-tests-results/${PACKAGE_S3_KEY}" || echo "::warning::Failed to delete package from S3"
 
   test:
     name: Run Playwright Tests in Lambda
@@ -271,10 +271,10 @@ jobs:
           echo "Uploading test results to S3..."
           aws s3 cp \
             "$GITHUB_WORKSPACE/test-output/" \
-            "s3://cere-io-playwright-test-results/telegram/${{ needs.get-env.outputs.env }}/${{ matrix.region }}/${{ github.run_id }}/" \
+            "s3://cere-playwright-tests-results/telegram/${{ needs.get-env.outputs.env }}/${{ matrix.region }}/${{ github.run_id }}/" \
             --recursive || echo "::warning::Failed to upload test results to S3"
 
-          echo "Test results uploaded to s3://cere-io-playwright-test-results/${{ needs.get-env.outputs.env }}/${{ matrix.region }}/${{ github.run_id }}/"
+          echo "Test results uploaded to s3://cere-playwright-tests-results/telegram/${{ needs.get-env.outputs.env }}/${{ matrix.region }}/${{ github.run_id }}/"
 
       - name: Upload test results as artifacts
         if: always()
