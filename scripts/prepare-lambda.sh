@@ -60,7 +60,7 @@ EOL
 
 echo "➡ Creating run-tests.js..."
 cat > "$PROJECT_ROOT/lambda-build/run-tests.js" << 'EOL'
-import { test as base, chromium } from '@playwright/test';
+import { chromium } from 'playwright';
 import path from 'path';
 
 async function runTests() {
@@ -122,17 +122,16 @@ EOL
 
 echo "➡ Creating test file..."
 cat > "$PROJECT_ROOT/lambda-build/tests/integration.spec.js" << 'EOL'
-import { test, expect } from '@playwright/test';
-
 export default async function runIntegrationTest({ browser, context }) {
   const page = await context.newPage();
   
   try {
     await page.goto('https://example.com');
-    await expect(page).toHaveTitle(/Example Domain/);
-    
-    // Здесь ваши тесты...
-    
+    const title = await page.title();
+    if (!title.includes('Example Domain')) {
+      throw new Error(`Expected title to include 'Example Domain', got '${title}'`);
+    }
+    console.log('Test passed: title matches expected value');
   } finally {
     await page.close();
   }
