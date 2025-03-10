@@ -380,6 +380,26 @@ export const handler = async (event) => {
       }
     }
     
+    // Настройка путей к библиотекам
+    const libPath = path.join(browserDir, 'lib');
+    const currentLibPath = process.env.LD_LIBRARY_PATH || '';
+    process.env.LD_LIBRARY_PATH = `${libPath}:${currentLibPath}`;
+    console.log('Updated LD_LIBRARY_PATH:', process.env.LD_LIBRARY_PATH);
+    
+    // Проверяем наличие необходимых библиотек
+    const requiredLibs = ['libnss3.so', 'libnspr4.so', 'libnssutil3.so'];
+    for (const lib of requiredLibs) {
+      const libFile = path.join(libPath, lib);
+      if (fs.existsSync(libFile)) {
+        console.log(`Found required library: ${lib}`);
+        const stats = fs.statSync(libFile);
+        console.log(`Library ${lib} size: ${stats.size} bytes`);
+      } else {
+        console.error(`Missing required library: ${lib}`);
+        throw new Error(`Required library ${lib} not found in ${libPath}`);
+      }
+    }
+    
     // Настройка переменных окружения для Playwright
     process.env.PLAYWRIGHT_BROWSERS_PATH = browserDir;
     process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = chromePath;
