@@ -12,7 +12,6 @@ mkdir -p "$PROJECT_ROOT/lambda-build/tests"
 
 echo "➡ Copying test files..."
 cp "$PROJECT_ROOT/tests/integration.spec.js" "$PROJECT_ROOT/lambda-build/tests/"
-cp "$PROJECT_ROOT/playwright.config.js" "$PROJECT_ROOT/lambda-build/"
 
 echo "➡ Creating package.json..."
 cat > "$PROJECT_ROOT/lambda-build/package.json" << EOL
@@ -32,6 +31,32 @@ cat > "$PROJECT_ROOT/lambda-build/package.json" << EOL
     "tar": "^6.2.0"
   }
 }
+EOL
+
+echo "➡ Creating playwright.config.js..."
+cat > "$PROJECT_ROOT/lambda-build/playwright.config.js" << EOL
+import { defineConfig, devices } from '@playwright/test';
+
+export default defineConfig({
+  testDir: './tests',
+  timeout: 60000,
+  use: {
+    headless: true,
+    viewport: { width: 1280, height: 720 },
+    ignoreHTTPSErrors: true,
+    launchOptions: {
+      executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+    }
+  },
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+    },
+  ],
+  reporter: [['list', { outputDir: '/tmp/test-results' }]],
+  outputDir: '/tmp/test-results',
+});
 EOL
 
 echo "➡ Creating Lambda handler..."
@@ -129,7 +154,8 @@ export const handler = async (event) => {
       ...process.env,
       PLAYWRIGHT_BROWSERS_PATH: browserDir,
       PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: chromePath,
-      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1',
+      NODE_PATH: '/var/task/node_modules'
     };
     
     // Запуск тестов
@@ -137,10 +163,13 @@ export const handler = async (event) => {
       console.log('Starting Playwright tests...');
       
       const playwright = spawn('node', [
-        'node_modules/playwright/cli.js',
+        'node_modules/@playwright/test/cli.js',
         'test',
         '--reporter=list'
-      ], { env });
+      ], { 
+        env,
+        cwd: '/var/task'
+      });
       
       let output = '';
       let errorOutput = '';
@@ -192,6 +221,7 @@ set -euo pipefail
 
 export LAMBDA_TASK_ROOT="/var/task"
 export PATH="\${LAMBDA_TASK_ROOT}/node_modules/.bin:\${PATH}"
+export NODE_PATH="\${LAMBDA_TASK_ROOT}/node_modules"
 
 while true
 do
