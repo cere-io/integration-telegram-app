@@ -9,7 +9,6 @@ export default defineConfig({
     viewport: { width: 1280, height: 720 },
     ignoreHTTPSErrors: true,
     launchOptions: {
-      // Оставляем пустым, будет заполнено динамически
     }
   },
   projects: [
@@ -20,4 +19,4 @@ export default defineConfig({
   ],
   reporter: [['list', { outputDir: '/tmp/test-results' }]],
   outputDir: '/tmp/test-results',
-}); 
+});
