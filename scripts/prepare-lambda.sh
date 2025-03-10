@@ -157,7 +157,7 @@ async function runTests() {
       throw new Error('Browser disconnected immediately after launch');
     }
 
-    // Получаем и проверяем PID браузера
+    // Получаем PID браузера - обратите внимание, что process это свойство, а не функция
     const browserProcess = browser.process();
     const pid = browserProcess?.pid;
     console.log('Browser PID:', pid);

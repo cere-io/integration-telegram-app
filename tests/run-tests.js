@@ -42,14 +42,6 @@ async function runTests() {
       throw new Error('System resources check failed');
     }
 
-    console.log('Browser launch configuration:', {
-      headless: true,
-      executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
-      env: {
-        LD_LIBRARY_PATH: process.env.LD_LIBRARY_PATH,
-      },
-    });
-
     const launchOptions = {
       headless: true,
       executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
@@ -63,22 +55,22 @@ async function runTests() {
         '--disable-web-security',
         '--disable-features=site-per-process',
         '--disable-features=IsolateOrigins',
-        '--disable-site-isolation-trials',
+        '--disable-site-isolation-trials'
       ],
       timeout: 120000,
       env: {
         ...process.env,
-        DISPLAY: process.env.DISPLAY || ':0',
-      },
+        DISPLAY: ':0'
+      }
     };
 
     console.log('Browser launch configuration:', launchOptions);
 
-    browser = await chromium.launch(launchOptions).catch((error) => {
+    browser = await chromium.launch(launchOptions).catch(error => {
       console.error('Error launching browser:', error);
       throw error;
     });
-
+    
     console.log('Browser launched successfully');
     console.log('Browser version:', await browser.version());
 
@@ -98,7 +90,7 @@ async function runTests() {
 
     // Увеличенная задержка после запуска браузера
     console.log('Waiting for browser to stabilize...');
-    await new Promise((resolve) => setTimeout(resolve, 10000));
+    await new Promise(resolve => setTimeout(resolve, 10000));
 
     // Проверяем, что браузер все еще работает
     if (!browser.isConnected() || !(await checkBrowserProcess(pid))) {
@@ -112,27 +104,19 @@ async function runTests() {
     }
 
     console.log('Creating browser context...');
-    context = await browser
-      .newContext({
-        viewport: { width: 1280, height: 720 },
-        ignoreHTTPSErrors: true,
-        bypassCSP: true,
-        userAgent:
-          'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
-      })
-      .catch((error) => {
-        console.error('Error creating context:', error);
-        throw error;
-      });
+    context = await browser.newContext({
+      viewport: { width: 1280, height: 720 },
+      ignoreHTTPSErrors: true,
+      bypassCSP: true,
+      userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36'
+    }).catch(error => {
+      console.error('Error creating context:', error);
+      throw error;
+    });
 
     // Проверяем количество активных контекстов
     const contexts = browser.contexts();
     console.log('Active contexts:', contexts.length);
-
-    // Проверяем состояние браузера после создания контекста
-    if (!browser.isConnected()) {
-      throw new Error('Browser disconnected after context creation');
-    }
 
     console.log('Loading test file...');
     const testFile = path.join(process.cwd(), 'tests', 'integration.spec.js');
@@ -153,7 +137,7 @@ async function runTests() {
       errorOutput = error.message;
       console.error('Test failed:', error);
       console.error('Error stack:', error.stack);
-
+      
       if (browser) {
         console.log('Browser connected after error:', browser.isConnected());
         if (pid) {
@@ -162,67 +146,38 @@ async function runTests() {
       }
     }
 
-    // Добавляем задержку перед закрытием
-    await new Promise((resolve) => setTimeout(resolve, 5000));
-
     return {
       success,
       output,
       errorOutput,
-      code: success ? 0 : 1,
+      code: success ? 0 : 1
     };
   } catch (error) {
     console.error('Error during test execution:', error);
     console.error('Error stack:', error.stack);
 
-    if (context || browser) {
-      console.log('Attempting cleanup after error...');
-
-      if (context) {
-        try {
-          await context.close().catch(() => {});
-          console.log('Context closed during error handling');
-        } catch (closeError) {
-          console.error('Error closing context during error handling:', closeError);
-        }
-      }
-
-      if (browser) {
-        try {
-          if (browser.isConnected()) {
-            await browser.close().catch(() => {});
-            console.log('Browser closed during error handling');
-          } else {
-            console.log('Browser already disconnected during error handling');
-          }
-        } catch (closeError) {
-          console.error('Error closing browser during error handling:', closeError);
-        }
-      }
-    }
-
     return {
       success: false,
       output: '',
       errorOutput: `${error.message}\nStack: ${error.stack}`,
-      code: 1,
+      code: 1
     };
   } finally {
     if (context || browser) {
       console.log('Starting cleanup...');
-
+      
       if (context) {
         try {
-          await context.close().catch((e) => console.error('Context close error:', e));
+          await context.close().catch(e => console.error('Context close error:', e));
           console.log('Context closed successfully');
         } catch (error) {
           console.error('Error closing context:', error);
         }
       }
-
+      
       if (browser) {
         try {
-          await browser.close().catch((e) => console.error('Browser close error:', e));
+          await browser.close().catch(e => console.error('Browser close error:', e));
           console.log('Browser closed successfully');
         } catch (error) {
           console.error('Error closing browser:', error);
