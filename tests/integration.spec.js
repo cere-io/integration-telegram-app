@@ -53,52 +53,7 @@ export default async function runIntegrationTest({ browser, context }) {
   try {
     page = await context.newPage();
     console.log('Page created successfully');
-    
-    console.log('Navigating to example.com...');
-    await page.goto('https://example.com', { 
-      timeout: 30000,
-      waitUntil: 'networkidle' 
-    });
-    
-    console.log('Getting page title...');
-    const title = await page.title();
-    console.log('Page title:', title);
-    
-    if (!title.includes('Example Domain')) {
-      throw new Error(`Expected title to include 'Example Domain', got '${title}'`);
-    }
-    console.log('Test passed: title matches expected value');
-  } catch (error) {
-    console.error('Test error:', error);
-    console.error('Browser connected:', browser.isConnected());
-    throw error;
-  } finally {
-    if (page) {
-      try {
-        console.log('Closing page...');
-        await page.close().catch(e => console.error('Error closing page:', e));
-      } catch (error) {
-        console.error('Error in finally block:', error);
-      }
-    }
-  }
-}
 
-async function runTests() {
-  const browser = await chromium.launch({
-    headless: true,
-    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
-  });
-  
-  const context = await browser.newContext({
-    viewport: { width: 1280, height: 720 },
-    ignoreHTTPSErrors: true
-  });
-  
-  const page = await context.newPage();
-  let hasErrors = false;
-
-  try {
     // Environment and Geolocation Check
     const env = process.env.TEST_ENV || 'dev';
     const isLambda = process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined;
@@ -120,8 +75,10 @@ async function runTests() {
 
     // Active Quests Screen Performance
     let start = Date.now();
-    await page.goto(`${appUrl}/?campaignId=${campaignId}`);
-    await page.waitForLoadState('networkidle');
+    await page.goto(`${appUrl}/?campaignId=${campaignId}`, {
+      timeout: 30000,
+      waitUntil: 'networkidle'
+    });
 
     await page.locator('.tgui-bca5056bf34297b0').click();
     await page.locator('.welcom-cta-text').click();
@@ -135,8 +92,10 @@ async function runTests() {
 
     // Leaderboard Screen Performance
     start = Date.now();
-    await page.goto(`${appUrl}/?campaignId=${campaignId}`);
-    await page.waitForLoadState('networkidle');
+    await page.goto(`${appUrl}/?campaignId=${campaignId}`, {
+      timeout: 30000,
+      waitUntil: 'networkidle'
+    });
 
     await page.locator('.tgui-bca5056bf34297b0').click();
     await page.locator('.welcom-cta-text').click();
@@ -154,8 +113,10 @@ async function runTests() {
 
     // Library Screen Performance
     start = Date.now();
-    await page.goto(`${appUrl}/?campaignId=${campaignId}`);
-    await page.waitForLoadState('networkidle');
+    await page.goto(`${appUrl}/?campaignId=${campaignId}`, {
+      timeout: 30000,
+      waitUntil: 'networkidle'
+    });
 
     await page.locator('.tgui-bca5056bf34297b0').click();
     await page.locator('.welcom-cta-text').click();
@@ -168,13 +129,17 @@ async function runTests() {
     if (timeTaken >= 60000) throw new Error('Library Screen test failed: took too long');
 
   } catch (error) {
-    console.error('Test failed:', error);
-    hasErrors = true;
+    console.error('Test error:', error);
+    console.error('Browser connected:', browser.isConnected());
+    throw error;
   } finally {
-    await browser.close();
+    if (page) {
+      try {
+        console.log('Closing page...');
+        await page.close().catch(e => console.error('Error closing page:', e));
+      } catch (error) {
+        console.error('Error in finally block:', error);
+      }
+    }
   }
-
-  process.exit(hasErrors ? 1 : 0);
-}
-
-runTests(); 
+} 
