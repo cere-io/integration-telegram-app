@@ -6,11 +6,11 @@ async function checkSystemResources() {
     const totalMemory = process.memoryUsage().heapTotal / 1024 / 1024;
     const usedMemory = process.memoryUsage().heapUsed / 1024 / 1024;
     console.log(`Memory usage - Total: ${totalMemory.toFixed(2)}MB, Used: ${usedMemory.toFixed(2)}MB`);
-    
+
     if (usedMemory > 900) {
       throw new Error('Memory usage is too high');
     }
-    
+
     return true;
   } catch (error) {
     console.error('Error checking system resources:', error);
@@ -51,7 +51,7 @@ async function runTests() {
         '--disable-web-security',
         '--disable-features=site-per-process',
         '--disable-features=IsolateOrigins',
-        '--disable-site-isolation-trials'
+        '--disable-site-isolation-trials',
       ],
       timeout: 120000,
       env: {
@@ -68,10 +68,10 @@ async function runTests() {
 
     console.log('Browser launched successfully');
     console.log('Browser version:', await browser.version());
-    
+
     const pid = browser.process().pid;
     console.log('Browser process pid:', pid);
-    
+
     if (!browser.isConnected()) {
       throw new Error('Browser disconnected immediately after launch');
     }
@@ -101,15 +101,18 @@ async function runTests() {
     }
 
     console.log('Creating browser context...');
-    context = await browser.newContext({
-      viewport: { width: 1280, height: 720 },
-      ignoreHTTPSErrors: true,
-      bypassCSP: true,
-      userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36',
-    }).catch((error) => {
-      console.error('Error creating context:', error);
-      throw error;
-    });
+    context = await browser
+      .newContext({
+        viewport: { width: 1280, height: 720 },
+        ignoreHTTPSErrors: true,
+        bypassCSP: true,
+        userAgent:
+          'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36',
+      })
+      .catch((error) => {
+        console.error('Error creating context:', error);
+        throw error;
+      });
 
     console.log('Browser context created successfully');
     const contexts = browser.contexts();
