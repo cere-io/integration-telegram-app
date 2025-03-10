@@ -23,7 +23,8 @@ cat > lambda-build/package.json << EOL
   "dependencies": {
     "@playwright/test": "^1.40.0",
     "playwright-core": "^1.40.0",
-    "adm-zip": "^0.5.10"
+    "adm-zip": "^0.5.10",
+    "puppeteer-core": "^21.10.0"
   }
 }
 EOL
@@ -35,15 +36,15 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createWriteStream } from 'fs';
-import { mkdir } from 'fs/promises';
+import { mkdir, rm } from 'fs/promises';
 import https from 'https';
 import AdmZip from 'adm-zip';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// URL мини-версии хромиума, оптимизированного для Playwright
-const CHROMIUM_URL = 'https://playwright.azureedge.net/builds/chromium/1060/chromium-linux.zip';
+// URL мини-версии хромиума, специально для AWS Lambda
+const CHROMIUM_URL = 'https://github.com/alixaxel/chrome-aws-lambda/releases/download/v10.1.0/chromium-v10.1.0-linux-x64.zip';
 
 // Функция для загрузки файла
 async function downloadFile(url, outputPath) {
@@ -79,13 +80,86 @@ async function downloadFile(url, outputPath) {
   });
 }
 
+// Функция для оптимизации использования диска
+async function freeDiskSpace() {
+  try {
+    // Очистка временных файлов
+    const tempDir = '/tmp';
+    const files = await fs.promises.readdir(tempDir);
+    console.log(\`Cleaning up temporary files: \${files.length} files found\`);
+    
+    for (const file of files) {
+      if (file !== 'playwright' && !file.startsWith('.')) {
+        try {
+          await rm(path.join(tempDir, file), { recursive: true, force: true });
+        } catch (err) {
+          console.warn(\`Failed to remove file \${file}: \${err.message}\`);
+        }
+      }
+    }
+    
+    // Проверка доступного места
+    const { stdout } = await new Promise((resolve, reject) => {
+      const process = spawn('df', ['-h', '/tmp']);
+      let stdout = '';
+      process.stdout.on('data', data => { stdout += data.toString(); });
+      process.on('close', code => {
+        if (code === 0) {
+          resolve({ stdout });
+        } else {
+          reject(new Error(\`Failed to check disk space, exit code: \${code}\`));
+        }
+      });
+    });
+    
+    console.log(\`Disk space after cleanup: \${stdout}\`);
+  } catch (err) {
+    console.warn(\`Error freeing disk space: \${err.message}\`);
+  }
+}
+
 // Функция распаковки архива с использованием adm-zip
 async function extractZip(zipPath, outputDir) {
   try {
     console.log(\`Extracting \${zipPath} to \${outputDir}\`);
     const zip = new AdmZip(zipPath);
-    zip.extractAllTo(outputDir, true);
-    console.log('Extraction complete');
+    
+    // Извлекаем только нужные файлы чтобы сэкономить место
+    const entries = zip.getEntries();
+    console.log(\`Found \${entries.length} entries in archive\`);
+    
+    // Создаем директорию если ее нет
+    await mkdir(outputDir, { recursive: true });
+    
+    // Сначала экстрактим только chromium исполняемый файл
+    let extractedMainFile = false;
+    for (const entry of entries) {
+      if (entry.entryName.endsWith('chromium') || 
+          entry.entryName.endsWith('chrome') || 
+          entry.entryName.includes('/chrome-linux/')) {
+        console.log(\`Extracting critical file: \${entry.entryName}\`);
+        zip.extractEntryTo(entry, outputDir, false, true);
+        extractedMainFile = true;
+        
+        // Устанавливаем права на исполнение
+        if (entry.entryName.endsWith('chromium') || entry.entryName.endsWith('chrome')) {
+          const fullPath = path.join(outputDir, entry.entryName);
+          fs.chmodSync(fullPath, 0o755);
+        }
+      }
+    }
+    
+    // Сообщаем о результате
+    if (extractedMainFile) {
+      console.log('Successfully extracted Chromium executable');
+    } else {
+      console.warn('Critical browser files not found in archive');
+    }
+    
+    // Удаляем zip-архив для экономии места
+    await fs.promises.unlink(zipPath);
+    console.log('Removed zip archive to free space');
+    
     return true;
   } catch (error) {
     console.error('Error extracting zip:', error);
@@ -104,6 +178,9 @@ export const handler = async (event) => {
     console.log('Running tests in region:', region);
     console.log('Running tests for environment:', environment);
     
+    // Освобождаем место перед началом работы
+    await freeDiskSpace();
+    
     // Создаем временные директории
     const tmpDir = '/tmp/playwright';
     const browserDir = \`\${tmpDir}/browser\`;
@@ -120,7 +197,7 @@ export const handler = async (event) => {
     process.env.REGION = region;
     
     console.log('Checking for Chromium browser...');
-    const chromiumPath = path.join(browserDir, 'chromium-1060');
+    const chromiumPath = path.join(browserDir, 'chrome-linux', 'chrome');
     if (!fs.existsSync(chromiumPath)) {
       console.log('Downloading and installing Chromium browser...');
       const chromiumZip = path.join(tmpDir, 'chromium.zip');
@@ -130,17 +207,26 @@ export const handler = async (event) => {
         console.log(\`Downloading Chromium from \${CHROMIUM_URL}\`);
         await downloadFile(CHROMIUM_URL, chromiumZip);
         
+        // Показываем размер скачанного файла
+        const stats = fs.statSync(chromiumZip);
+        console.log(\`Downloaded file size: \${stats.size / 1024 / 1024} MB\`);
+        
         // Распаковываем архив с использованием adm-zip
         console.log('Extracting Chromium...');
         await extractZip(chromiumZip, browserDir);
         
         console.log('Chromium installation complete');
+        
+        // Записываем путь к исполняемому файлу Chrome
+        process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = chromiumPath;
       } catch (err) {
         console.error('Failed to download or extract Chromium:', err);
         throw err;
       }
     } else {
       console.log('Chromium browser already installed');
+      // Записываем путь к исполняемому файлу Chrome
+      process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = chromiumPath;
     }
     
     // Запуск тестов
@@ -150,7 +236,8 @@ export const handler = async (event) => {
       const playwright = spawn('npx', ['playwright', 'test', '--reporter=list'], {
         env: {
           ...process.env,
-          PLAYWRIGHT_BROWSERS_PATH: browserDir
+          PLAYWRIGHT_BROWSERS_PATH: browserDir,
+          PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: chromiumPath
         }
       });
       
