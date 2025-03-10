@@ -217,15 +217,34 @@ export const handler = async (event) => {
     const browserDir = path.join(tmpDir, 'chromium');
     const chromePath = path.join(browserDir, 'chrome');
     
+    console.log('Temporary directory:', tmpDir);
+    console.log('Browser directory:', browserDir);
+    console.log('Chrome path:', chromePath);
+    
     // Установка Chromium если его нет
     if (!fs.existsSync(chromePath)) {
       console.log('Installing Chromium...');
       const archivePath = path.join(tmpDir, 'chromium.tar');
+      console.log('Archive path:', archivePath);
       
+      console.log('Downloading Chromium...');
       await downloadFile(CHROMIUM_URL, archivePath);
-      await extractChromium(archivePath, browserDir);
+      console.log('Download completed');
       
-      console.log('Chromium installed successfully');
+      console.log('Extracting Chromium...');
+      await extractChromium(archivePath, browserDir);
+      console.log('Extraction completed');
+      
+      if (fs.existsSync(chromePath)) {
+        console.log('Chrome executable exists after installation');
+        const stats = fs.statSync(chromePath);
+        console.log('Chrome executable permissions:', stats.mode.toString(8));
+      } else {
+        console.log('Chrome executable does not exist after installation!');
+        console.log('Contents of browser directory:', fs.readdirSync(browserDir));
+      }
+    } else {
+      console.log('Chrome executable already exists');
     }
     
     // Настройка переменных окружения для Playwright
