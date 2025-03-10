@@ -35,33 +35,45 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { promisify } from 'util';
 import { createWriteStream } from 'fs';
-import { pipeline } from 'stream';
-import { createGunzip } from 'zlib';
+import { pipeline } from 'stream/promises';
 import { mkdir } from 'fs/promises';
 import https from 'https';
 
-const pipelineAsync = promisify(pipeline);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // URL мини-версии хромиума, оптимизированного для Playwright
-const CHROMIUM_URL = 'https://playwright.azureedge.net/builds/chromium/1060/chromium-linux-arm64.zip';
+const CHROMIUM_URL = 'https://playwright.azureedge.net/builds/chromium/1060/chromium-linux.zip';
 
 // Функция для загрузки файла
 async function downloadFile(url, outputPath) {
-  const file = createWriteStream(outputPath);
   return new Promise((resolve, reject) => {
-    https.get(url, response => {
+    const file = createWriteStream(outputPath);
+    const request = https.get(url, response => {
       if (response.statusCode !== 200) {
+        file.close();
+        fs.unlink(outputPath, () => {});
         reject(new Error(\`Failed to download file, status code: \${response.statusCode}\`));
         return;
       }
       
-      pipeline(response, file)
-        .then(() => resolve())
-        .catch(err => reject(err));
-    }).on('error', err => {
-      fs.unlink(outputPath, () => {}); // Удаляем файл в случае ошибки
+      response.pipe(file);
+      
+      file.on('finish', () => {
+        file.close();
+        resolve();
+      });
+    });
+    
+    request.on('error', err => {
+      file.close();
+      fs.unlink(outputPath, () => {});
+      reject(err);
+    });
+    
+    file.on('error', err => {
+      file.close();
+      fs.unlink(outputPath, () => {});
       reject(err);
     });
   });
