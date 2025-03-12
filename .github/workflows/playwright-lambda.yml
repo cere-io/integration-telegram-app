@@ -55,7 +55,6 @@ jobs:
         run: |
           if [ "${{ inputs.regions }}" = "all" ]; then
             echo "regions=['eu-west-2']" >> $GITHUB_OUTPUT
-#            echo "regions=['eu-west-2', 'eu-central-1']" >> $GITHUB_OUTPUT
           else
             echo "regions=['${{ inputs.regions }}']" >> $GITHUB_OUTPUT
           fi
