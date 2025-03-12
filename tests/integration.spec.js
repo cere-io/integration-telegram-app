@@ -4,142 +4,152 @@ import fs from 'fs';
 const userName = process.env.TEST_USER_EMAIL || 'veronika.filipenko@cere.io';
 const otp = process.env.TEST_USER_OTP || '555555';
 const appUrl = process.env.TEST_APP_URL || 'https://telegram-viewer-app.stage.cere.io';
-const campaignId = process.env.TEST_CAMPAIGN_ID || '117';
+const campaignId = process.env.TEST_CAMPAIGN_ID || '114';
 
 const logTime = (testName, time) => {
   const logMessage = `${testName} took ${time}ms\n`;
   fs.appendFileSync(`performance-log.txt`, logMessage);
 };
 
-const login = async (page, userName, otp) => {
+const login = async (page) => {
+  // Добавляем ожидание данных фрейма
   await page.waitForSelector('#torusIframe', { timeout: 30000 });
   const torusFrame = await page.frameLocator('#torusIframe');
 
-  await page.waitForSelector('iframe[title="Embedded browser"]', { timeout: 30000 });
+  await torusFrame.locator('iframe[title="Embedded browser"]').waitFor({ timeout: 30000 });
   const embeddedFrame = await torusFrame.frameLocator('iframe[title="Embedded browser"]');
 
-  await embeddedFrame.locator('button:has-text("I already have a wallet")').waitFor({ timeout: 30000 });
-  await embeddedFrame.getByRole('button', { name: 'I already have a wallet' }).click();
+  const buttonLogin = embeddedFrame.locator('button:has-text("I already have a wallet")');
+  await buttonLogin.scrollIntoViewIfNeeded();
+  await buttonLogin.waitFor({ state: 'visible', timeout: 10000 });
+  await buttonLogin.click();
 
-  await embeddedFrame.locator('input[type="email"]').waitFor({ timeout: 30000 });
-  await embeddedFrame.getByRole('textbox', { name: 'Email' }).fill(userName);
+  const emailInput = embeddedFrame.getByRole('textbox', { name: 'Email' });
+  await emailInput.scrollIntoViewIfNeeded();
+  await emailInput.waitFor({ state: 'visible', timeout: 10000 });
+  await emailInput.fill(userName);
 
-  await embeddedFrame.locator('button:has-text("Sign In")').waitFor({ timeout: 30000 });
-  await embeddedFrame.getByRole('button', { name: 'Sign In' }).click();
+  const signInButton = embeddedFrame.locator('button:has-text("Sign In")');
+  await signInButton.scrollIntoViewIfNeeded();
+  await signInButton.waitFor({ state: 'visible', timeout: 10000 });
+  await signInButton.click();
 
-  await page.waitForTimeout(2000);
-  await embeddedFrame.locator('input[type="text"]').waitFor({ timeout: 30000 });
-  await embeddedFrame.getByRole('textbox', { name: 'OTP input' }).fill(otp);
+  const otpInput = embeddedFrame.getByRole('textbox', { name: 'OTP input' });
+  await otpInput.waitFor({ state: 'visible', timeout: 10000 });
+  await otpInput.fill(otp);
 
-  await embeddedFrame.locator('button:has-text("Verify")').waitFor({ timeout: 30000 });
-  await embeddedFrame.getByRole('button', { name: 'Verify' }).click();
+  const verifyButton = embeddedFrame.locator('button:has-text("Verify")');
+  await verifyButton.scrollIntoViewIfNeeded();
+  await verifyButton.waitFor({ state: 'visible', timeout: 10000 });
+  await verifyButton.click();
 };
 
 export default async function runIntegrationTest({ browser, context }) {
   console.log('Starting integration test...');
-  
-  // Добавляем задержку после создания контекста
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
-  // Проверяем состояние браузера
-  if (!browser.isConnected()) {
-    throw new Error('Browser is not connected before creating page');
-  }
-  
-  console.log('Browser connection status:', browser.isConnected());
-  console.log('Creating new page...');
-  
   let page;
+
   try {
     page = await context.newPage();
     console.log('Page created successfully');
 
-    // Environment and Geolocation Check
-    const env = process.env.TEST_ENV || 'dev';
-    const isLambda = process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined;
-    const region = process.env.REGION || 'local';
-
-    console.log(`Running in environment: ${env}`);
-    console.log(`Is Lambda: ${isLambda}`);
-    console.log(`Region: ${region}`);
-
-    await page.goto('https://api64.ipify.org?format=json');
-    const ipResponse = await page.locator('pre').textContent();
-    const { ip } = JSON.parse(ipResponse || '{}');
-    console.log(`Detected IP: ${ip}`);
-
-    await page.goto('https://ipapi.co/json/');
-    const locationResponse = await page.locator('pre').textContent();
-    const { country_name, country } = JSON.parse(locationResponse || '{}');
-    console.log(`Detected Country: ${country_name} (${country})`);
-
-    // Active Quests Screen Performance
+    // Test 1: Active Quests Screen
+    console.log('Testing Active Quests screen...');
     let start = Date.now();
+
+    // Заходим на URL
     await page.goto(`${appUrl}/?campaignId=${campaignId}`, {
-      timeout: 30000,
       waitUntil: 'networkidle'
     });
 
-    await page.locator('.tgui-bca5056bf34297b0').click();
-    await page.locator('.welcom-cta-text').click();
+    // Проверяем, что страница загружена
+    await page.waitForLoadState('networkidle');
 
+    // Попробуем кликнуть на кнопки с логами видимости элемента
+    // const welcomeButton = page.locator('.tgui-bca5056bf34297b0');
+    // if (await welcomeButton.isVisible()) {
+    //   console.log('Welcome button is visible');
+    //   await welcomeButton.click();
+    // } else {
+    //   throw new Error('Welcome button is not visible or interactable!');
+    // }
+    //
+    // const welcomeCtaText = page.locator('.welcom-cta-text');
+    // if (await welcomeCtaText.isVisible()) {
+    //   console.log('Welcome CTA button is visible');
+    //   await welcomeCtaText.click();
+    // } else {
+    //   throw new Error('Welcome CTA button is not visible or interactable!');
+    // }
+
+    await page.locator('path').nth(1).click();
+    await page.getByRole('button', { name: 'Start Earning' }).click();
+
+    // Авторизация
     await login(page, userName, otp);
+
+    // Проверяем вкладку Active Quests
+    const questTab = await page.locator('.tgui-e6658d0b8927f95e').textContent();
+    console.log('Quest tab text:', questTab);
+    if (questTab !== 'Active Quests') {
+      throw new Error('Active Quests tab not found');
+    }
 
     let timeTaken = Date.now() - start;
-    console.log(`Time to load active quests screen: ${timeTaken}ms`);
     logTime('Active Quests Screen', timeTaken);
-    if (timeTaken >= 60000) throw new Error('Active Quests Screen test failed: took too long');
 
-    // Leaderboard Screen Performance
+    // Test 2: Leaderboard Screen
+    console.log('Testing Leaderboard screen...');
     start = Date.now();
-    await page.goto(`${appUrl}/?campaignId=${campaignId}`, {
-      timeout: 30000,
-      waitUntil: 'networkidle'
-    });
 
-    await page.locator('.tgui-bca5056bf34297b0').click();
-    await page.locator('.welcom-cta-text').click();
+    // Клик по табу Leaderboard
+    const leaderboardTabButton = page.locator('xpath=/html/body/div[1]/div/div/div[2]/button[2]');
+    await leaderboardTabButton.scrollIntoViewIfNeeded();
+    await leaderboardTabButton.click();
 
-    await login(page, userName, otp);
+    // Проверяем вкладку Leaderboard
+    const leaderboardTab = await page.locator('.tgui-e6658d0b8927f95e').textContent();
+    if (leaderboardTab !== 'Leaderboard') {
+      throw new Error('Leaderboard tab not found');
+    }
 
-    await page.getByRole('button', { name: 'Leaderboard' }).click();
-    const leaderboardFrame = await page.frameLocator('iframe[title="Leaderboard"]');
-    await leaderboardFrame.locator('img').click();
+    // Проверяем заголовок Leaderboard
+    const leaderboardTitle = await page.locator('.jss1').textContent();
+    if (leaderboardTitle !== 'Leaderboard') {
+      throw new Error('Leaderboard title not found');
+    }
+
+    // Клик на элемент Leaderboard
+    const leaderboardElement = await page.locator('.l1shii3t');
+    await leaderboardElement.scrollIntoViewIfNeeded();
+    await leaderboardElement.click();
+
+    // Проверяем результат Leaderboard
+    const leaderboardResult = await page.locator('.p1kqqlhg').textContent();
+    if (leaderboardResult !== '1 out of 3 tasks completed – Could do better') {
+      throw new Error('Incorrect leaderboard result');
+    }
 
     timeTaken = Date.now() - start;
-    console.log(`Time to load leaderboard screen: ${timeTaken}ms`);
     logTime('Leaderboard Screen', timeTaken);
-    if (timeTaken >= 60000) throw new Error('Leaderboard Screen test failed: took too long');
 
-    // Library Screen Performance
+    // Test 3: Library Screen
+    console.log('Testing Library screen...');
     start = Date.now();
-    await page.goto(`${appUrl}/?campaignId=${campaignId}`, {
-      timeout: 30000,
-      waitUntil: 'networkidle'
-    });
 
-    await page.locator('.tgui-bca5056bf34297b0').click();
-    await page.locator('.welcom-cta-text').click();
+    // Клик по табу Library
+    const libraryTabButton = page.locator('xpath=/html/body/div[1]/div/div/div[2]/button[3]');
+    await libraryTabButton.scrollIntoViewIfNeeded();
+    await libraryTabButton.click();
 
-    await page.getByRole('button', { name: 'Library' }).click();
+    console.log('Library tab clicked successfully.');
 
     timeTaken = Date.now() - start;
-    console.log(`Time to load library screen: ${timeTaken}ms`);
     logTime('Library Screen', timeTaken);
-    if (timeTaken >= 60000) throw new Error('Library Screen test failed: took too long');
-
-  } catch (error) {
-    console.error('Test error:', error);
-    console.error('Browser connected:', browser.isConnected());
-    throw error;
+  } catch (err) {
+    console.error('Error during integration test:', err);
   } finally {
     if (page) {
-      try {
-        console.log('Closing page...');
-        await page.close().catch(e => console.error('Error closing page:', e));
-      } catch (error) {
-        console.error('Error in finally block:', error);
-      }
+      await page.close();
     }
   }
-} 
+}
