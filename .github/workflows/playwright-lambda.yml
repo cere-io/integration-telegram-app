@@ -211,7 +211,6 @@ jobs:
         run: |
           # Use clean paths for all files
           RESPONSE_FILE="${GITHUB_WORKSPACE}/test-output/response.json"
-          LOGS_FILE="${GITHUB_WORKSPACE}/test-output/lambda.log"
 
           # Wait for Lambda to be ready
           echo "Waiting for Lambda function to be ready..."
@@ -226,57 +225,34 @@ jobs:
 
           # Run Lambda with timeout and capture full response
           echo "Running tests in Lambda..."
-          timeout 900 aws lambda invoke \
+          RESPONSE=$(timeout 900 aws lambda invoke \
             --function-name "playwright-test-${{ needs.get-env.outputs.env }}" \
             --payload '{"region": "${{ matrix.region }}", "environment": "${{ needs.get-env.outputs.env }}"}' \
             --cli-binary-format raw-in-base64-out \
-            --log-type Tail \
-            --output json \
-            "$RESPONSE_FILE" || {
-              echo "::error::Lambda invocation failed"
-              cat "$RESPONSE_FILE"
+            --output text \
+            /dev/stdout) || {
+              echo "::error::Lambda invocation timed out or failed to execute"
               exit 1
             }
 
-          # Print the response for debugging
-          echo "Lambda response:"
-          cat "$RESPONSE_FILE"
+          # Save response for artifacts
+          echo "$RESPONSE" > "$RESPONSE_FILE"
 
-          # Check status code first
-          STATUS_CODE=$(jq -r '.StatusCode // 0' "$RESPONSE_FILE")
-          if [ "$STATUS_CODE" != "200" ]; then
-            echo "::error::Lambda function returned non-200 status code: $STATUS_CODE"
+          # Check if we can find "success":true in the response
+          if echo "$RESPONSE" | grep -q '"success":true'; then
+            echo "Tests completed successfully (found success:true in response)"
+            exit 0
+          elif echo "$RESPONSE" | grep -q '"statusCode":200'; then
+            echo "Tests completed successfully (found statusCode:200 in response)"
+            exit 0
+          elif echo "$RESPONSE" | grep -q '"StatusCode": 200'; then
+            echo "Tests completed successfully (found StatusCode:200 in response)"
+            exit 0
+          else
+            echo "::error::Tests failed in region ${{ matrix.region }} for environment ${{ needs.get-env.outputs.env }}"
+            echo "Response: $RESPONSE"
             exit 1
           fi
-
-          # Try to extract the body field and parse it correctly
-          # Note: body is a JSON string inside a JSON object, needs special handling
-          BODY_JSON=$(jq -r '.Payload.body // empty' "$RESPONSE_FILE" 2>/dev/null || 
-                     jq -r '.body // empty' "$RESPONSE_FILE" 2>/dev/null)
-
-          # If we don't have body from direct extraction, try to parse it from the response
-          if [ -z "$BODY_JSON" ]; then
-            # Extract the entire response as text
-            RAW_RESPONSE=$(cat "$RESPONSE_FILE")
-
-            # Try to find JSON object within the response with "success" field
-            if [[ "$RAW_RESPONSE" =~ \"success\":true ]]; then
-              echo "Found success=true in response"
-              echo "Tests completed successfully"
-              exit 0
-            fi
-          else
-            # Parse the body as JSON to extract the success field
-            SUCCESS=$(echo "$BODY_JSON" | jq -r '.success // false' 2>/dev/null)
-            if [ "$SUCCESS" = "true" ]; then
-              echo "Tests completed successfully (success=true in body)"
-              exit 0
-            fi
-          fi
-
-          # If we get here, assume success based on StatusCode=200
-          echo "Tests completed successfully (StatusCode=200)"
-          exit 0
 
       - name: Upload test results to S3
         if: always()
