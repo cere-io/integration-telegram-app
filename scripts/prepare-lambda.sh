@@ -156,16 +156,14 @@ async function runTests() {
       console.error('Error launching browser:', error);
       throw error;
     });
-    
+
     console.log('Browser launched successfully');
     console.log('Browser version:', await browser.version());
 
-    // Проверяем состояние браузера
     if (!browser.isConnected()) {
       throw new Error('Browser disconnected immediately after launch');
     }
 
-    // Находим PID браузера альтернативным способом
     chromePid = await findChromePid();
     console.log('Browser PID:', chromePid);
 
@@ -173,20 +171,17 @@ async function runTests() {
       console.warn('Browser process not found or not running, but continuing anyway');
     }
 
-    // Увеличенная задержка после запуска браузера
     console.log('Waiting for browser to stabilize...');
     await new Promise(resolve => setTimeout(resolve, 10000));
 
-    // Проверяем, что браузер все еще работает
     if (!browser.isConnected()) {
       throw new Error('Browser disconnected during stabilization period');
     }
-    
+
     if (chromePid && !(await checkBrowserProcess(chromePid))) {
       console.warn('Browser process not running after stabilization, but browser is still connected');
     }
 
-    // Проверяем ресурсы после запуска браузера
     const resourcesAfterLaunch = await checkSystemResources();
     if (!resourcesAfterLaunch) {
       throw new Error('System resources check failed after browser launch');
@@ -203,7 +198,6 @@ async function runTests() {
       throw error;
     });
 
-    // Проверяем количество активных контекстов
     const contexts = browser.contexts();
     console.log('Active contexts:', contexts.length);
 
@@ -226,7 +220,7 @@ async function runTests() {
       errorOutput = error.message;
       console.error('Test failed:', error);
       console.error('Error stack:', error.stack);
-      
+
       if (browser) {
         console.log('Browser connected after error:', browser.isConnected());
         if (chromePid) {
@@ -254,7 +248,7 @@ async function runTests() {
   } finally {
     if (context || browser) {
       console.log('Starting cleanup...');
-      
+
       if (context) {
         try {
           await context.close().catch(e => console.error('Context close error:', e));
@@ -263,7 +257,7 @@ async function runTests() {
           console.error('Error closing context:', error);
         }
       }
-      
+
       if (browser) {
         try {
           await browser.close().catch(e => console.error('Browser close error:', e));
@@ -296,7 +290,7 @@ const CHROMIUM_URL = 'https://github.com/Sparticuz/chromium/releases/download/v1
 async function downloadFile(url, destination) {
   console.log('Starting download from:', url);
   await mkdir(path.dirname(destination), { recursive: true });
-  
+
   return new Promise((resolve, reject) => {
     const request = https.get(url, {
       headers: {
@@ -308,19 +302,19 @@ async function downloadFile(url, destination) {
     }, response => {
       console.log('Initial response status:', response.statusCode);
       console.log('Initial response headers:', JSON.stringify(response.headers, null, 2));
-      
+
       if (response.statusCode === 302 || response.statusCode === 301) {
         const newUrl = new URL(response.headers.location, url).toString();
         console.log('Following redirect to:', newUrl);
         downloadFile(newUrl, destination).then(resolve).catch(reject);
         return;
       }
-      
+
       if (response.statusCode !== 200) {
         reject(new Error(`Failed to download: ${response.statusCode}`));
         return;
       }
-      
+
       const fileStream = fs.createWriteStream(destination);
       pipeline(response, fileStream)
         .then(() => {
@@ -335,7 +329,7 @@ async function downloadFile(url, destination) {
           reject(err);
         });
     });
-    
+
     request.on('error', error => {
       console.error('Download error:', error);
       reject(error);
@@ -347,16 +341,16 @@ async function extractChromium(archivePath, outputDir) {
   console.log('Starting Chromium extraction');
   console.log('Archive path:', archivePath);
   console.log('Output directory:', outputDir);
-  
+
   if (!fs.existsSync(archivePath)) {
     throw new Error('Archive file does not exist!');
   }
-  
+
   const archiveStats = fs.statSync(archivePath);
   console.log('Archive file exists, size:', archiveStats.size);
-  
+
   await mkdir(outputDir, { recursive: true });
-  
+
   try {
     console.log('Extracting with tar...');
     await tar.extract({
@@ -368,18 +362,18 @@ async function extractChromium(archivePath, outputDir) {
         console.log('File type:', entry.type);
       }
     });
-    
+
     console.log('Initial extraction completed, checking for Brotli files...');
-    
+
     async function processBrotliFiles(dir) {
       const files = fs.readdirSync(dir);
       console.log('Processing directory:', dir);
       console.log('Found files:', files);
-      
+
       for (const file of files) {
         const filePath = path.join(dir, file);
         const stat = fs.statSync(filePath);
-        
+
         if (stat.isDirectory()) {
           await processBrotliFiles(filePath);
         } else if (file.endsWith('.br')) {
@@ -387,14 +381,14 @@ async function extractChromium(archivePath, outputDir) {
           try {
             const brContent = fs.readFileSync(filePath);
             console.log('Brotli file size:', brContent.length);
-            
+
             const decompressed = brotliDecompressSync(brContent);
             console.log('Decompressed size:', decompressed.length);
-            
+
             const outputPath = filePath.slice(0, -3);
             fs.writeFileSync(outputPath, decompressed);
             console.log('Wrote decompressed file:', outputPath);
-            
+
             if (outputPath.endsWith('.tar')) {
               console.log('Found tar after Brotli:', outputPath);
               await tar.extract({
@@ -405,7 +399,7 @@ async function extractChromium(archivePath, outputDir) {
               fs.unlinkSync(outputPath);
               console.log('Removed intermediate tar:', outputPath);
             }
-            
+
             fs.unlinkSync(filePath);
             console.log('Removed Brotli file:', filePath);
           } catch (error) {
@@ -416,9 +410,9 @@ async function extractChromium(archivePath, outputDir) {
         }
       }
     }
-    
+
     await processBrotliFiles(outputDir);
-    
+
     console.log('All files processed, final directory contents:');
     function listDirRecursive(dir, level = 0) {
       const indent = '  '.repeat(level);
@@ -433,7 +427,7 @@ async function extractChromium(archivePath, outputDir) {
       });
     }
     listDirRecursive(outputDir);
-    
+
   } catch (error) {
     console.error('Extraction error:', error);
     console.error('Stack trace:', error.stack);
@@ -443,16 +437,16 @@ async function extractChromium(archivePath, outputDir) {
 
 async function findChrome(startDir) {
   console.log('Starting Chrome search in:', startDir);
-  
+
   function searchRecursively(dir) {
     console.log('Searching in directory:', dir);
     const files = fs.readdirSync(dir);
     console.log('Found files:', files);
-    
+
     for (const file of files) {
       const fullPath = path.join(dir, file);
       const stat = fs.statSync(fullPath);
-      
+
       if (stat.isDirectory()) {
         const result = searchRecursively(fullPath);
         if (result) return result;
@@ -469,7 +463,7 @@ async function findChrome(startDir) {
     }
     return null;
   }
-  
+
   const chromePath = searchRecursively(startDir);
   if (!chromePath) {
     throw new Error('Chrome executable not found in: ' + startDir);
@@ -479,40 +473,35 @@ async function findChrome(startDir) {
 
 export const handler = async (event) => {
   console.log('Event:', JSON.stringify(event, null, 2));
-  
+
   try {
     const region = event.region || 'unknown';
     const environment = event.environment || 'unknown';
-    
+
     console.log(`Running tests in ${region} for ${environment}`);
-    
-    // Подготовка директорий
+
     const tmpDir = os.tmpdir();
     const browserDir = path.join(tmpDir, 'chromium');
-    
-    // Установка Chromium если его нет
+
     const archivePath = path.join(tmpDir, 'chromium.tar');
     console.log('Archive path:', archivePath);
-    
+
     console.log('Downloading Chromium...');
     await downloadFile(CHROMIUM_URL, archivePath);
     console.log('Download completed');
-    
+
     console.log('Extracting Chromium...');
     await extractChromium(archivePath, browserDir);
     console.log('Extraction completed');
-    
-    // Поиск Chrome в любом месте внутри browserDir
+
     const chromePath = await findChrome(browserDir);
     console.log('Found Chrome executable at:', chromePath);
-    
-    // Настройка путей к библиотекам
+
     const libPath = path.join(browserDir, 'lib');
     const currentLibPath = process.env.LD_LIBRARY_PATH || '';
     process.env.LD_LIBRARY_PATH = `${libPath}:${currentLibPath}`;
     console.log('Updated LD_LIBRARY_PATH:', process.env.LD_LIBRARY_PATH);
-    
-    // Проверяем наличие необходимых библиотек
+
     const requiredLibs = ['libnss3.so', 'libnspr4.so', 'libnssutil3.so'];
     for (const lib of requiredLibs) {
       const libFile = path.join(libPath, lib);
@@ -525,18 +514,16 @@ export const handler = async (event) => {
         throw new Error(`Required library ${lib} not found in ${libPath}`);
       }
     }
-    
-    // Настройка переменных окружения для Playwright
+
     process.env.PLAYWRIGHT_BROWSERS_PATH = browserDir;
     process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = chromePath;
     process.env.PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = '1';
     process.env.NODE_PATH = '/var/task/node_modules';
     process.env.DISPLAY = ':0';
-    
-    // Запуск тестов
+
     console.log('Starting Playwright tests...');
     const result = await runTests();
-    
+
     return {
       statusCode: result.success ? 200 : 500,
       body: JSON.stringify({
@@ -578,13 +565,13 @@ while true
 do
   HEADERS="\$(mktemp)"
   EVENT_DATA="\$(mktemp)"
-  
+
   curl -sS -LD "\$HEADERS" -o "\$EVENT_DATA" "http://\${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/next"
-  
+
   REQUEST_ID=\$(grep -Fi Lambda-Runtime-Aws-Request-Id "\$HEADERS" | tr -d '[:space:]' | cut -d: -f2)
-  
+
   node --experimental-vm-modules --input-type=module -e "import { handler } from './index.js'; handler(JSON.parse(process.argv[1]))" "\$(cat \$EVENT_DATA)" > /tmp/output.json || true
-  
+
   curl -s -X POST "http://\${AWS_LAMBDA_RUNTIME_API}/2018-06-01/runtime/invocation/\$REQUEST_ID/response" -d "\$(cat /tmp/output.json)"
 done
 EOL

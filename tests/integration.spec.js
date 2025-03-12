@@ -8,7 +8,7 @@ const campaignId = process.env.TEST_CAMPAIGN_ID || '114';
 
 const logTime = (testName, time) => {
   const logMessage = `${testName} took ${time}ms\n`;
-  fs.appendFileSync(`performance-log.txt`, logMessage);
+  fs.appendFileSync(`/tmp/performance-log.txt`, logMessage);
 };
 
 const login = async (page) => {
