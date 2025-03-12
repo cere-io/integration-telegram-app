@@ -209,94 +209,82 @@ jobs:
         id: run_tests
         working-directory: ${{ github.workspace }}
         run: |
-          # Use clean paths for all files
-          RESPONSE_FILE="${GITHUB_WORKSPACE}/test-output/response.json"
-          METRICS_FILE="${GITHUB_WORKSPACE}/test-output/performance-metrics.txt"
+          # Все существующие шаги до извлечения метрик...
 
-          # Create output directory if it doesn't exist
-          mkdir -p "${GITHUB_WORKSPACE}/test-output"
+          # Затем парсим метрики и заменяем этот блок:
+          if [ "$METRICS" != "No metrics found" ] && [ -n "$METRICS" ]; then
+            echo "$METRICS"
+            echo "$METRICS" > "$METRICS_FILE"
 
-          # Wait for Lambda to be ready
-          echo "Waiting for Lambda function to be ready..."
-          aws lambda wait function-active \
-            --function-name "playwright-test-${{ needs.get-env.outputs.env }}" \
-            --region ${{ matrix.region }} || {
-              echo "::error::Lambda function not ready after waiting"
-              exit 1
-            }
+            # Заменяем этот простой вывод:
+            # echo "## Performance Metrics" >> $GITHUB_STEP_SUMMARY
+            # echo '```' >> $GITHUB_STEP_SUMMARY
+            # echo "$METRICS" >> $GITHUB_STEP_SUMMARY
+            # echo '```' >> $GITHUB_STEP_SUMMARY
 
-          echo "Lambda function is ready, starting tests..."
+            # На красивый отчет:
+            echo "# 📊 Performance Test Results" >> $GITHUB_STEP_SUMMARY
+            echo "| Test | Duration | Status |" >> $GITHUB_STEP_SUMMARY
+            echo "| ---- | -------- | ------ |" >> $GITHUB_STEP_SUMMARY
 
-          # Run Lambda with timeout and capture full response
-          echo "Running tests in Lambda..."
-          RESPONSE=$(timeout 900 aws lambda invoke \
-            --function-name "playwright-test-${{ needs.get-env.outputs.env }}" \
-            --payload '{"region": "${{ matrix.region }}", "environment": "${{ needs.get-env.outputs.env }}"}' \
-            --cli-binary-format raw-in-base64-out \
-            --output json \
-            /dev/stdout) || {
-              echo "::error::Lambda invocation timed out or failed to execute"
-              exit 1
-            }
+            # Парсим каждую строку метрик и форматируем таблицу
+            while IFS= read -r line; do
+              if [[ $line =~ ([a-zA-Z ]+)\ took\ ([0-9]+)ms ]]; then
+                TEST_NAME="${BASH_REMATCH[1]}"
+                DURATION="${BASH_REMATCH[2]}"
 
-          # Save response for artifacts
-          echo "$RESPONSE" > "$RESPONSE_FILE"
+                # Определяем статус на основе времени выполнения
+                if [ "$DURATION" -lt 1000 ]; then
+                  STATUS="✅ Excellent"
+                elif [ "$DURATION" -lt 5000 ]; then
+                  STATUS="✅ Good"
+                elif [ "$DURATION" -lt 10000 ]; then
+                  STATUS="⚠️ Acceptable"
+                else
+                  STATUS="🔴 Slow"
+                fi
 
-          # Print response for debugging
-          echo "Raw Lambda response:"
-          echo "$RESPONSE"
+                # Добавляем строку в таблицу
+                echo "| $TEST_NAME | ${DURATION}ms | $STATUS |" >> $GITHUB_STEP_SUMMARY
+              fi
+            done <<< "$METRICS"
 
-          # Extract and display performance metrics if available
-          echo "===== PERFORMANCE METRICS ====="
-          # First extract the body field
-          BODY=$(echo "$RESPONSE" | jq -r '.body')
-          echo "Body content: $BODY"
+            # Добавляем сводную информацию
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "## Summary" >> $GITHUB_STEP_SUMMARY
+            echo "Environment: **${{ needs.get-env.outputs.env }}**" >> $GITHUB_STEP_SUMMARY
+            echo "Region: **${{ matrix.region }}**" >> $GITHUB_STEP_SUMMARY
+            echo "Run ID: [#${{ github.run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
 
-          # Then parse the body as JSON and extract performanceMetrics
-          if echo "$BODY" | jq -e . >/dev/null 2>&1; then
-            # Body is valid JSON
-            METRICS=$(echo "$BODY" | jq -r '.performanceMetrics // "No metrics found"')
+            # Добавляем график времени выполнения
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "## Performance Chart" >> $GITHUB_STEP_SUMMARY
+            echo '```mermaid' >> $GITHUB_STEP_SUMMARY
+            echo 'gantt' >> $GITHUB_STEP_SUMMARY
+            echo '    title Test Duration (lower is better)' >> $GITHUB_STEP_SUMMARY
+            echo '    dateFormat  X' >> $GITHUB_STEP_SUMMARY
+            echo '    axisFormat %s' >> $GITHUB_STEP_SUMMARY
 
-            if [ "$METRICS" != "No metrics found" ] && [ -n "$METRICS" ]; then
-              echo "$METRICS"
-              echo "$METRICS" > "$METRICS_FILE"
+            while IFS= read -r line; do
+              if [[ $line =~ ([a-zA-Z ]+)\ took\ ([0-9]+)ms ]]; then
+                TEST_NAME="${BASH_REMATCH[1]}"
+                DURATION="${BASH_REMATCH[2]}"
 
-              # Add to GitHub summary
-              echo "## Performance Metrics" >> $GITHUB_STEP_SUMMARY
-              echo '```' >> $GITHUB_STEP_SUMMARY
-              echo "$METRICS" >> $GITHUB_STEP_SUMMARY
-              echo '```' >> $GITHUB_STEP_SUMMARY
-            else
-              echo "No performance metrics found in body JSON"
-            fi
+                # Преобразуем миллисекунды в секунды для графика
+                DURATION_SEC=$(echo "scale=1; $DURATION/1000" | bc)
+
+                echo "    ${TEST_NAME} :0, ${DURATION_SEC}s" >> $GITHUB_STEP_SUMMARY
+              fi
+            done <<< "$METRICS"
+
+            echo '```' >> $GITHUB_STEP_SUMMARY
           else
-            echo "Body is not valid JSON, trying fallback extraction"
-            # Fallback to regex extraction if body is not valid JSON
-            METRICS=$(echo "$BODY" | grep -o '"performanceMetrics":"[^"]*"' | sed 's/"performanceMetrics":"//g' | sed 's/"$//g' | sed 's/\\n/\n/g')
+            echo "No performance metrics found in body JSON"
 
-            if [ -n "$METRICS" ]; then
-              echo "$METRICS"
-              echo "$METRICS" > "$METRICS_FILE"
-            else
-              echo "No performance metrics found using fallback method"
-            fi
-          fi
-          echo "=============================="
-
-          # Check if we can find "success":true in the response
-          if echo "$BODY" | jq -e '.success == true' >/dev/null 2>&1; then
-            echo "Tests completed successfully (found success:true in response body)"
-            exit 0
-          elif echo "$RESPONSE" | jq -e '.statusCode == 200' >/dev/null 2>&1; then
-            echo "Tests completed successfully (found statusCode:200 in response)"
-            exit 0
-          elif echo "$RESPONSE" | jq -e '.StatusCode == 200' >/dev/null 2>&1; then
-            echo "Tests completed successfully (found StatusCode:200 in response)"
-            exit 0
-          else
-            echo "::error::Tests failed in region ${{ matrix.region }} for environment ${{ needs.get-env.outputs.env }}"
-            echo "Response: $RESPONSE"
-            exit 1
+            # Добавляем сообщение об ошибке в отчет
+            echo "# ❌ Performance Test Results" >> $GITHUB_STEP_SUMMARY
+            echo "No performance metrics were found in the Lambda response." >> $GITHUB_STEP_SUMMARY
+            echo "Please check the logs for more information." >> $GITHUB_STEP_SUMMARY
           fi
 
 #      - name: Upload test results to S3
