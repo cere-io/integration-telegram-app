@@ -523,6 +523,7 @@ export const handler = async (event) => {
 
     console.log('Starting Playwright tests...');
     const result = await runTests();
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     let performanceMetrics = "";
     try {

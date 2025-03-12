@@ -299,16 +299,16 @@ jobs:
             exit 1
           fi
 
-      - name: Upload test results to S3
-        if: always()
-        run: |
-          echo "Uploading test results to S3..."
-          aws s3 cp \
-            "$GITHUB_WORKSPACE/test-output/" \
-            "s3://cere-playwright-tests-results/telegram/${{ needs.get-env.outputs.env }}/${{ matrix.region }}/${{ github.run_id }}/" \
-            --recursive || echo "::warning::Failed to upload test results to S3"
-
-          echo "Test results uploaded to s3://cere-playwright-tests-results/telegram/${{ needs.get-env.outputs.env }}/${{ matrix.region }}/${{ github.run_id }}/"
+#      - name: Upload test results to S3
+#        if: always()
+#        run: |
+#          echo "Uploading test results to S3..."
+#          aws s3 cp \
+#            "$GITHUB_WORKSPACE/test-output/" \
+#            "s3://cere-playwright-tests-results/telegram/${{ needs.get-env.outputs.env }}/${{ matrix.region }}/${{ github.run_id }}/" \
+#            --recursive || echo "::warning::Failed to upload test results to S3"
+#
+#          echo "Test results uploaded to s3://cere-playwright-tests-results/telegram/${{ needs.get-env.outputs.env }}/${{ matrix.region }}/${{ github.run_id }}/"
 
       - name: Upload test results as artifacts
         if: always()

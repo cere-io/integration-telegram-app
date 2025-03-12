@@ -7,10 +7,8 @@ const appUrl = process.env.TEST_APP_URL || 'https://telegram-viewer-app.stage.ce
 const campaignId = process.env.TEST_CAMPAIGN_ID || '120';
 
 const logTime = (testName, time) => {
-  console.log(`Recording metric: ${testName} took ${time}ms`);
   const logMessage = `${testName} took ${time}ms\n`;
   fs.appendFileSync(`/tmp/performance-log.txt`, logMessage);
-  console.log(`Metric recorded for ${testName}`);
 };
 
 const login = async (page) => {
@@ -77,6 +75,7 @@ async function testLeaderboardScreen({ page }) {
   const leaderboardTabButton = page.locator('xpath=/html/body/div[1]/div/div/div[2]/button[2]');
   await leaderboardTabButton.scrollIntoViewIfNeeded();
   await leaderboardTabButton.click();
+
 
   let timeTaken = Date.now() - start;
   logTime('Leaderboard Screen', timeTaken);
