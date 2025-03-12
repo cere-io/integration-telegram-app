@@ -6,17 +6,14 @@ const otp = process.env.TEST_USER_OTP || '555555';
 const appUrl = process.env.TEST_APP_URL || 'https://telegram-viewer-app.stage.cere.io';
 const campaignId = process.env.TEST_CAMPAIGN_ID || '120';
 
-// Собираем метрики в глобальную переменную для надежности
 const metrics = [];
 
 const logTime = (testName, time) => {
   const logMessage = `${testName} took ${time}ms\n`;
   console.log(`Recording metric: ${logMessage.trim()}`);
 
-  // Добавляем в массив метрик
   metrics.push({ name: testName, duration: time });
 
-  // Также пишем в файл как раньше
   try {
     fs.appendFileSync(`/tmp/performance-log.txt`, logMessage);
     console.log(`Metric recorded for ${testName}`);
@@ -57,7 +54,6 @@ const login = async (page) => {
   await verifyButton.click();
 };
 
-// ВАЖНО: Определите функции тестов до их использования
 async function testActiveQuestsScreen({ page }) {
   console.log('Testing Active Quests screen...');
   let start = Date.now();
@@ -111,10 +107,8 @@ async function testLibraryScreen({ page }) {
 
 export default async function runIntegrationTest({ browser, context }) {
   console.log('Starting integration test...');
-  // Очищаем массив метрик
   metrics.length = 0;
 
-  // Очищаем файл метрик
   try {
     fs.writeFileSync('/tmp/performance-log.txt', '');
     console.log('Metrics file cleared');
@@ -132,12 +126,10 @@ export default async function runIntegrationTest({ browser, context }) {
     await testLeaderboardScreen({ page });
     await testLibraryScreen({ page });
 
-    // Выводим собранные метрики для отладки
     console.log('=== COLLECTED METRICS ===');
     console.log(JSON.stringify(metrics, null, 2));
     console.log('========================');
 
-    // Возвращаем метрики как часть результата
     return {
       success: true,
       metrics: metrics
@@ -145,12 +137,10 @@ export default async function runIntegrationTest({ browser, context }) {
   } catch (err) {
     console.error('Error during integration test:', err);
 
-    // Выводим метрики даже в случае ошибки
     console.log('=== METRICS AT ERROR ===');
     console.log(JSON.stringify(metrics, null, 2));
     console.log('=======================');
 
-    // Возвращаем ошибку и собранные до ошибки метрики
     return {
       success: false,
       error: err.message,
