@@ -212,8 +212,7 @@ jobs:
           # Use clean paths for all files
           RESPONSE_FILE="${GITHUB_WORKSPACE}/test-output/response.json"
           LOGS_FILE="${GITHUB_WORKSPACE}/test-output/lambda.log"
-          LOGS_BASE64="${GITHUB_WORKSPACE}/test-output/lambda-logs.base64"
-          
+
           # Wait for Lambda to be ready
           echo "Waiting for Lambda function to be ready..."
           aws lambda wait function-active \
@@ -222,46 +221,73 @@ jobs:
               echo "::error::Lambda function not ready after waiting"
               exit 1
             }
-          
+
           echo "Lambda function is ready, starting tests..."
-          
-          # Run Lambda with timeout and capture logs
+
+          # Run Lambda with timeout and capture full response
           echo "Running tests in Lambda..."
-          RESPONSE=$(timeout 900 aws lambda invoke \
+          timeout 900 aws lambda invoke \
             --function-name "playwright-test-${{ needs.get-env.outputs.env }}" \
             --payload '{"region": "${{ matrix.region }}", "environment": "${{ needs.get-env.outputs.env }}"}' \
             --cli-binary-format raw-in-base64-out \
             --log-type Tail \
-            --query 'LogResult' \
-            --output text \
-            /dev/stdout) || {
+            --output json \
+            "$RESPONSE_FILE" || {
               echo "::error::Lambda invocation failed"
-              echo "Error details:"
-              echo "$RESPONSE"
+              cat "$RESPONSE_FILE"
               exit 1
             }
 
-          # Save response to file
-          echo "$RESPONSE" > "$RESPONSE_FILE"
-
-          # Process and check results
-          if [ -n "$RESPONSE" ]; then
+          # Extract logs base64 string and decode
+          LOG_RESULT=$(cat "$RESPONSE_FILE" | jq -r '.LogResult')
+          if [ -n "$LOG_RESULT" ]; then
             echo "Lambda execution logs:"
-            echo "$RESPONSE" | base64 -d || echo "::warning::Failed to decode Lambda logs"
-            
-            if echo "$RESPONSE" | grep -q "error" || \
-               echo "$RESPONSE" | grep -q "statusCode.:.*500" || \
-               echo "$RESPONSE" | grep -q "FunctionError" || \
-               echo "$RESPONSE" | grep -q "Task timed out"; then
-              echo "::error::Tests failed in region ${{ matrix.region }} for environment ${{ needs.get-env.outputs.env }}"
-              echo "Full response:"
-              echo "$RESPONSE"
-              exit 1
+            echo "$LOG_RESULT" | tr -d '\n' | base64 -d 2>"$LOGS_FILE".err > "$LOGS_FILE" || {
+              echo "::warning::Failed to decode Lambda logs correctly"
+              # Alternative decoding attempt
+              echo "$LOG_RESULT" | sed 's/ /+/g' | base64 -d 2>>"$LOGS_FILE".err >> "$LOGS_FILE" || 
+              echo "::warning::All decoding attempts failed"
+            }
+
+            # Display logs
+            if [ -s "$LOGS_FILE" ]; then
+              cat "$LOGS_FILE"
             fi
-            
-            echo "Tests completed successfully"
+          fi
+
+          # Check if the function execution was successful
+          FUNCTION_ERROR=$(cat "$RESPONSE_FILE" | jq -r '.FunctionError // empty')
+          if [ -n "$FUNCTION_ERROR" ]; then
+            echo "::error::Lambda function returned an error: $FUNCTION_ERROR"
+            cat "$RESPONSE_FILE"
+            exit 1
+          fi
+
+          # Check for success in the actual response
+          PAYLOAD=$(cat "$RESPONSE_FILE" | jq -r '.Payload')
+          if [ -n "$PAYLOAD" ]; then
+            # Extract the body from the payload if it exists
+            BODY=$(echo "$PAYLOAD" | jq -r '.body' 2>/dev/null)
+            if [ -n "$BODY" ]; then
+              # Try to parse as JSON if it is a JSON string
+              SUCCESS=$(echo "$BODY" | jq -r '.success // false' 2>/dev/null)
+              if [ "$SUCCESS" = "true" ]; then
+                echo "Tests completed successfully"
+              else
+                echo "::error::Tests failed in region ${{ matrix.region }} for environment ${{ needs.get-env.outputs.env }}"
+                cat "$RESPONSE_FILE"
+                exit 1
+              fi
+            elif echo "$PAYLOAD" | grep -q "error" || echo "$PAYLOAD" | grep -q "Task timed out"; then
+              echo "::error::Tests failed in region ${{ matrix.region }} for environment ${{ needs.get-env.outputs.env }}"
+              cat "$RESPONSE_FILE"
+              exit 1
+            else
+              echo "Tests completed successfully"
+            fi
           else
-            echo "::error::No test results found"
+            echo "::error::No payload found in Lambda response"
+            cat "$RESPONSE_FILE"
             exit 1
           fi
 
