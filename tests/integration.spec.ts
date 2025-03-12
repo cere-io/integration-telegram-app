@@ -69,8 +69,10 @@ test('Active Quests Screen Performance', async ({ page }) => {
   await page.goto(`${appUrl}/?campaignId=${campaignId}`);
   await page.waitForLoadState('networkidle');
 
-  await page.locator('.tgui-bca5056bf34297b0').click();
-  await page.locator('.welcom-cta-text').click();
+  // await page.locator('.tgui-bca5056bf34297b0').click();
+  // await page.locator('.welcom-cta-text').click();
+  await page.locator('path').nth(1).click();
+  await page.getByRole('button', { name: 'Start Earning' }).click();
 
   await login(page, userName, otp);
 
@@ -85,8 +87,10 @@ test('Leaderboard Screen Performance', async ({ page }) => {
   await page.goto(`${appUrl}/?campaignId=${campaignId}`);
   await page.waitForLoadState('networkidle');
 
-  await page.locator('.tgui-bca5056bf34297b0').click();
-  await page.locator('.welcom-cta-text').click();
+  // await page.locator('.tgui-bca5056bf34297b0').click();
+  // await page.locator('.welcom-cta-text').click();
+  await page.locator('path').nth(1).click();
+  await page.getByRole('button', { name: 'Start Earning' }).click();
 
   await login(page, userName, otp);
 
@@ -105,8 +109,10 @@ test('Library Screen Performance', async ({ page }) => {
   await page.goto(`${appUrl}/?campaignId=${campaignId}`);
   await page.waitForLoadState('networkidle');
 
-  await page.locator('.tgui-bca5056bf34297b0').click();
-  await page.locator('.welcom-cta-text').click();
+  // await page.locator('.tgui-bca5056bf34297b0').click();
+  // await page.locator('.welcom-cta-text').click();
+  await page.locator('path').nth(1).click();
+  await page.getByRole('button', { name: 'Start Earning' }).click();
 
   await page.getByRole('button', { name: 'Library' }).click();
 
