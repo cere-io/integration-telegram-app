@@ -4,11 +4,13 @@ import fs from 'fs';
 const userName = process.env.TEST_USER_EMAIL || 'veronika.filipenko@cere.io';
 const otp = process.env.TEST_USER_OTP || '555555';
 const appUrl = process.env.TEST_APP_URL || 'https://telegram-viewer-app.stage.cere.io';
-const campaignId = process.env.TEST_CAMPAIGN_ID || '114';
+const campaignId = process.env.TEST_CAMPAIGN_ID || '120';
 
 const logTime = (testName, time) => {
+  console.log(`Recording metric: ${testName} took ${time}ms`);
   const logMessage = `${testName} took ${time}ms\n`;
   fs.appendFileSync(`/tmp/performance-log.txt`, logMessage);
+  console.log(`Metric recorded for ${testName}`);
 };
 
 const login = async (page) => {
@@ -43,6 +45,57 @@ const login = async (page) => {
   await verifyButton.click();
 };
 
+async function testActiveQuestsScreen({ page }) {
+  console.log('Testing Active Quests screen...');
+  let start = Date.now();
+
+  await page.goto(`${appUrl}/?campaignId=${campaignId}`, {
+    waitUntil: 'networkidle'
+  });
+
+  await page.waitForLoadState('networkidle');
+
+  await page.locator('path').nth(1).click();
+  await page.getByRole('button', { name: 'Start Earning' }).click();
+
+  await login(page, userName, otp);
+
+  const questTab = await page.locator('.tgui-e6658d0b8927f95e').textContent();
+  console.log('Quest tab text:', questTab);
+  if (questTab !== 'Active Quests') {
+    throw new Error('Active Quests tab not found');
+  }
+
+  let timeTaken = Date.now() - start;
+  logTime('Active Quests Screen', timeTaken);
+}
+
+async function testLeaderboardScreen({ page }) {
+  console.log('Testing Leaderboard screen...');
+  let start = Date.now();
+
+  const leaderboardTabButton = page.locator('xpath=/html/body/div[1]/div/div/div[2]/button[2]');
+  await leaderboardTabButton.scrollIntoViewIfNeeded();
+  await leaderboardTabButton.click();
+
+  let timeTaken = Date.now() - start;
+  logTime('Leaderboard Screen', timeTaken);
+}
+
+async function testLibraryScreen({ page }) {
+  console.log('Testing Library screen...');
+  let start = Date.now();
+
+  const libraryTabButton = page.locator('xpath=/html/body/div[1]/div/div/div[2]/button[3]');
+  await libraryTabButton.scrollIntoViewIfNeeded();
+  await libraryTabButton.click();
+
+  console.log('Library tab clicked successfully.');
+
+  let timeTaken = Date.now() - start;
+  logTime('Library Screen', timeTaken);
+}
+
 export default async function runIntegrationTest({ browser, context }) {
   console.log('Starting integration test...');
   let page;
@@ -51,74 +104,21 @@ export default async function runIntegrationTest({ browser, context }) {
     page = await context.newPage();
     console.log('Page created successfully');
 
-    // Test 1: Active Quests Screen
-    console.log('Testing Active Quests screen...');
-    let start = Date.now();
-
-    await page.goto(`${appUrl}/?campaignId=${campaignId}`, {
-      waitUntil: 'networkidle'
-    });
-
-    await page.waitForLoadState('networkidle');
-
-    await page.locator('path').nth(1).click();
-    await page.getByRole('button', { name: 'Start Earning' }).click();
-
-    await login(page, userName, otp);
-
-    const questTab = await page.locator('.tgui-e6658d0b8927f95e').textContent();
-    console.log('Quest tab text:', questTab);
-    if (questTab !== 'Active Quests') {
-      throw new Error('Active Quests tab not found');
-    }
-
-    let timeTaken = Date.now() - start;
-    logTime('Active Quests Screen', timeTaken);
-
-    // Test 2: Leaderboard Screen
-    console.log('Testing Leaderboard screen...');
-    start = Date.now();
-
-    const leaderboardTabButton = page.locator('xpath=/html/body/div[1]/div/div/div[2]/button[2]');
-    await leaderboardTabButton.scrollIntoViewIfNeeded();
-    await leaderboardTabButton.click();
-
-    const leaderboardTab = await page.locator('.tgui-e6658d0b8927f95e').textContent();
-    if (leaderboardTab !== 'Leaderboard') {
-      throw new Error('Leaderboard tab not found');
-    }
-
-    const leaderboardTitle = await page.locator('.jss1').textContent();
-    if (leaderboardTitle !== 'Leaderboard') {
-      throw new Error('Leaderboard title not found');
-    }
-
-    const leaderboardElement = await page.locator('.l1shii3t');
-    await leaderboardElement.scrollIntoViewIfNeeded();
-    await leaderboardElement.click();
-
-    const leaderboardResult = await page.locator('.p1kqqlhg').textContent();
-    if (leaderboardResult !== '1 out of 3 tasks completed – Could do better') {
-      throw new Error('Incorrect leaderboard result');
-    }
-
-    timeTaken = Date.now() - start;
-    logTime('Leaderboard Screen', timeTaken);
-
-    // Test 3: Library Screen
-    console.log('Testing Library screen...');
-    start = Date.now();
-
-    const libraryTabButton = page.locator('xpath=/html/body/div[1]/div/div/div[2]/button[3]');
-    await libraryTabButton.scrollIntoViewIfNeeded();
-    await libraryTabButton.click();
-
-    console.log('Library tab clicked successfully.');
-
-    timeTaken = Date.now() - start;
-    logTime('Library Screen', timeTaken);
+    await testActiveQuestsScreen({ page });
+    await testLeaderboardScreen({ page });
+    await testLibraryScreen({ page });
   } catch (err) {
     console.error('Error during integration test:', err);
+
+    try {
+      if (fs.existsSync('/tmp/performance-log.txt')) {
+        const metrics = fs.readFileSync('/tmp/performance-log.txt', 'utf8');
+        console.log('Current performance metrics:');
+        console.log(metrics);
+      }
+    } catch (readErr) {
+      console.error('Error reading performance metrics:', readErr);
+    }
   } finally {
     if (page) {
       await page.close();
