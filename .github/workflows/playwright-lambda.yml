@@ -211,6 +211,10 @@ jobs:
         run: |
           # Use clean paths for all files
           RESPONSE_FILE="${GITHUB_WORKSPACE}/test-output/response.json"
+          METRICS_FILE="${GITHUB_WORKSPACE}/test-output/performance-metrics.txt"
+
+          # Create output directory if it doesn't exist
+          mkdir -p "${GITHUB_WORKSPACE}/test-output"
 
           # Wait for Lambda to be ready
           echo "Waiting for Lambda function to be ready..."
@@ -237,6 +241,18 @@ jobs:
 
           # Save response for artifacts
           echo "$RESPONSE" > "$RESPONSE_FILE"
+
+          # Extract and display performance metrics if available
+          echo "===== PERFORMANCE METRICS ====="
+          if echo "$RESPONSE" | grep -q "performanceMetrics"; then
+            # Extract the performanceMetrics field from the JSON response
+            METRICS=$(echo "$RESPONSE" | grep -o '"performanceMetrics":"[^"]*"' | sed 's/"performanceMetrics":"//g' | sed 's/"$//g' | sed 's/\\n/\n/g')
+            echo "$METRICS"
+            echo "$METRICS" > "$METRICS_FILE"
+          else
+            echo "No performance metrics found in the response"
+          fi
+          echo "=============================="
 
           # Check if we can find "success":true in the response
           if echo "$RESPONSE" | grep -q '"success":true'; then

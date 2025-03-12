@@ -524,12 +524,26 @@ export const handler = async (event) => {
     console.log('Starting Playwright tests...');
     const result = await runTests();
 
+    let performanceMetrics = "";
+    try {
+      if (fs.existsSync('/tmp/performance-log.txt')) {
+        performanceMetrics = fs.readFileSync('/tmp/performance-log.txt', 'utf8');
+        console.log('Performance metrics collected:');
+        console.log(performanceMetrics);
+      } else {
+        console.log('Performance metrics file not found');
+      }
+    } catch (err) {
+      console.error("Error reading performance log:", err);
+    }
+
     return {
       statusCode: result.success ? 200 : 500,
       body: JSON.stringify({
         success: result.success,
         output: result.output,
         errorOutput: result.errorOutput,
+        performanceMetrics: performanceMetrics,
         region,
         environment
       })
