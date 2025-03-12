@@ -233,7 +233,7 @@ jobs:
             --function-name "playwright-test-${{ needs.get-env.outputs.env }}" \
             --payload '{"region": "${{ matrix.region }}", "environment": "${{ needs.get-env.outputs.env }}"}' \
             --cli-binary-format raw-in-base64-out \
-            --output text \
+            --output json \
             /dev/stdout) || {
               echo "::error::Lambda invocation timed out or failed to execute"
               exit 1
@@ -242,26 +242,55 @@ jobs:
           # Save response for artifacts
           echo "$RESPONSE" > "$RESPONSE_FILE"
 
+          # Print response for debugging
+          echo "Raw Lambda response:"
+          echo "$RESPONSE"
+
           # Extract and display performance metrics if available
           echo "===== PERFORMANCE METRICS ====="
-          if echo "$RESPONSE" | grep -q "performanceMetrics"; then
-            # Extract the performanceMetrics field from the JSON response
-            METRICS=$(echo "$RESPONSE" | grep -o '"performanceMetrics":"[^"]*"' | sed 's/"performanceMetrics":"//g' | sed 's/"$//g' | sed 's/\\n/\n/g')
-            echo "$METRICS"
-            echo "$METRICS" > "$METRICS_FILE"
+          # First extract the body field
+          BODY=$(echo "$RESPONSE" | jq -r '.body')
+          echo "Body content: $BODY"
+
+          # Then parse the body as JSON and extract performanceMetrics
+          if echo "$BODY" | jq -e . >/dev/null 2>&1; then
+            # Body is valid JSON
+            METRICS=$(echo "$BODY" | jq -r '.performanceMetrics // "No metrics found"')
+
+            if [ "$METRICS" != "No metrics found" ] && [ -n "$METRICS" ]; then
+              echo "$METRICS"
+              echo "$METRICS" > "$METRICS_FILE"
+
+              # Add to GitHub summary
+              echo "## Performance Metrics" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              echo "$METRICS" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+            else
+              echo "No performance metrics found in body JSON"
+            fi
           else
-            echo "No performance metrics found in the response"
+            echo "Body is not valid JSON, trying fallback extraction"
+            # Fallback to regex extraction if body is not valid JSON
+            METRICS=$(echo "$BODY" | grep -o '"performanceMetrics":"[^"]*"' | sed 's/"performanceMetrics":"//g' | sed 's/"$//g' | sed 's/\\n/\n/g')
+
+            if [ -n "$METRICS" ]; then
+              echo "$METRICS"
+              echo "$METRICS" > "$METRICS_FILE"
+            else
+              echo "No performance metrics found using fallback method"
+            fi
           fi
           echo "=============================="
 
           # Check if we can find "success":true in the response
-          if echo "$RESPONSE" | grep -q '"success":true'; then
-            echo "Tests completed successfully (found success:true in response)"
+          if echo "$BODY" | jq -e '.success == true' >/dev/null 2>&1; then
+            echo "Tests completed successfully (found success:true in response body)"
             exit 0
-          elif echo "$RESPONSE" | grep -q '"statusCode":200'; then
+          elif echo "$RESPONSE" | jq -e '.statusCode == 200' >/dev/null 2>&1; then
             echo "Tests completed successfully (found statusCode:200 in response)"
             exit 0
-          elif echo "$RESPONSE" | grep -q '"StatusCode": 200'; then
+          elif echo "$RESPONSE" | jq -e '.StatusCode == 200' >/dev/null 2>&1; then
             echo "Tests completed successfully (found StatusCode:200 in response)"
             exit 0
           else
