@@ -15,24 +15,32 @@ const login = async (page: Page, userName: string, otp: string) => {
   await page.waitForSelector('#torusIframe', { timeout: 30000 });
   const torusFrame = await page.frameLocator('#torusIframe');
 
-  await page.waitForSelector('iframe[title="Embedded browser"]', { timeout: 30000 });
+  await torusFrame.locator('iframe[title="Embedded browser"]').waitFor({ timeout: 30000 });
   const embeddedFrame = await torusFrame.frameLocator('iframe[title="Embedded browser"]');
 
-  await embeddedFrame.locator('button:has-text("I already have a wallet")').waitFor({ timeout: 30000 });
-  await embeddedFrame.getByRole('button', { name: 'I already have a wallet' }).click();
+  const buttonLogin = embeddedFrame.locator('button:has-text("I already have a wallet")');
+  await buttonLogin.scrollIntoViewIfNeeded();
+  await buttonLogin.waitFor({ state: 'visible', timeout: 10000 });
+  await buttonLogin.click();
 
-  await embeddedFrame.locator('input[type="email"]').waitFor({ timeout: 30000 });
-  await embeddedFrame.getByRole('textbox', { name: 'Email' }).fill(userName);
+  const emailInput = embeddedFrame.getByRole('textbox', { name: 'Email' });
+  await emailInput.scrollIntoViewIfNeeded();
+  await emailInput.waitFor({ state: 'visible', timeout: 10000 });
+  await emailInput.fill(userName);
 
-  await embeddedFrame.locator('button:has-text("Sign In")').waitFor({ timeout: 30000 });
-  await embeddedFrame.getByRole('button', { name: 'Sign In' }).click();
+  const signInButton = embeddedFrame.locator('button:has-text("Sign In")');
+  await signInButton.scrollIntoViewIfNeeded();
+  await signInButton.waitFor({ state: 'visible', timeout: 10000 });
+  await signInButton.click();
 
-  await page.waitForTimeout(2000);
-  await embeddedFrame.locator('input[type="text"]').waitFor({ timeout: 30000 });
-  await embeddedFrame.getByRole('textbox', { name: 'OTP input' }).fill(otp);
+  const otpInput = embeddedFrame.getByRole('textbox', { name: 'OTP input' });
+  await otpInput.waitFor({ state: 'visible', timeout: 10000 });
+  await otpInput.fill(otp);
 
-  await embeddedFrame.locator('button:has-text("Verify")').waitFor({ timeout: 30000 });
-  await embeddedFrame.getByRole('button', { name: 'Verify' }).click();
+  const verifyButton = embeddedFrame.locator('button:has-text("Verify")');
+  await verifyButton.scrollIntoViewIfNeeded();
+  await verifyButton.waitFor({ state: 'visible', timeout: 10000 });
+  await verifyButton.click();
 };
 
 test('Environment and Geolocation Check', async ({ page }) => {
