@@ -12,7 +12,6 @@ const logTime = (testName, time) => {
 };
 
 const login = async (page) => {
-  // Добавляем ожидание данных фрейма
   await page.waitForSelector('#torusIframe', { timeout: 30000 });
   const torusFrame = await page.frameLocator('#torusIframe');
 
@@ -56,38 +55,17 @@ export default async function runIntegrationTest({ browser, context }) {
     console.log('Testing Active Quests screen...');
     let start = Date.now();
 
-    // Заходим на URL
     await page.goto(`${appUrl}/?campaignId=${campaignId}`, {
       waitUntil: 'networkidle'
     });
 
-    // Проверяем, что страница загружена
     await page.waitForLoadState('networkidle');
-
-    // Попробуем кликнуть на кнопки с логами видимости элемента
-    // const welcomeButton = page.locator('.tgui-bca5056bf34297b0');
-    // if (await welcomeButton.isVisible()) {
-    //   console.log('Welcome button is visible');
-    //   await welcomeButton.click();
-    // } else {
-    //   throw new Error('Welcome button is not visible or interactable!');
-    // }
-    //
-    // const welcomeCtaText = page.locator('.welcom-cta-text');
-    // if (await welcomeCtaText.isVisible()) {
-    //   console.log('Welcome CTA button is visible');
-    //   await welcomeCtaText.click();
-    // } else {
-    //   throw new Error('Welcome CTA button is not visible or interactable!');
-    // }
 
     await page.locator('path').nth(1).click();
     await page.getByRole('button', { name: 'Start Earning' }).click();
 
-    // Авторизация
     await login(page, userName, otp);
 
-    // Проверяем вкладку Active Quests
     const questTab = await page.locator('.tgui-e6658d0b8927f95e').textContent();
     console.log('Quest tab text:', questTab);
     if (questTab !== 'Active Quests') {
@@ -101,29 +79,24 @@ export default async function runIntegrationTest({ browser, context }) {
     console.log('Testing Leaderboard screen...');
     start = Date.now();
 
-    // Клик по табу Leaderboard
     const leaderboardTabButton = page.locator('xpath=/html/body/div[1]/div/div/div[2]/button[2]');
     await leaderboardTabButton.scrollIntoViewIfNeeded();
     await leaderboardTabButton.click();
 
-    // Проверяем вкладку Leaderboard
     const leaderboardTab = await page.locator('.tgui-e6658d0b8927f95e').textContent();
     if (leaderboardTab !== 'Leaderboard') {
       throw new Error('Leaderboard tab not found');
     }
 
-    // Проверяем заголовок Leaderboard
     const leaderboardTitle = await page.locator('.jss1').textContent();
     if (leaderboardTitle !== 'Leaderboard') {
       throw new Error('Leaderboard title not found');
     }
 
-    // Клик на элемент Leaderboard
     const leaderboardElement = await page.locator('.l1shii3t');
     await leaderboardElement.scrollIntoViewIfNeeded();
     await leaderboardElement.click();
 
-    // Проверяем результат Leaderboard
     const leaderboardResult = await page.locator('.p1kqqlhg').textContent();
     if (leaderboardResult !== '1 out of 3 tasks completed – Could do better') {
       throw new Error('Incorrect leaderboard result');
@@ -136,7 +109,6 @@ export default async function runIntegrationTest({ browser, context }) {
     console.log('Testing Library screen...');
     start = Date.now();
 
-    // Клик по табу Library
     const libraryTabButton = page.locator('xpath=/html/body/div[1]/div/div/div[2]/button[3]');
     await libraryTabButton.scrollIntoViewIfNeeded();
     await libraryTabButton.click();
