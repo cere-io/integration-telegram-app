@@ -521,41 +521,106 @@ export const handler = async (event) => {
     process.env.NODE_PATH = '/var/task/node_modules';
     process.env.DISPLAY = ':0';
 
-    console.log('Starting Playwright tests...');
-    const testResult = await runTests();
+   try {
+     if (!fs.existsSync('/tmp')) {
+       console.log('Creating /tmp directory');
+       fs.mkdirSync('/tmp', { recursive: true });
+     }
 
-    const metrics = testResult.metrics || [];
+     console.log('Clearing metrics file');
+     fs.writeFileSync('/tmp/performance-log.txt', '');
 
-      let performanceMetrics = '';
-      if (metrics.length > 0) {
-        performanceMetrics = metrics.map(m => `${m.name} took ${m.duration}ms`).join('\n');
-        console.log('Metrics from test result:');
-        console.log(performanceMetrics);
-      } else {
-        console.log('No metrics returned from test result');
-        try {
-          if (fs.existsSync('/tmp/performance-log.txt')) {
-            performanceMetrics = fs.readFileSync('/tmp/performance-log.txt', 'utf8');
-            console.log('Metrics from file:');
-            console.log(performanceMetrics);
-          }
-        } catch (err) {
-          console.error('Error reading metrics file:', err);
-        }
-      }
+     console.log('Starting Playwright tests...');
+     const testResult = await Promise.race([
+       runTests(),
+       new Promise((_, reject) =>
+         setTimeout(() => reject(new Error('Test execution timed out')), 840000)
+       )
+     ]);
+     console.log(`Tests completed with success=${testResult.success}`);
 
-      return {
-        statusCode: testResult.success ? 200 : 500,
-        body: JSON.stringify({
-          success: testResult.success,
-          output: testResult.output || 'No output',
-          errorOutput: testResult.errorOutput || '',
-          performanceMetrics: performanceMetrics,
-          rawMetrics: metrics,
-          region: event.region || process.env.AWS_REGION,
-          environment: event.environment || 'unknown'
-        }, null, 2)
-      };
+     let metrics = testResult.metrics || [];
+     console.log(`Found ${metrics.length} metrics in test result`);
+
+     let performanceMetrics = '';
+     if (metrics.length > 0) {
+       performanceMetrics = metrics.map(m => `${m.name} took ${m.duration}ms`).join('\n');
+       console.log('Metrics from test result:');
+       console.log(performanceMetrics);
+     } else {
+       console.log('No metrics in test result, checking file...');
+       try {
+         if (fs.existsSync('/tmp/performance-log.txt')) {
+           performanceMetrics = fs.readFileSync('/tmp/performance-log.txt', 'utf8');
+           console.log('Metrics from file:');
+           console.log(performanceMetrics);
+
+           if (performanceMetrics.trim()) {
+             metrics = performanceMetrics.split('\n')
+               .filter(line => line.trim())
+               .map(line => {
+                 const match = line.match(/([A-Za-z ]+) took ([0-9]+)ms/);
+                 return match ? { name: match[1], duration: parseInt(match[2]) } : null;
+               })
+               .filter(m => m !== null);
+             console.log(`Parsed ${metrics.length} metrics from file`);
+           }
+         } else {
+           console.log('Metrics file does not exist');
+         }
+       } catch (err) {
+         console.error('Error reading metrics file:', err);
+       }
+     }
+
+     const expectedScreens = ['Active Quests Screen', 'Leaderboard Screen', 'Library Screen'];
+     const foundScreens = metrics.map(m => m.name);
+     const missingScreens = expectedScreens.filter(screen => !foundScreens.includes(screen));
+
+     if (missingScreens.length > 0) {
+       console.log(`Missing metrics for screens: ${missingScreens.join(', ')}`);
+     }
+
+     if (metrics.length > 0) {
+       metrics.sort((a, b) => {
+         const order = { 'Active Quests Screen': 1, 'Leaderboard Screen': 2, 'Library Screen': 3 };
+         return (order[a.name] || 99) - (order[b.name] || 99);
+       });
+
+       performanceMetrics = metrics.map(m => `${m.name} took ${m.duration}ms`).join('\n');
+     }
+
+     console.log('Final metrics to be returned:');
+     console.log(metrics);
+
+     return {
+       statusCode: testResult.success ? 200 : 500,
+       body: JSON.stringify({
+         success: testResult.success,
+         output: testResult.output || 'No output',
+         errorOutput: testResult.errorOutput || '',
+         performanceMetrics: performanceMetrics,
+         metrics: metrics,
+         region: event.region || process.env.AWS_REGION,
+         environment: event.environment || 'unknown',
+         executionTime: new Date().toISOString()
+       }, null, 2)
+     };
+   } catch (error) {
+     console.error('Error in Lambda handler:', error);
+
+     return {
+       statusCode: 500,
+       body: JSON.stringify({
+         success: false,
+         error: error.message,
+         stack: error.stack,
+         region: event.region || process.env.AWS_REGION,
+         environment: event.environment || 'unknown',
+         executionTime: new Date().toISOString()
+       }, null, 2)
+     };
+   }
   } catch (error) {
     console.error('Error:', error);
     return {

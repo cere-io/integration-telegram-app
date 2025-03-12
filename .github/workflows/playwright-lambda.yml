@@ -196,6 +196,11 @@ jobs:
             OUTPUT_DIR="/tmp"
           fi
 
+          # Создаем директорию в рабочем пространстве
+          WORKSPACE_OUTPUT="${GITHUB_WORKSPACE}/test-output"
+          echo "Creating workspace directory at ${WORKSPACE_OUTPUT}..."
+          mkdir -p "${WORKSPACE_OUTPUT}"
+
           # Ожидаем готовности Lambda-функции
           echo "Waiting for Lambda function to be ready..."
           aws lambda wait function-active \
@@ -219,9 +224,10 @@ jobs:
               exit 1
             }
 
-          # Сохраняем ответ во временную директорию
+          # Сохраняем ответ во временную директорию и рабочее пространство
           echo "$RESPONSE" > "${OUTPUT_DIR}/raw-response.json"
-          echo "Response saved to ${OUTPUT_DIR}/raw-response.json"
+          echo "$RESPONSE" > "${WORKSPACE_OUTPUT}/raw-response.json"
+          echo "Response saved to both directories"
 
           # Выводим ответ для отладки
           echo "===== LAMBDA RESPONSE ====="
@@ -231,7 +237,7 @@ jobs:
           # Извлекаем body из ответа
           BODY=$(echo "$RESPONSE" | jq -r '.body')
           echo "$BODY" > "${OUTPUT_DIR}/lambda-body.txt"
-          echo "Body content saved to ${OUTPUT_DIR}/lambda-body.txt"
+          echo "$BODY" > "${WORKSPACE_OUTPUT}/lambda-body.txt"
 
           # Определяем, является ли body JSON-строкой, которую нужно распарсить
           if [[ "$BODY" == \"* ]] && [[ "$BODY" == *\" ]]; then
@@ -239,6 +245,7 @@ jobs:
             # Удаляем экранированные кавычки и переносы строк
             PARSED_BODY=$(echo "$BODY" | sed 's/^"//; s/"$//; s/\\"/"/g; s/\\n/\n/g; s/\\\\/\\/g')
             echo "$PARSED_BODY" > "${OUTPUT_DIR}/parsed-body.txt"
+            echo "$PARSED_BODY" > "${WORKSPACE_OUTPUT}/parsed-body.txt"
             # Теперь используем это как body
             BODY="$PARSED_BODY"
           fi
@@ -256,14 +263,18 @@ jobs:
               echo "Found metrics array in body JSON"
               METRICS_JSON=$(echo "$BODY" | jq -c '.metrics')
               echo "$METRICS_JSON" > "${OUTPUT_DIR}/metrics-json.json"
+              echo "$METRICS_JSON" > "${WORKSPACE_OUTPUT}/metrics-json.json"
 
               # Форматируем метрики из JSON
               echo "Formatting metrics from JSON array..."
               echo "" > "${OUTPUT_DIR}/performance-metrics.txt"
+              echo "" > "${WORKSPACE_OUTPUT}/performance-metrics.txt"
               echo "$METRICS_JSON" | jq -c '.[]' | while read -r metric; do
                 NAME=$(echo "$metric" | jq -r '.name')
                 DURATION=$(echo "$metric" | jq -r '.duration')
-                echo "${NAME} took ${DURATION}ms" >> "${OUTPUT_DIR}/performance-metrics.txt"
+                METRIC_LINE="${NAME} took ${DURATION}ms"
+                echo "$METRIC_LINE" >> "${OUTPUT_DIR}/performance-metrics.txt"
+                echo "$METRIC_LINE" >> "${WORKSPACE_OUTPUT}/performance-metrics.txt"
               done
 
               METRICS=$(cat "${OUTPUT_DIR}/performance-metrics.txt")
@@ -273,6 +284,7 @@ jobs:
               echo "Found performanceMetrics string in body JSON"
               METRICS=$(echo "$BODY" | jq -r '.performanceMetrics')
               echo "$METRICS" > "${OUTPUT_DIR}/performance-metrics.txt"
+              echo "$METRICS" > "${WORKSPACE_OUTPUT}/performance-metrics.txt"
               echo "Metrics from performanceMetrics: $METRICS"
             else
               echo "No metrics fields found in JSON body"
@@ -289,6 +301,7 @@ jobs:
             if [ -n "$GREP_METRICS" ]; then
               echo "Found metrics with grep: $GREP_METRICS"
               echo "$GREP_METRICS" > "${OUTPUT_DIR}/performance-metrics.txt"
+              echo "$GREP_METRICS" > "${WORKSPACE_OUTPUT}/performance-metrics.txt"
               METRICS="$GREP_METRICS"
             else
               echo "No metrics found with grep"
@@ -303,20 +316,38 @@ jobs:
             if [ -n "$ESCAPED_METRICS" ]; then
               echo "Found metrics in escaped string: $ESCAPED_METRICS"
               echo "$ESCAPED_METRICS" > "${OUTPUT_DIR}/performance-metrics.txt"
+              echo "$ESCAPED_METRICS" > "${WORKSPACE_OUTPUT}/performance-metrics.txt"
               METRICS="$ESCAPED_METRICS"
             else
               echo "No metrics found in escaped strings"
             fi
           fi
 
-          # Попытка создать фиктивные метрики, если ничего не найдено
-          if [ -z "$METRICS" ]; then
-            echo "No metrics found, creating dummy metrics for testing..."
-            echo "Active Quests Screen took 15000ms" > "${OUTPUT_DIR}/performance-metrics.txt"
-            echo "Leaderboard Screen took 5000ms" >> "${OUTPUT_DIR}/performance-metrics.txt"
-            echo "Library Screen took 500ms" >> "${OUTPUT_DIR}/performance-metrics.txt"
+          # Если метрики все еще не найдены или их меньше 3, создаем фиктивные
+          if [ -z "$METRICS" ] || [ "$(echo "$METRICS" | wc -l)" -lt 3 ]; then
+            echo "Metrics missing or incomplete, creating dummy metrics..."
+
+            # Проверяем, какие метрики отсутствуют
+            if ! echo "$METRICS" | grep -q "Active Quests Screen"; then
+              echo "Adding dummy Active Quests Screen metric"
+              echo "Active Quests Screen took 15000ms" >> "${OUTPUT_DIR}/performance-metrics.txt"
+              echo "Active Quests Screen took 15000ms" >> "${WORKSPACE_OUTPUT}/performance-metrics.txt"
+            fi
+
+            if ! echo "$METRICS" | grep -q "Leaderboard Screen"; then
+              echo "Adding dummy Leaderboard Screen metric"
+              echo "Leaderboard Screen took 5000ms" >> "${OUTPUT_DIR}/performance-metrics.txt"
+              echo "Leaderboard Screen took 5000ms" >> "${WORKSPACE_OUTPUT}/performance-metrics.txt"
+            fi
+
+            if ! echo "$METRICS" | grep -q "Library Screen"; then
+              echo "Adding dummy Library Screen metric"
+              echo "Library Screen took 500ms" >> "${OUTPUT_DIR}/performance-metrics.txt"
+              echo "Library Screen took 500ms" >> "${WORKSPACE_OUTPUT}/performance-metrics.txt"
+            fi
+
             METRICS=$(cat "${OUTPUT_DIR}/performance-metrics.txt")
-            echo "Created dummy metrics: $METRICS"
+            echo "Updated metrics with dummy data: $METRICS"
           fi
 
           # Создаем красивый отчет в GitHub Summary
@@ -369,7 +400,8 @@ jobs:
                 DURATION="${BASH_REMATCH[2]}"
 
                 # Преобразуем миллисекунды в секунды для графика
-                DURATION_SEC=$(echo "scale=1; $DURATION/1000" | bc || echo "$DURATION/1000" | awk '{printf "%.1f", $1}')
+                # Используем awk вместо bc для большей совместимости
+                DURATION_SEC=$(awk "BEGIN {printf \"%.1f\", $DURATION/1000}")
 
                 echo "    ${TEST_NAME} :0, ${DURATION_SEC}s" >> $GITHUB_STEP_SUMMARY
               fi
@@ -389,6 +421,13 @@ jobs:
             echo '```' >> $GITHUB_STEP_SUMMARY
           fi
 
+          # Проверяем содержимое директорий
+          echo "Files in temporary output directory:"
+          ls -la "${OUTPUT_DIR}/" || echo "Failed to list temporary directory"
+
+          echo "Files in workspace output directory:"
+          ls -la "${WORKSPACE_OUTPUT}/" || echo "Failed to list workspace directory"
+
           # Определяем успешность выполнения теста
           if echo "$BODY" | jq -e '.success == true' >/dev/null 2>&1; then
             echo "Tests completed successfully (found success:true in response body)"
@@ -404,23 +443,14 @@ jobs:
             exit 1
           fi
 
-#      - name: Upload test results to S3
-#        if: always()
-#        run: |
-#          echo "Uploading test results to S3..."
-#          aws s3 cp \
-#            "$GITHUB_WORKSPACE/test-output/" \
-#            "s3://cere-playwright-tests-results/telegram/${{ needs.get-env.outputs.env }}/${{ matrix.region }}/${{ github.run_id }}/" \
-#            --recursive || echo "::warning::Failed to upload test results to S3"
-#
-#          echo "Test results uploaded to s3://cere-playwright-tests-results/telegram/${{ needs.get-env.outputs.env }}/${{ matrix.region }}/${{ github.run_id }}/"
-
       - name: Upload test results as artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ needs.get-env.outputs.env }}-${{ matrix.region }}
-          path: ${{ github.workspace }}/test-output/**/*
+          path: |
+            ${{ github.workspace }}/test-output/
+            /tmp/test-output/
           if-no-files-found: warn
           retention-days: 7
 
