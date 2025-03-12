@@ -522,44 +522,40 @@ export const handler = async (event) => {
     process.env.DISPLAY = ':0';
 
     console.log('Starting Playwright tests...');
-    const result = await runTests();
+    const testResult = await runTests();
 
-    if (!fs.existsSync('/tmp/performance-log.txt')) {
-      console.log('Warning: Metrics file not found, creating empty file');
-      fs.writeFileSync('/tmp/performance-log.txt', '');
-    }
+    const metrics = testResult.metrics || [];
 
-    let performanceMetrics = "";
-    try {
-      if (fs.existsSync('/tmp/performance-log.txt')) {
-        performanceMetrics = fs.readFileSync('/tmp/performance-log.txt', 'utf8');
-        console.log('Performance metrics collected:');
+      let performanceMetrics = '';
+      if (metrics.length > 0) {
+        performanceMetrics = metrics.map(m => `${m.name} took ${m.duration}ms`).join('\n');
+        console.log('Metrics from test result:');
         console.log(performanceMetrics);
-
-        if (!performanceMetrics.trim()) {
-            console.log('Warning: Empty metrics file, adding test data');
-            performanceMetrics = "Test Execution took 1000ms\n";
-            fs.writeFileSync('/tmp/performance-log.txt', performanceMetrics);
-          }
       } else {
-        console.log('Performance metrics file not found');
+        console.log('No metrics returned from test result');
+        try {
+          if (fs.existsSync('/tmp/performance-log.txt')) {
+            performanceMetrics = fs.readFileSync('/tmp/performance-log.txt', 'utf8');
+            console.log('Metrics from file:');
+            console.log(performanceMetrics);
+          }
+        } catch (err) {
+          console.error('Error reading metrics file:', err);
+        }
       }
-    } catch (err) {
-      console.error("Error reading performance log:", err);
-      performanceMetrics = "Error Reading Metrics took 500ms\n";
-    }
 
-    return {
-      statusCode: result.success ? 200 : 500,
-      body: JSON.stringify({
-        success: result.success,
-        output: result.output,
-        errorOutput: result.errorOutput,
-        performanceMetrics: performanceMetrics,
-        region,
-        environment
-      })
-    };
+      return {
+        statusCode: testResult.success ? 200 : 500,
+        body: JSON.stringify({
+          success: testResult.success,
+          output: testResult.output || 'No output',
+          errorOutput: testResult.errorOutput || '',
+          performanceMetrics: performanceMetrics,
+          rawMetrics: metrics,
+          region: event.region || process.env.AWS_REGION,
+          environment: event.environment || 'unknown'
+        }, null, 2)
+      };
   } catch (error) {
     console.error('Error:', error);
     return {
