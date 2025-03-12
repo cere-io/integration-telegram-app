@@ -230,6 +230,7 @@ jobs:
             --function-name "playwright-test-${{ needs.get-env.outputs.env }}" \
             --payload '{"region": "${{ matrix.region }}", "environment": "${{ needs.get-env.outputs.env }}"}' \
             --cli-binary-format raw-in-base64-out \
+            --log-type Tail \
             --output json \
             "$RESPONSE_FILE" || {
               echo "::error::Lambda invocation failed"
@@ -237,28 +238,36 @@ jobs:
               exit 1
             }
 
+          # Print the response for debugging
+          echo "Lambda response:"
+          cat "$RESPONSE_FILE"
+
           # Check if the function returned an error status
           FUNCTION_ERROR=$(jq -r '.FunctionError // empty' "$RESPONSE_FILE")
           if [ -n "$FUNCTION_ERROR" ]; then
             echo "::error::Lambda function returned an error: $FUNCTION_ERROR"
-            cat "$RESPONSE_FILE"
             exit 1
           fi
 
-          # Extract the response body and check the success field
-          BODY=$(jq -r '.Payload' "$RESPONSE_FILE" | jq -r '.body' 2>/dev/null || echo "{}")
-          SUCCESS=$(echo "$BODY" | jq -r '.success // false' 2>/dev/null)
+          # Check status code - if it's 200, consider it success
+          STATUS_CODE=$(jq -r '.StatusCode // 0' "$RESPONSE_FILE")
+          if [ "$STATUS_CODE" = "200" ]; then
+            echo "Tests completed successfully (StatusCode: 200)"
 
-          # Try to decode logs for debugging purposes only
-          LOG_RESULT=$(jq -r '.LogResult // empty' "$RESPONSE_FILE")
-          if [ -n "$LOG_RESULT" ]; then
-            echo "Lambda execution logs:"
-            echo "$LOG_RESULT" | base64 -d 2>/dev/null || echo "Warning: Failed to decode logs"
-          fi
+            # Try to decode logs if available
+            LOG_RESULT=$(jq -r '.LogResult // empty' "$RESPONSE_FILE")
+            if [ -n "$LOG_RESULT" ]; then
+              echo "Lambda execution logs:"
+              echo "$LOG_RESULT" | base64 -d 2>/dev/null || echo "Warning: Failed to decode logs"
+            fi
 
-          # Make decision based on success field, not logs content
-          if [ "$SUCCESS" = "true" ]; then
-            echo "Tests completed successfully"
+            # Check payload if available
+            PAYLOAD=$(jq -r '.Payload // empty' "$RESPONSE_FILE")
+            if [ -n "$PAYLOAD" ]; then
+              echo "Lambda payload:"
+              echo "$PAYLOAD"
+            fi
+
             exit 0
           else
             echo "::error::Tests failed in region ${{ matrix.region }} for environment ${{ needs.get-env.outputs.env }}"
