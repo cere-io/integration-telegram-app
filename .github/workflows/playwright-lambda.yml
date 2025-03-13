@@ -38,6 +38,7 @@ on:
         options:
           - all
           - us-west-2
+          - eu-central-1
 
 permissions:
   id-token: write
