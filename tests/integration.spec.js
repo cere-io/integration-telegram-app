@@ -87,8 +87,6 @@ async function testActiveQuestsScreen({ page }) {
   await page.locator('path').nth(1).click();
   await page.getByRole('button', { name: 'Start Earning' }).click();
 
-  await login(page);
-
   const questTab = await page.locator('.tgui-e6658d0b8927f95e').textContent();
   console.log('Quest tab text:', questTab);
   if (questTab !== 'Active Quests') {
@@ -97,6 +95,8 @@ async function testActiveQuestsScreen({ page }) {
 
   let timeTaken = Date.now() - start;
   logTime('Active Quests Screen', timeTaken);
+
+  await login(page);
 }
 
 async function testLeaderboardScreen({ page }) {
