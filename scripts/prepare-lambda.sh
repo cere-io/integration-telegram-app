@@ -648,19 +648,19 @@ export const handler = async (event) => {
      console.log('Final metrics to be returned:');
      console.log(metrics);
 
-     return {
-       statusCode: testResult.success ? 200 : 500,
-       body: JSON.stringify({
-        success,
-        output,
-        errorOutput,
+    return {
+      statusCode: testResult.success ? 200 : 500,
+      body: JSON.stringify({
+        success: testResult.success,
+        output: testResult.output,
+        errorOutput: testResult.errorOutput,
         performanceMetrics,
         metrics,
         region: process.env.AWS_REGION || 'unknown',
         environment: process.env.TEST_ENV || 'unknown',
         executionTime: new Date().toISOString()
-       }, null, 2)
-     };
+      }, null, 2)
+    };
    } catch (error) {
      console.error('Error in Lambda handler:', error);
 
