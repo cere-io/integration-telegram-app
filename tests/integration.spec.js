@@ -79,10 +79,8 @@ async function testActiveQuestsScreen({ page }) {
   let start = Date.now();
 
   await page.goto(`${appUrl}/?campaignId=${campaignId}`, {
-    waitUntil: 'networkidle'
+    waitUntil: 'domcontentloaded'
   });
-
-  await page.waitForLoadState('networkidle');
 
   await page.locator('path').nth(1).click();
   await page.getByRole('button', { name: 'Start Earning' }).click();
