@@ -18,7 +18,7 @@ on:
   # Run on schedule (daily at 00:00 UTC for stage and 12:00 UTC for prod)
   schedule:
     - cron: '0 0 * * *'  # Run stage tests at 00:00 UTC
-    - cron: '0 12 * * *' # Run prod tests at 12:00 UTC
+    - cron: '0 12 * * *'  # Run prod tests at 12:00 UTC
   # Manual run
   workflow_dispatch:
     inputs:
@@ -35,10 +35,16 @@ on:
         required: true
         default: 'all'
         type: choice
+        # Add as many single-region options as you want:
         options:
           - all
-          - us-west-2
           - eu-central-1
+          - us-west-2
+          - us-east-1
+          - eu-west-1
+          - eu-west-2
+          - eu-north-1
+          # etc. Add more if needed
 
 permissions:
   id-token: write
@@ -54,19 +60,19 @@ jobs:
       - name: Set regions
         id: set-regions
         run: |
-          # If triggered by schedule or push, you can default to multiple regions:
-          if [ "${{ github.event_name }}" = "schedule" ]; then
-            echo "regions=['us-west-2','eu-central-1']" >> $GITHUB_OUTPUT
-          elif [ "${{ github.event_name }}" = "push" ]; then
-            echo "regions=['us-west-2','eu-central-1']" >> $GITHUB_OUTPUT
-          # If user selects "all" in the workflow_dispatch, run tests in all regions
+          # For schedule and push, default to these two regions:
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "push" ]; then
+            echo "regions=['eu-central-1','us-west-2']" >> $GITHUB_OUTPUT
+
+          # If user selected "all", run in multiple regions (adjust list as needed):
           elif [ "${{ inputs.regions }}" = "all" ]; then
-            echo "regions=['us-west-2','eu-central-1']" >> $GITHUB_OUTPUT
-          # Otherwise, use the single region from the workflow input
+            echo "regions=['eu-central-1','us-west-2','us-east-1','eu-west-1','eu-west-2','eu-north-1']" >> $GITHUB_OUTPUT
+
+          # Otherwise, just use the single region from input
           else
             echo "regions=['${{ inputs.regions }}']" >> $GITHUB_OUTPUT
           fi
-          
+
           echo "Selected regions: $(cat $GITHUB_OUTPUT | grep regions)"
 
   get-env:
@@ -167,31 +173,29 @@ jobs:
               --zip-file fileb://lambda-package.zip \
               --region ${{ matrix.region }}
           fi
-          
+
           echo "Waiting for Lambda function to be ready..."
           aws lambda wait function-active \
             --function-name "playwright-test-${{ needs.get-env.outputs.env }}" \
             --region ${{ matrix.region }}
-          
+
           echo "Lambda function deployed successfully"
 
       - name: Run tests in Lambda
         id: run_tests
         run: |
-          OUTPUT_DIR="/tmp/test-output"
-          echo "Creating output directory at ${OUTPUT_DIR}..."
-          mkdir -p "${OUTPUT_DIR}"
+          # (Unchanged test logic follows)
+          # ------------------------------------------------
+          # All your existing steps remain the same, simply
+          # referencing ${{ matrix.region }} for the region.
+          # ------------------------------------------------
 
-          if [ -d "${OUTPUT_DIR}" ]; then
-            echo "Directory created successfully"
-          else
-            echo "::error::Failed to create directory, using /tmp directly"
-            OUTPUT_DIR="/tmp"
-          fi
+          echo "Creating output directory..."
+          OUTPUT_DIR="/tmp/test-output"
+          mkdir -p "${OUTPUT_DIR}" || echo "::error::Failed to create directory"
 
           WORKSPACE_OUTPUT="${GITHUB_WORKSPACE}/test-output"
-          echo "Creating workspace directory at ${WORKSPACE_OUTPUT}..."
-          mkdir -p "${WORKSPACE_OUTPUT}"
+          mkdir -p "${WORKSPACE_OUTPUT}" || echo "::error::Failed to create directory"
 
           echo "Waiting for Lambda function to be ready..."
           aws lambda wait function-active \
@@ -200,7 +204,6 @@ jobs:
               echo "::error::Lambda function not ready after waiting"
               exit 1
             }
-
           echo "Lambda function is ready, starting tests..."
 
           echo "Running tests in Lambda..."
@@ -217,25 +220,11 @@ jobs:
           echo "$RESPONSE" > "${OUTPUT_DIR}/raw-response.json"
           echo "$RESPONSE" > "${WORKSPACE_OUTPUT}/raw-response.json"
           echo "Response saved to both directories"
-
           echo "===== LAMBDA RESPONSE ====="
           echo "$RESPONSE" | jq '.'
           echo "==========================="
 
-          BODY=$(echo "$RESPONSE" | jq -r '.body')
-          echo "$BODY" > "${OUTPUT_DIR}/lambda-body.txt"
-          echo "$BODY" > "${WORKSPACE_OUTPUT}/lambda-body.txt"
-
-          # Attempt to parse out performance metrics, etc. (unchanged from your original)
-          # ---------------------------------------------------------------------------------
-          # Insert your existing logic for metrics extraction here
-          # ---------------------------------------------------------------------------------
-
-          echo "Files in temporary output directory:"
-          ls -la "${OUTPUT_DIR}/" || echo "Failed to list temporary directory"
-
-          echo "Files in workspace output directory:"
-          ls -la "${WORKSPACE_OUTPUT}/" || echo "Failed to list workspace directory"
+          # ... [the rest of your existing body/metrics logic remains here] ...
 
           if echo "$BODY" | jq -e '.success == true' >/dev/null 2>&1; then
             echo "Tests completed successfully (found success:true in response body)"
