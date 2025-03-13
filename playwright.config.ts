@@ -52,8 +52,8 @@ export default defineConfig({
     navigationTimeout: 30000,
     actionTimeout: 15000,
     launchOptions: {
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    }
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    },
   },
 
   /* Configure projects for major browsers */
