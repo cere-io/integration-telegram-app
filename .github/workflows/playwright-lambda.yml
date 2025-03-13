@@ -305,31 +305,6 @@ jobs:
             fi
           fi
 
-          if [ -z "$METRICS" ] || [ "$(echo "$METRICS" | wc -l)" -lt 3 ]; then
-            echo "Metrics missing or incomplete, creating dummy metrics..."
-
-            if ! echo "$METRICS" | grep -q "Active Quests Screen"; then
-              echo "Adding dummy Active Quests Screen metric"
-              echo "Active Quests Screen took 15000ms" >> "${OUTPUT_DIR}/performance-metrics.txt"
-              echo "Active Quests Screen took 15000ms" >> "${WORKSPACE_OUTPUT}/performance-metrics.txt"
-            fi
-
-            if ! echo "$METRICS" | grep -q "Leaderboard Screen"; then
-              echo "Adding dummy Leaderboard Screen metric"
-              echo "Leaderboard Screen took 5000ms" >> "${OUTPUT_DIR}/performance-metrics.txt"
-              echo "Leaderboard Screen took 5000ms" >> "${WORKSPACE_OUTPUT}/performance-metrics.txt"
-            fi
-
-            if ! echo "$METRICS" | grep -q "Library Screen"; then
-              echo "Adding dummy Library Screen metric"
-              echo "Library Screen took 500ms" >> "${OUTPUT_DIR}/performance-metrics.txt"
-              echo "Library Screen took 500ms" >> "${WORKSPACE_OUTPUT}/performance-metrics.txt"
-            fi
-
-            METRICS=$(cat "${OUTPUT_DIR}/performance-metrics.txt")
-            echo "Updated metrics with dummy data: $METRICS"
-          fi
-
           if [ -n "$METRICS" ]; then
             echo "Creating performance report in GitHub Summary..."
 

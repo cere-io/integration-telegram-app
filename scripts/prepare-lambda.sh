@@ -600,10 +600,15 @@ export const handler = async (event) => {
      } else {
        console.log('No metrics in test result, checking file...');
        try {
+         console.log('Checking metrics before return...');
+         console.log('metrics array:', metrics);
+         console.log('metrics file exists:', fs.existsSync('/tmp/performance-log.txt'));
          if (fs.existsSync('/tmp/performance-log.txt')) {
            performanceMetrics = fs.readFileSync('/tmp/performance-log.txt', 'utf8');
            console.log('Metrics from file:');
            console.log(performanceMetrics);
+           console.log('metrics file content:', fs.readFileSync('/tmp/performance-log.txt', 'utf8'));
+
 
            if (performanceMetrics.trim()) {
              metrics = performanceMetrics.split('\n')
@@ -646,14 +651,14 @@ export const handler = async (event) => {
      return {
        statusCode: testResult.success ? 200 : 500,
        body: JSON.stringify({
-         success: testResult.success,
-         output: testResult.output || 'No output',
-         errorOutput: testResult.errorOutput || '',
-         performanceMetrics: performanceMetrics,
-         metrics: metrics,
-         region: region,
-         environment: environment,
-         executionTime: new Date().toISOString()
+        success,
+        output,
+        errorOutput,
+        performanceMetrics,
+        metrics,
+        region: process.env.AWS_REGION || 'unknown',
+        environment: process.env.TEST_ENV || 'unknown',
+        executionTime: new Date().toISOString()
        }, null, 2)
      };
    } catch (error) {
