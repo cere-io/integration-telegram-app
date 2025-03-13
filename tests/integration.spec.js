@@ -76,6 +76,7 @@ const login = async (page) => {
 
 async function testActiveQuestsScreen({ page }) {
   console.log(`Testing Active Quests screen in ${environment} environment (${region})...`);
+  console.log(`Using URL: ${appUrl}/?campaignId=${campaignId}`);
   let start = Date.now();
 
   try {
@@ -109,6 +110,7 @@ async function testActiveQuestsScreen({ page }) {
 
 async function testLeaderboardScreen({ page }) {
   console.log(`Testing Leaderboard screen in ${environment} environment (${region})...`);
+  console.log(`Using URL: ${appUrl}/?campaignId=${campaignId}`);
   let start = Date.now();
 
   try {
@@ -131,6 +133,7 @@ async function testLeaderboardScreen({ page }) {
 async function testLibraryScreen({ page }) {
   try {
     console.log(`Testing Library screen in ${environment} environment (${region})...`);
+    console.log(`Using URL: ${appUrl}/?campaignId=${campaignId}`);
     let start = Date.now();
 
     const libraryTabButton = page.locator('xpath=/html/body/div[1]/div/div/div[2]/button[3]');
