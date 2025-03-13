@@ -12,7 +12,7 @@ const envConfigs = {
   },
   prod: {
     baseURL: 'https://telegram-viewer-app.cere.io',
-    campaignId: '117',
+    campaignId: '12',
   },
 };
 
