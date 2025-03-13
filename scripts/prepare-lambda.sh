@@ -128,6 +128,13 @@ async function runTests() {
       throw new Error('System resources check failed');
     }
 
+    // Log environment information from process.env
+    console.log('Environment settings:');
+    console.log('- TEST_ENV:', process.env.TEST_ENV);
+    console.log('- AWS_REGION:', process.env.AWS_REGION);
+    console.log('- TEST_APP_URL:', process.env.TEST_APP_URL);
+    console.log('- TEST_CAMPAIGN_ID:', process.env.TEST_CAMPAIGN_ID);
+
     const launchOptions = {
       headless: true,
       executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
@@ -209,12 +216,19 @@ async function runTests() {
     let success = true;
     let output = '';
     let errorOutput = '';
+    let metrics = [];
 
     try {
       const testFn = testModule.default;
-      await testFn({ browser, context });
+      const result = await testFn({ browser, context });
       output = 'Tests completed successfully';
       console.log(output);
+
+      // Extract metrics from test result if available
+      if (result && result.metrics) {
+        metrics = result.metrics;
+        console.log('Metrics received from test:', metrics);
+      }
     } catch (error) {
       success = false;
       errorOutput = error.message;
@@ -233,7 +247,10 @@ async function runTests() {
       success,
       output,
       errorOutput,
-      code: success ? 0 : 1
+      metrics,
+      code: success ? 0 : 1,
+      environment: process.env.TEST_ENV,
+      region: process.env.AWS_REGION
     };
   } catch (error) {
     console.error('Error during test execution:', error);
@@ -243,7 +260,10 @@ async function runTests() {
       success: false,
       output: '',
       errorOutput: `${error.message}\nStack: ${error.stack}`,
-      code: 1
+      metrics: [],
+      code: 1,
+      environment: process.env.TEST_ENV,
+      region: process.env.AWS_REGION
     };
   } finally {
     if (context || browser) {
@@ -286,6 +306,22 @@ import { runTests } from './run-tests.js';
 import { brotliDecompressSync } from 'zlib';
 
 const CHROMIUM_URL = 'https://github.com/Sparticuz/chromium/releases/download/v133.0.0/chromium-v133.0.0-pack.tar';
+
+// Configuration for different environments
+const envConfigs = {
+  dev: {
+    baseURL: 'https://telegram-viewer-app.stage.cere.io',
+    campaignId: '117',
+  },
+  stage: {
+    baseURL: 'https://telegram-viewer-app.stage.cere.io',
+    campaignId: '117',
+  },
+  prod: {
+    baseURL: 'https://telegram-viewer-app.cere.io',
+    campaignId: '117',
+  },
+};
 
 async function downloadFile(url, destination) {
   console.log('Starting download from:', url);
@@ -475,10 +511,24 @@ export const handler = async (event) => {
   console.log('Event:', JSON.stringify(event, null, 2));
 
   try {
-    const region = event.region || 'unknown';
-    const environment = event.environment || 'unknown';
+    // Get environment and region from event
+    const region = event.region || process.env.AWS_REGION || 'unknown';
+    const environment = event.environment || 'stage';
+
+    // Set environment variables for tests
+    process.env.AWS_REGION = region;
+    process.env.TEST_ENV = environment;
+
+    // Get environment config
+    const config = envConfigs[environment] || envConfigs.stage;
+
+    // Set test specific environment variables
+    process.env.TEST_APP_URL = config.baseURL;
+    process.env.TEST_CAMPAIGN_ID = config.campaignId;
 
     console.log(`Running tests in ${region} for ${environment}`);
+    console.log(`Using app URL: ${config.baseURL}`);
+    console.log(`Using campaign ID: ${config.campaignId}`);
 
     const tmpDir = os.tmpdir();
     const browserDir = path.join(tmpDir, 'chromium');
@@ -601,8 +651,8 @@ export const handler = async (event) => {
          errorOutput: testResult.errorOutput || '',
          performanceMetrics: performanceMetrics,
          metrics: metrics,
-         region: event.region || process.env.AWS_REGION,
-         environment: event.environment || 'unknown',
+         region: region,
+         environment: environment,
          executionTime: new Date().toISOString()
        }, null, 2)
      };
@@ -615,8 +665,8 @@ export const handler = async (event) => {
          success: false,
          error: error.message,
          stack: error.stack,
-         region: event.region || process.env.AWS_REGION,
-         environment: event.environment || 'unknown',
+         region: region,
+         environment: environment,
          executionTime: new Date().toISOString()
        }, null, 2)
      };
@@ -627,7 +677,9 @@ export const handler = async (event) => {
       statusCode: 500,
       body: JSON.stringify({
         error: error.message,
-        stack: error.stack
+        stack: error.stack,
+        region: event.region || process.env.AWS_REGION || 'unknown',
+        environment: event.environment || 'unknown'
       })
     };
   }

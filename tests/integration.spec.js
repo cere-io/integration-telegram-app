@@ -1,10 +1,30 @@
 import { chromium } from 'playwright';
 import fs from 'fs';
 
+const envConfigs = {
+  dev: {
+    baseURL: 'https://telegram-viewer-app.stage.cere.io',
+    campaignId: '120',
+  },
+  stage: {
+    baseURL: 'https://telegram-viewer-app.stage.cere.io',
+    campaignId: '120',
+  },
+  prod: {
+    baseURL: 'https://telegram-viewer-app.cere.io',
+    campaignId: '117',
+  },
+};
+
+const environment = process.env.TEST_ENV || 'stage';
+const region = process.env.AWS_REGION || 'us-west-2';
+
+const currentConfig = envConfigs[environment] || envConfigs.stage;
+
 const userName = process.env.TEST_USER_EMAIL || 'veronika.filipenko@cere.io';
 const otp = process.env.TEST_USER_OTP || '555555';
-const appUrl = process.env.TEST_APP_URL || 'https://telegram-viewer-app.stage.cere.io';
-const campaignId = process.env.TEST_CAMPAIGN_ID || '120';
+const appUrl = process.env.TEST_APP_URL || currentConfig.baseURL;
+const campaignId = process.env.TEST_CAMPAIGN_ID || currentConfig.campaignId;
 
 const metrics = [];
 
@@ -55,7 +75,7 @@ const login = async (page) => {
 };
 
 async function testActiveQuestsScreen({ page }) {
-  console.log('Testing Active Quests screen...');
+  console.log(`Testing Active Quests screen in ${environment} environment (${region})...`);
   let start = Date.now();
 
   await page.goto(`${appUrl}/?campaignId=${campaignId}`, {
@@ -80,7 +100,7 @@ async function testActiveQuestsScreen({ page }) {
 }
 
 async function testLeaderboardScreen({ page }) {
-  console.log('Testing Leaderboard screen...');
+  console.log(`Testing Leaderboard screen in ${environment} environment (${region})...`);
   let start = Date.now();
 
   const leaderboardTabButton = page.locator('xpath=/html/body/div[1]/div/div/div[2]/button[2]');
@@ -92,7 +112,7 @@ async function testLeaderboardScreen({ page }) {
 }
 
 async function testLibraryScreen({ page }) {
-  console.log('Testing Library screen...');
+  console.log(`Testing Library screen in ${environment} environment (${region})...`);
   let start = Date.now();
 
   const libraryTabButton = page.locator('xpath=/html/body/div[1]/div/div/div[2]/button[3]');
@@ -106,7 +126,8 @@ async function testLibraryScreen({ page }) {
 }
 
 export default async function runIntegrationTest({ browser, context }) {
-  console.log('Starting integration test...');
+  console.log(`Starting integration test for ${environment} environment in ${region} region`);
+  console.log(`Using URL: ${appUrl} with campaign ID: ${campaignId}`);
   metrics.length = 0;
 
   try {
@@ -128,23 +149,31 @@ export default async function runIntegrationTest({ browser, context }) {
 
     console.log('=== COLLECTED METRICS ===');
     console.log(JSON.stringify(metrics, null, 2));
+    console.log(`Environment: ${environment}`);
+    console.log(`Region: ${region}`);
     console.log('========================');
 
     return {
       success: true,
-      metrics: metrics
+      metrics: metrics,
+      environment: environment,
+      region: region
     };
   } catch (err) {
     console.error('Error during integration test:', err);
 
     console.log('=== METRICS AT ERROR ===');
     console.log(JSON.stringify(metrics, null, 2));
+    console.log(`Environment: ${environment}`);
+    console.log(`Region: ${region}`);
     console.log('=======================');
 
     return {
       success: false,
       error: err.message,
-      metrics: metrics
+      metrics: metrics,
+      environment: environment,
+      region: region
     };
   } finally {
     if (page) {

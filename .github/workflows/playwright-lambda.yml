@@ -53,11 +53,17 @@ jobs:
       - name: Set regions
         id: set-regions
         run: |
-          if [ "${{ inputs.regions }}" = "all" ]; then
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            echo "regions=['eu-west-2']" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            echo "regions=['eu-west-2']" >> $GITHUB_OUTPUT
+          elif [ "${{ inputs.regions }}" = "all" ]; then
             echo "regions=['eu-west-2']" >> $GITHUB_OUTPUT
           else
             echo "regions=['${{ inputs.regions }}']" >> $GITHUB_OUTPUT
           fi
+          
+          echo "Selected regions: $(cat $GITHUB_OUTPUT | grep regions)"
 
   get-env:
     name: Get environment
