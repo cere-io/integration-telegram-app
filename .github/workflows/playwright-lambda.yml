@@ -71,7 +71,7 @@ jobs:
 
           # Otherwise, just use the single region chosen:
           else
-            echo "regions=['${{ inputs.regions }}']" >> $GITHUB_OUTPUT
+            echo "regions=[\"${{ inputs.regions }}\"]" >> $GITHUB_OUTPUT
           fi
           
           echo "Selected regions: $(cat $GITHUB_OUTPUT | grep regions)"
@@ -112,9 +112,9 @@ jobs:
 
           # Print parameters that will be used
           echo "Parameters that will be used:"
-          echo "env: ${{ steps.set-env.outputs.env }}"
-          echo "account_id: ${{ steps.set-env.outputs.account_id }}"
-          echo "lambda_function_name: playwright-test-${{ steps.set-env.outputs.env }}"
+          echo "env: $(cat $GITHUB_OUTPUT | grep env)"
+          echo "account_id: $(cat $GITHUB_OUTPUT | grep account_id)"
+          echo "lambda_function_name: playwright-test-$(cat $GITHUB_OUTPUT | grep env | cut -d= -f2)"
 
   deploy-lambda:
     name: Deploy Lambda Function
@@ -185,11 +185,6 @@ jobs:
       - name: Run tests in Lambda
         id: run_tests
         run: |
-          # Настраиваем AWS CLI с увеличенными таймаутами
-          echo "Configuring AWS CLI timeouts..."
-          aws configure set default.lambda.read_timeout 900
-          aws configure set default.lambda.connect_timeout 60
-          
           OUTPUT_DIR="/tmp/test-output"
           echo "Creating output directory at ${OUTPUT_DIR}..."
           mkdir -p "${OUTPUT_DIR}"
@@ -215,24 +210,21 @@ jobs:
 
           echo "Lambda function is ready, starting tests..."
 
-          echo "Running tests in Lambda..."
-          MAX_RETRIES=2
+          # Add retry logic for Lambda invocation
+          MAX_RETRIES=3
           RETRY_COUNT=0
-          SUCCESS=false
-
-          while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$SUCCESS" != "true" ]; do
-            echo "Attempt $(($RETRY_COUNT+1))/$MAX_RETRIES"
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            echo "Running tests in Lambda (attempt $(($RETRY_COUNT+1))/$MAX_RETRIES)..."
           
             if RESPONSE=$(timeout 900 aws lambda invoke \
               --function-name "playwright-test-${{ needs.get-env.outputs.env }}" \
               --payload '{"region": "${{ matrix.region }}", "environment": "${{ needs.get-env.outputs.env }}"}' \
               --cli-binary-format raw-in-base64-out \
-              --cli-read-timeout 900 \
               --output json \
-              /dev/stdout 2>&1); then
-          
-              SUCCESS="true"
+              /dev/stdout); then
               echo "Lambda invocation successful"
+              break
             else
               EXIT_CODE=$?
               RETRY_COUNT=$(($RETRY_COUNT+1))
@@ -271,6 +263,7 @@ jobs:
           fi
 
           METRICS=""
+          METRICS_COMPLETE=true
 
           echo "Method 1: Trying to parse body as JSON..."
           if echo "$BODY" | jq -e . >/dev/null 2>&1; then
@@ -336,15 +329,16 @@ jobs:
             fi
           fi
 
-          METRICS_COMPLETE=true
-
+          # Check if there are at least 3 metrics
           if [ -z "$METRICS" ] || [ "$(echo "$METRICS" | wc -l)" -lt 3 ]; then
             echo "::error::Tests in ${{ matrix.region }} produced incomplete metrics (fewer than 3 metrics)"
             METRICS_COMPLETE=false
           
+            # Create warning report
             echo "⚠️ WARNING: Incomplete metrics found! ⚠️" > "${OUTPUT_DIR}/performance-metrics.txt"
             echo "⚠️ WARNING: Incomplete metrics found! ⚠️" > "${WORKSPACE_OUTPUT}/performance-metrics.txt"
           
+            # Add existing metrics if any
             if [ -n "$METRICS" ]; then
               echo "Existing metrics:" >> "${OUTPUT_DIR}/performance-metrics.txt"
               echo "Existing metrics:" >> "${WORKSPACE_OUTPUT}/performance-metrics.txt"
@@ -352,10 +346,12 @@ jobs:
               echo "$METRICS" >> "${WORKSPACE_OUTPUT}/performance-metrics.txt"
             fi
           
+            # Save full response for debugging
             echo "Saving full response for debugging..."
             echo "$RESPONSE" > "${OUTPUT_DIR}/error-full-response.json"
             echo "$RESPONSE" > "${WORKSPACE_OUTPUT}/error-full-response.json"
           
+            # Update metrics variable with warning message
             METRICS=$(cat "${OUTPUT_DIR}/performance-metrics.txt")
           fi
 
@@ -364,11 +360,11 @@ jobs:
 
             echo "# 📊 Performance Test Results" >> $GITHUB_STEP_SUMMARY
           
+            # Add warning to report if metrics are incomplete
             if [ "$METRICS_COMPLETE" = "false" ]; then
-              echo "## 🔴 Status: FAILED - Incomplete Metrics" >> $GITHUB_STEP_SUMMARY
+              echo "## 🔴 TEST FAILURE: Incomplete Metrics" >> $GITHUB_STEP_SUMMARY
               echo "Expected at least 3 metrics but received fewer. This indicates a test execution problem." >> $GITHUB_STEP_SUMMARY
               echo "" >> $GITHUB_STEP_SUMMARY
-          
               echo "### Expected metrics:" >> $GITHUB_STEP_SUMMARY
               echo "- Active Quests Screen" >> $GITHUB_STEP_SUMMARY
               echo "- Leaderboard Screen" >> $GITHUB_STEP_SUMMARY
@@ -452,6 +448,7 @@ jobs:
           echo "Files in workspace output directory:"
           ls -la "${WORKSPACE_OUTPUT}/" || echo "Failed to list workspace directory"
 
+          # Check test success criteria
           if [ "$METRICS_COMPLETE" = "false" ]; then
             echo "::error::Tests failed: incomplete metrics (fewer than 3) in region ${{ matrix.region }}"
             exit 1
