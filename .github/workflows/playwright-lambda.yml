@@ -8,6 +8,8 @@
 # 5. Create dedicated directories for outputs
 
 name: Playwright Lambda Tests
+env:
+  ALL_REGIONS: '["eu-central-1","us-west-2","us-east-1","eu-west-1","eu-west-2","eu-north-1"]'
 
 on:
   # Run on merge to stage/prod
@@ -61,11 +63,11 @@ jobs:
         run: |
           # For schedule events or push events, default to these two regions:
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "push" ]; then
-            echo "regions=['eu-central-1','us-west-2']" >> $GITHUB_OUTPUT
+            echo "regions=${{ env.ALL_REGIONS }}" >> $GITHUB_OUTPUT
 
           # If user selects "all" for a manual run, list multiple regions:
           elif [ "${{ inputs.regions }}" = "all" ]; then
-            echo "regions=['eu-central-1','us-west-2','us-east-1','eu-west-1','eu-west-2','eu-north-1']" >> $GITHUB_OUTPUT
+            echo "regions=${{ env.ALL_REGIONS }}" >> $GITHUB_OUTPUT
 
           # Otherwise, just use the single region chosen:
           else
@@ -183,6 +185,11 @@ jobs:
       - name: Run tests in Lambda
         id: run_tests
         run: |
+          # Настраиваем AWS CLI с увеличенными таймаутами
+          echo "Configuring AWS CLI timeouts..."
+          aws configure set default.lambda.read_timeout 900
+          aws configure set default.lambda.connect_timeout 60
+          
           OUTPUT_DIR="/tmp/test-output"
           echo "Creating output directory at ${OUTPUT_DIR}..."
           mkdir -p "${OUTPUT_DIR}"
@@ -209,15 +216,39 @@ jobs:
           echo "Lambda function is ready, starting tests..."
 
           echo "Running tests in Lambda..."
-          RESPONSE=$(timeout 900 aws lambda invoke \
-            --function-name "playwright-test-${{ needs.get-env.outputs.env }}" \
-            --payload '{"region": "${{ matrix.region }}", "environment": "${{ needs.get-env.outputs.env }}"}' \
-            --cli-binary-format raw-in-base64-out \
-            --output json \
-            /dev/stdout) || {
-              echo "::error::Lambda invocation timed out or failed to execute"
-              exit 1
-            }
+          MAX_RETRIES=2
+          RETRY_COUNT=0
+          SUCCESS=false
+
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$SUCCESS" != "true" ]; do
+            echo "Attempt $(($RETRY_COUNT+1))/$MAX_RETRIES"
+          
+            if RESPONSE=$(timeout 900 aws lambda invoke \
+              --function-name "playwright-test-${{ needs.get-env.outputs.env }}" \
+              --payload '{"region": "${{ matrix.region }}", "environment": "${{ needs.get-env.outputs.env }}"}' \
+              --cli-binary-format raw-in-base64-out \
+              --cli-read-timeout 900 \
+              --output json \
+              /dev/stdout 2>&1); then
+          
+              SUCCESS="true"
+              echo "Lambda invocation successful"
+            else
+              EXIT_CODE=$?
+              RETRY_COUNT=$(($RETRY_COUNT+1))
+              echo "Lambda invocation failed with exit code $EXIT_CODE (attempt $RETRY_COUNT/$MAX_RETRIES)"
+          
+              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                echo "Waiting 30 seconds before retry..."
+                sleep 30
+              else
+                echo "::error::All retry attempts failed"
+                echo "$RESPONSE" > "${OUTPUT_DIR}/error-response.txt"
+                echo "$RESPONSE" > "${WORKSPACE_OUTPUT}/error-response.txt"
+                exit 1
+              fi
+            fi
+          done
 
           echo "$RESPONSE" > "${OUTPUT_DIR}/raw-response.json"
           echo "$RESPONSE" > "${WORKSPACE_OUTPUT}/raw-response.json"
@@ -305,35 +336,55 @@ jobs:
             fi
           fi
 
+          METRICS_COMPLETE=true
+
           if [ -z "$METRICS" ] || [ "$(echo "$METRICS" | wc -l)" -lt 3 ]; then
-            echo "Metrics missing or incomplete, creating dummy metrics..."
-
-            if ! echo "$METRICS" | grep -q "Active Quests Screen"; then
-              echo "Adding dummy Active Quests Screen metric"
-              echo "Active Quests Screen took 15000ms" >> "${OUTPUT_DIR}/performance-metrics.txt"
-              echo "Active Quests Screen took 15000ms" >> "${WORKSPACE_OUTPUT}/performance-metrics.txt"
+            echo "::error::Tests in ${{ matrix.region }} produced incomplete metrics (fewer than 3 metrics)"
+            METRICS_COMPLETE=false
+          
+            echo "⚠️ WARNING: Incomplete metrics found! ⚠️" > "${OUTPUT_DIR}/performance-metrics.txt"
+            echo "⚠️ WARNING: Incomplete metrics found! ⚠️" > "${WORKSPACE_OUTPUT}/performance-metrics.txt"
+          
+            if [ -n "$METRICS" ]; then
+              echo "Existing metrics:" >> "${OUTPUT_DIR}/performance-metrics.txt"
+              echo "Existing metrics:" >> "${WORKSPACE_OUTPUT}/performance-metrics.txt"
+              echo "$METRICS" >> "${OUTPUT_DIR}/performance-metrics.txt"
+              echo "$METRICS" >> "${WORKSPACE_OUTPUT}/performance-metrics.txt"
             fi
-
-            if ! echo "$METRICS" | grep -q "Leaderboard Screen"; then
-              echo "Adding dummy Leaderboard Screen metric"
-              echo "Leaderboard Screen took 5000ms" >> "${OUTPUT_DIR}/performance-metrics.txt"
-              echo "Leaderboard Screen took 5000ms" >> "${WORKSPACE_OUTPUT}/performance-metrics.txt"
-            fi
-
-            if ! echo "$METRICS" | grep -q "Library Screen"; then
-              echo "Adding dummy Library Screen metric"
-              echo "Library Screen took 500ms" >> "${OUTPUT_DIR}/performance-metrics.txt"
-              echo "Library Screen took 500ms" >> "${WORKSPACE_OUTPUT}/performance-metrics.txt"
-            fi
-
+          
+            echo "Saving full response for debugging..."
+            echo "$RESPONSE" > "${OUTPUT_DIR}/error-full-response.json"
+            echo "$RESPONSE" > "${WORKSPACE_OUTPUT}/error-full-response.json"
+          
             METRICS=$(cat "${OUTPUT_DIR}/performance-metrics.txt")
-            echo "Updated metrics with dummy data: $METRICS"
           fi
 
           if [ -n "$METRICS" ]; then
             echo "Creating performance report in GitHub Summary..."
 
             echo "# 📊 Performance Test Results" >> $GITHUB_STEP_SUMMARY
+          
+            if [ "$METRICS_COMPLETE" = "false" ]; then
+              echo "## 🔴 Status: FAILED - Incomplete Metrics" >> $GITHUB_STEP_SUMMARY
+              echo "Expected at least 3 metrics but received fewer. This indicates a test execution problem." >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+          
+              echo "### Expected metrics:" >> $GITHUB_STEP_SUMMARY
+              echo "- Active Quests Screen" >> $GITHUB_STEP_SUMMARY
+              echo "- Leaderboard Screen" >> $GITHUB_STEP_SUMMARY
+              echo "- Library Screen" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "### Received metrics:" >> $GITHUB_STEP_SUMMARY
+              if [ -n "$METRICS" ]; then
+                echo '```' >> $GITHUB_STEP_SUMMARY
+                echo "$METRICS" >> $GITHUB_STEP_SUMMARY
+                echo '```' >> $GITHUB_STEP_SUMMARY
+              else
+                echo "No metrics were received" >> $GITHUB_STEP_SUMMARY
+              fi
+              echo "" >> $GITHUB_STEP_SUMMARY
+            fi
+          
             echo "| Test | Duration | Status |" >> $GITHUB_STEP_SUMMARY
             echo "| ---- | -------- | ------ |" >> $GITHUB_STEP_SUMMARY
 
@@ -401,7 +452,10 @@ jobs:
           echo "Files in workspace output directory:"
           ls -la "${WORKSPACE_OUTPUT}/" || echo "Failed to list workspace directory"
 
-          if echo "$BODY" | jq -e '.success == true' >/dev/null 2>&1; then
+          if [ "$METRICS_COMPLETE" = "false" ]; then
+            echo "::error::Tests failed: incomplete metrics (fewer than 3) in region ${{ matrix.region }}"
+            exit 1
+          elif echo "$BODY" | jq -e '.success == true' >/dev/null 2>&1; then
             echo "Tests completed successfully (found success:true in response body)"
             echo "::notice::Tests completed successfully in region ${{ matrix.region }}"
             exit 0
