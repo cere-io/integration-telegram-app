@@ -23,8 +23,8 @@ const currentConfig = envConfigs[environment] || envConfigs.stage;
 
 const userName = process.env.TEST_USER_EMAIL || 'veronika.filipenko@cere.io';
 const otp = process.env.TEST_USER_OTP || '555555';
-const appUrl = process.env.TEST_APP_URL || currentConfig.baseURL;
-const campaignId = process.env.TEST_CAMPAIGN_ID || currentConfig.campaignId;
+const appUrl = currentConfig.baseURL || process.env.TEST_APP_URL;
+const campaignId = currentConfig.campaignId || process.env.TEST_CAMPAIGN_ID;
 
 const metrics = [];
 
@@ -78,55 +78,98 @@ async function testActiveQuestsScreen({ page }) {
   console.log(`Testing Active Quests screen in ${environment} environment (${region})...`);
   let start = Date.now();
 
-  await page.goto(`${appUrl}/?campaignId=${campaignId}`, {
-    waitUntil: 'domcontentloaded'
-  });
+  try {
+    await page.goto(`${appUrl}/?campaignId=${campaignId}`, {
+      waitUntil: 'domcontentloaded'
+    });
 
-  await page.locator('path').nth(1).click();
-  await page.getByRole('button', { name: 'Start Earning' }).click();
+    await page.locator('path').nth(1).click();
+    await page.getByRole('button', { name: 'Start Earning' }).click();
 
-  const questTab = await page.locator('.tgui-e6658d0b8927f95e').textContent();
-  console.log('Quest tab text:', questTab);
-  if (questTab !== 'Active Quests') {
-    throw new Error('Active Quests tab not found');
+    const questTab = await page.locator('.tgui-e6658d0b8927f95e').textContent();
+    console.log('Quest tab text:', questTab);
+    if (questTab !== 'Active Quests') {
+      throw new Error('Active Quests tab not found');
+    }
+
+    let timeTaken = Date.now() - start;
+    logTime('Active Quests Screen', timeTaken);
+    console.log(`✅ Active Quests Screen metric recorded: ${timeTaken}ms`);
+
+    await login(page);
+    return true;
+  } catch (err) {
+    console.error(`❌ Error in testActiveQuestsScreen: ${err.message}`);
+    let timeTaken = Date.now() - start;
+    logTime('Active Quests Screen', timeTaken);
+    console.log(`⚠️ Active Quests Screen metric recorded on error: ${timeTaken}ms`);
+    throw err;
   }
-
-  let timeTaken = Date.now() - start;
-  logTime('Active Quests Screen', timeTaken);
-
-  await login(page);
 }
 
 async function testLeaderboardScreen({ page }) {
   console.log(`Testing Leaderboard screen in ${environment} environment (${region})...`);
   let start = Date.now();
 
-  const leaderboardTabButton = page.locator('xpath=/html/body/div[1]/div/div/div[2]/button[2]');
-  await leaderboardTabButton.scrollIntoViewIfNeeded();
-  await leaderboardTabButton.click();
+  try {
+    const leaderboardTabButton = page.locator('xpath=/html/body/div[1]/div/div/div[2]/button[2]');
+    await leaderboardTabButton.scrollIntoViewIfNeeded();
+    await leaderboardTabButton.click();
 
-  let timeTaken = Date.now() - start;
-  logTime('Leaderboard Screen', timeTaken);
+    let timeTaken = Date.now() - start;
+    logTime('Leaderboard Screen', timeTaken);
+    return true
+  } catch (err) {
+    console.error(`❌ Error in testLeaderboardScreen: ${err.message}`);
+    let timeTaken = Date.now() - start;
+    logTime('Leaderboard Screen', timeTaken);
+    console.log(`⚠️ Leaderboard Screen metric recorded on error: ${timeTaken}ms`);
+    throw err;
+  }
 }
 
 async function testLibraryScreen({ page }) {
-  console.log(`Testing Library screen in ${environment} environment (${region})...`);
-  let start = Date.now();
+  try {
+    console.log(`Testing Library screen in ${environment} environment (${region})...`);
+    let start = Date.now();
 
-  const libraryTabButton = page.locator('xpath=/html/body/div[1]/div/div/div[2]/button[3]');
-  await libraryTabButton.scrollIntoViewIfNeeded();
-  await libraryTabButton.click();
+    const libraryTabButton = page.locator('xpath=/html/body/div[1]/div/div/div[2]/button[3]');
+    await libraryTabButton.scrollIntoViewIfNeeded();
+    await libraryTabButton.click();
 
-  console.log('Library tab clicked successfully.');
+    console.log('Library tab clicked successfully.');
 
-  let timeTaken = Date.now() - start;
-  logTime('Library Screen', timeTaken);
+    let timeTaken = Date.now() - start;
+    logTime('Library Screen', timeTaken);
+  } catch (err) {
+    console.error(`❌ Error in testLibraryScreen: ${err.message}`);
+    let timeTaken = Date.now() - start;
+    logTime('Library Screen', timeTaken);
+    console.log(`⚠️ Library Screen metric recorded on error: ${timeTaken}ms`);
+    throw err;
+  }
 }
 
 export default async function runIntegrationTest({ browser, context }) {
   console.log(`Starting integration test for ${environment} environment in ${region} region`);
   console.log(`Using URL: ${appUrl} with campaign ID: ${campaignId}`);
   metrics.length = 0;
+
+  console.log(`Starting integration test for ${environment} environment in ${region} region`);
+  console.log(`Using URL: ${appUrl} with campaign ID: ${campaignId}`);
+  metrics.length = 0;
+
+  try {
+    console.log('Testing file system access...');
+    fs.writeFileSync('/tmp/test-file.txt', 'Test file system access');
+    const content = fs.readFileSync('/tmp/test-file.txt', 'utf8');
+    console.log('File system access test result:', content);
+    if (content !== 'Test file system access') {
+      console.error('File system test failed: content mismatch');
+    }
+  } catch (error) {
+    console.error('File system access test failed:', error);
+  }
 
   try {
     fs.writeFileSync('/tmp/performance-log.txt', '');
