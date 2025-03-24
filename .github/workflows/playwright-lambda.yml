@@ -231,6 +231,18 @@ jobs:
           echo "$BODY" > "${OUTPUT_DIR}/lambda-body.txt"
           echo "$BODY" > "${WORKSPACE_OUTPUT}/lambda-body.txt"
 
+          if [ -f "/tmp/console-errors.txt" ]; then
+            echo "Copying console-errors.txt from /tmp to output directories..."
+            cp "/tmp/console-errors.txt" "${OUTPUT_DIR}/"
+            cp "/tmp/console-errors.txt" "${WORKSPACE_OUTPUT}/"
+          fi
+
+          if [ -f "/tmp/console-errors.json" ]; then
+            echo "Copying console-errors.json from /tmp to output directories..."
+            cp "/tmp/console-errors.json" "${OUTPUT_DIR}/"
+            cp "/tmp/console-errors.json" "${WORKSPACE_OUTPUT}/"
+          fi
+
           if [[ "$BODY" == \"* ]] && [[ "$BODY" == *\" ]]; then
             echo "Body appears to be a JSON string, attempting to parse..."
             PARSED_BODY=$(echo "$BODY" | sed 's/^"//; s/"$//; s/\\"/"/g; s/\\n/\n/g; s/\\\\/\\/g')
@@ -382,35 +394,64 @@ jobs:
               echo '```' >> $GITHUB_STEP_SUMMARY
             fi
             
-            # Проверяем наличие файла с консольными ошибками
+            HAS_CONSOLE_ERRORS=true
+            
             if [ -f "${OUTPUT_DIR}/console-errors.txt" ]; then
+              HAS_CONSOLE_ERRORS=true
               echo "" >> $GITHUB_STEP_SUMMARY
               echo "## 🔴 Browser Console Errors" >> $GITHUB_STEP_SUMMARY
               echo "Browser console errors were detected during test execution:" >> $GITHUB_STEP_SUMMARY
               echo '```' >> $GITHUB_STEP_SUMMARY
               cat "${OUTPUT_DIR}/console-errors.txt" >> $GITHUB_STEP_SUMMARY
               echo '```' >> $GITHUB_STEP_SUMMARY
+            elif [ -f "${OUTPUT_DIR}/console-errors-formatted.txt" ]; then
+              HAS_CONSOLE_ERRORS=true
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "## 🔴 Browser Console Errors (formatted)" >> $GITHUB_STEP_SUMMARY
+              echo "Browser console errors were detected during test execution:" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              cat "${OUTPUT_DIR}/console-errors-formatted.txt" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+            elif [ -f "${OUTPUT_DIR}/console-errors.json" ]; then
+              HAS_CONSOLE_ERRORS=true
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "## 🔴 Browser Console Errors (from JSON)" >> $GITHUB_STEP_SUMMARY
+              echo "Browser console errors were detected during test execution:" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              cat "${OUTPUT_DIR}/console-errors.json" | jq -r '.[] | "[\(.type)] [\(.time)] \(.text)"' >> $GITHUB_STEP_SUMMARY || cat "${OUTPUT_DIR}/console-errors.json" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+            elif [ -f "${OUTPUT_DIR}/all-console-errors.json" ]; then
+              HAS_CONSOLE_ERRORS=true
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "## 🔴 Browser Console Errors (comprehensive)" >> $GITHUB_STEP_SUMMARY
+              echo "Browser console errors were detected during test execution:" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              cat "${OUTPUT_DIR}/all-console-errors.json" | jq -r '.combined[] | "[\(.type)] [\(.time)] \(.text)"' >> $GITHUB_STEP_SUMMARY || cat "${OUTPUT_DIR}/all-console-errors.json" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
             elif echo "$BODY" | jq -e '.consoleErrors' >/dev/null 2>&1; then
-              # Check if consoleErrors array is not empty
               CONSOLE_ERRORS_COUNT=$(echo "$BODY" | jq -r '.consoleErrors | length')
               if [ "$CONSOLE_ERRORS_COUNT" -gt 0 ]; then
+                HAS_CONSOLE_ERRORS=true
                 echo "" >> $GITHUB_STEP_SUMMARY
-                echo "## 🔴 Browser Console Errors" >> $GITHUB_STEP_SUMMARY
+                echo "## 🔴 Browser Console Errors (from response)" >> $GITHUB_STEP_SUMMARY
                 echo "Browser console errors were detected during test execution:" >> $GITHUB_STEP_SUMMARY
                 echo '```' >> $GITHUB_STEP_SUMMARY
-                
                 echo "$BODY" | jq -r '.consoleErrors | map("[\(.type)] [\(.time)] \(.text)") | .[0:20] | .[]' >> $GITHUB_STEP_SUMMARY
-                
                 if [ "$CONSOLE_ERRORS_COUNT" -gt 20 ]; then
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "... and $((CONSOLE_ERRORS_COUNT - 20)) more console errors" >> $GITHUB_STEP_SUMMARY
                 fi
-                
                 echo '```' >> $GITHUB_STEP_SUMMARY
                 
                 echo "$BODY" | jq -r '.consoleErrors | map("[\(.type)] [\(.time)] \(.text)") | .[]' > "${OUTPUT_DIR}/console-errors-from-response.txt"
                 echo "$BODY" | jq -r '.consoleErrors | map("[\(.type)] [\(.time)] \(.text)") | .[]' > "${WORKSPACE_OUTPUT}/console-errors-from-response.txt"
               fi
+            fi
+            
+            if [ "$HAS_CONSOLE_ERRORS" = "true" ]; then
+              echo "Console errors were found and added to the report"
+            else
+              echo "No console errors were found in any source"
             fi
             
             echo "## Environment" >> $GITHUB_STEP_SUMMARY

@@ -658,6 +658,16 @@ export const handler = async (event) => {
        console.log('No console errors log found');
      }
 
+     if (fs.existsSync('/tmp/console-errors-formatted.txt')) {
+       console.log('Formatted console errors file found, copying...');
+       try {
+         fs.copyFileSync('/tmp/console-errors-formatted.txt', `${tmpDir}/console-errors-formatted.txt`);
+         console.log('Formatted console errors file copied successfully');
+       } catch (copyError) {
+         console.error('Error copying formatted console errors file:', copyError);
+       }
+     }
+
      if (fs.existsSync('/tmp/console-errors.json')) {
        console.log('Console errors JSON file found, processing...');
        try {
@@ -746,7 +756,25 @@ export const handler = async (event) => {
        ...consoleErrorsFromFile
      ];
 
-     console.log(`Total console errors: ${combinedConsoleErrors.length} (${testResult.consoleErrors ? testResult.consoleErrors.length : 0} from test result, ${consoleErrorsFromFile.length} from file)`);
+     const uniqueConsoleErrors = Array.from(
+       new Map(combinedConsoleErrors.map(
+         error => [`${error.type}-${error.text}-${error.time}`, error]
+       )).values()
+     );
+     
+     console.log(`Total console errors: ${uniqueConsoleErrors.length} (${testResult.consoleErrors ? testResult.consoleErrors.length : 0} from test result, ${consoleErrorsFromFile.length} from file, ${combinedConsoleErrors.length - uniqueConsoleErrors.length} duplicates removed)`);
+
+     try {
+       const allErrors = {
+         fromTestResult: testResult.consoleErrors || [],
+         fromFile: consoleErrorsFromFile,
+         combined: uniqueConsoleErrors
+       };
+       fs.writeFileSync(`${tmpDir}/all-console-errors.json`, JSON.stringify(allErrors, null, 2));
+       console.log('Created comprehensive error report in all-console-errors.json');
+     } catch (error) {
+       console.error('Failed to create comprehensive error report:', error);
+     }
 
      return {
        statusCode: testResult.success ? 200 : 500,
@@ -757,7 +785,7 @@ export const handler = async (event) => {
          performanceMetrics: performanceMetrics,
          metrics: metrics,
          authError: testResult.authError || null,
-         consoleErrors: combinedConsoleErrors.length > 0 ? combinedConsoleErrors : [],
+         consoleErrors: uniqueConsoleErrors.length > 0 ? uniqueConsoleErrors : [],
          region: region,
          environment: environment,
          executionTime: new Date().toISOString()

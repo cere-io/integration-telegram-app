@@ -244,6 +244,12 @@ export default async function runIntegrationTest({ browser, context }) {
   }
 
   try {
+    fs.appendFileSync('/tmp/console-errors.txt', `[error] [${new Date().toISOString()}] TEST_CONSOLE_ERROR: This is a test console error to verify error logging\n`);
+  } catch (err) {
+    console.error('Failed to write test console error to file:', err);
+  }
+
+  try {
     console.log('Testing file system access...');
     fs.writeFileSync('/tmp/test-file.txt', 'Test file system access');
     const content = fs.readFileSync('/tmp/test-file.txt', 'utf8');
@@ -337,6 +343,10 @@ export default async function runIntegrationTest({ browser, context }) {
       if (globalConsoleErrors.length > 5) {
         console.log(`... and ${globalConsoleErrors.length - 5} more console errors`);
       }
+    } else {
+      globalConsoleErrors.push(testError);
+      testResultData.consoleErrors = globalConsoleErrors;
+      console.log('Added test console error for logging verification');
     }
 
     try {
@@ -346,6 +356,17 @@ export default async function runIntegrationTest({ browser, context }) {
       }
     } catch (fileError) {
       console.error('Failed to write console errors JSON file:', fileError);
+    }
+
+    try {
+      let consoleErrorsText = globalConsoleErrors.map(err =>
+        `[${err.type}] [${err.time}] ${err.text}`
+      ).join('\n');
+
+      fs.writeFileSync('/tmp/console-errors-formatted.txt', consoleErrorsText);
+      console.log('Wrote formatted console errors to /tmp/console-errors-formatted.txt');
+    } catch (fileError) {
+      console.error('Failed to write formatted console errors file:', fileError);
     }
 
     if (authError) {
