@@ -257,7 +257,14 @@ jobs:
               echo "$METRICS_JSON" | jq -c '.[]' | while read -r metric; do
                 NAME=$(echo "$metric" | jq -r '.name')
                 DURATION=$(echo "$metric" | jq -r '.duration')
-                METRIC_LINE="${NAME} took ${DURATION}ms"
+                FAKED=$(echo "$metric" | jq -r '.faked // false')
+                
+                if [ "$FAKED" == "true" ]; then
+                  METRIC_LINE="${NAME} took ${DURATION}ms [AUTH_ERROR]"
+                else
+                  METRIC_LINE="${NAME} took ${DURATION}ms"
+                fi
+                
                 echo "$METRIC_LINE" >> "${OUTPUT_DIR}/performance-metrics.txt"
                 echo "$METRIC_LINE" >> "${WORKSPACE_OUTPUT}/performance-metrics.txt"
               done
@@ -272,6 +279,20 @@ jobs:
               echo "Metrics from performanceMetrics: $METRICS"
             else
               echo "No metrics fields found in JSON body"
+            fi
+
+            if echo "$BODY" | jq -e '.authError' >/dev/null 2>&1; then
+              echo "Found authentication error in response"
+              AUTH_ERROR=$(echo "$BODY" | jq -c '.authError')
+              echo "$AUTH_ERROR" > "${OUTPUT_DIR}/auth-error.json"
+              echo "$AUTH_ERROR" > "${WORKSPACE_OUTPUT}/auth-error.json"
+              echo "Authentication error saved to files"
+              
+              AUTH_ERROR_TYPE=$(echo "$AUTH_ERROR" | jq -r '.type')
+              AUTH_ERROR_MSG=$(echo "$AUTH_ERROR" | jq -r '.message')
+              AUTH_ERROR_TIME=$(echo "$AUTH_ERROR" | jq -r '.timestamp')
+              
+              echo "Auth error details - Type: $AUTH_ERROR_TYPE, Message: $AUTH_ERROR_MSG, Time: $AUTH_ERROR_TIME"
             fi
           else
             echo "Body is not valid JSON, trying other methods..."
@@ -332,6 +353,17 @@ jobs:
               echo "- **Type:** ${AUTH_ERROR_TYPE}" >> $GITHUB_STEP_SUMMARY
               echo "- **Message:** ${AUTH_ERROR_MSG}" >> $GITHUB_STEP_SUMMARY
               echo "- **Time:** ${AUTH_ERROR_TIME}" >> $GITHUB_STEP_SUMMARY
+              
+              if echo "$AUTH_ERROR" | jq -e '.consoleErrors' >/dev/null 2>&1; then
+                echo "" >> $GITHUB_STEP_SUMMARY
+                echo "### Browser Console Errors" >> $GITHUB_STEP_SUMMARY
+                echo "The following errors were detected in the browser console during authentication:" >> $GITHUB_STEP_SUMMARY
+                echo "" >> $GITHUB_STEP_SUMMARY
+                echo "```" >> $GITHUB_STEP_SUMMARY
+                echo "$AUTH_ERROR" | jq -r '.consoleErrors[] | "[\(.type)] \(.text)"' >> $GITHUB_STEP_SUMMARY
+                echo "```" >> $GITHUB_STEP_SUMMARY
+              fi
+              
               echo "" >> $GITHUB_STEP_SUMMARY
               echo "### Troubleshooting Steps" >> $GITHUB_STEP_SUMMARY
               echo "1. Check if the web3auth service is working properly" >> $GITHUB_STEP_SUMMARY
@@ -347,6 +379,15 @@ jobs:
               echo "## ⚠️ Test Errors" >> $GITHUB_STEP_SUMMARY
               echo '```' >> $GITHUB_STEP_SUMMARY
               cat "${OUTPUT_DIR}/error-log.txt" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            if [ -f "${OUTPUT_DIR}/console-errors.txt" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "## 🔴 Browser Console Errors" >> $GITHUB_STEP_SUMMARY
+              echo "Browser console errors were detected during test execution:" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              cat "${OUTPUT_DIR}/console-errors.txt" >> $GITHUB_STEP_SUMMARY
               echo '```' >> $GITHUB_STEP_SUMMARY
             fi
             

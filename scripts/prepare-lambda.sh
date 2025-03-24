@@ -217,18 +217,37 @@ async function runTests() {
     let output = '';
     let errorOutput = '';
     let metrics = [];
+    let authError = null;
+    let testResult = null;
+    let performanceMetrics = '';
 
     try {
       const testFn = testModule.default;
-      const result = await testFn({ browser, context });
-      output = 'Tests completed successfully';
-      console.log(output);
+      testResult = await testFn({ browser, context });
 
-      // Extract metrics from test result if available
-      if (result && result.metrics) {
-        metrics = result.metrics;
-        console.log('Metrics received from test:', metrics);
+      if (testResult.authError) {
+        authError = testResult.authError;
+        console.log('Authentication error detected:', authError);
       }
+
+      metrics = testResult.metrics || [];
+      console.log('Collected metrics:', metrics.length);
+
+      if (metrics && metrics.length > 0) {
+        for (const metric of metrics) {
+          const authErrorTag = metric.faked ? ' [AUTH_ERROR]' : '';
+          performanceMetrics += `${metric.name} took ${metric.duration}ms${authErrorTag}\n`;
+        }
+      }
+
+      success = testResult.success === true;
+      output = success ? 'Tests completed successfully' : 'Tests completed with errors';
+
+      if (testResult.errorInfo) {
+        errorOutput = testResult.errorInfo.message;
+      }
+
+      console.log(output);
     } catch (error) {
       success = false;
       errorOutput = error.message;
@@ -241,6 +260,17 @@ async function runTests() {
           console.log('Browser process still running:', await checkBrowserProcess(chromePid));
         }
       }
+
+      if (testResult && testResult.authError) {
+        authError = testResult.authError;
+      }
+
+      if (testResult && testResult.metrics) {
+        for (const metric of testResult.metrics) {
+          const authErrorTag = metric.faked ? ' [AUTH_ERROR]' : '';
+          performanceMetrics += `${metric.name} took ${metric.duration}ms${authErrorTag}\n`;
+        }
+      }
     }
 
     return {
@@ -248,6 +278,8 @@ async function runTests() {
       output,
       errorOutput,
       metrics,
+      authError,
+      performanceMetrics,
       code: success ? 0 : 1,
       environment: process.env.TEST_ENV,
       region: process.env.AWS_REGION
@@ -261,6 +293,8 @@ async function runTests() {
       output: '',
       errorOutput: `${error.message}\nStack: ${error.stack}`,
       metrics: [],
+      authError: null,
+      performanceMetrics: '',
       code: 1,
       environment: process.env.TEST_ENV,
       region: process.env.AWS_REGION
@@ -589,6 +623,18 @@ export const handler = async (event) => {
      ]);
      console.log(`Tests completed with success=${testResult.success}`);
 
+     if (fs.existsSync('/tmp/console-errors.txt')) {
+       console.log('Console errors log found, copying to output directory');
+       try {
+         fs.copyFileSync('/tmp/console-errors.txt', `${tmpDir}/console-errors.txt`);
+         console.log('Console errors log copied successfully');
+       } catch (copyError) {
+         console.error('Error copying console errors log:', copyError);
+       }
+     } else {
+       console.log('No console errors log found');
+     }
+
      let metrics = testResult.metrics || [];
      console.log(`Found ${metrics.length} metrics in test result`);
 
@@ -609,8 +655,15 @@ export const handler = async (event) => {
              metrics = performanceMetrics.split('\n')
                .filter(line => line.trim())
                .map(line => {
-                 const match = line.match(/([A-Za-z ]+) took ([0-9]+)ms/);
-                 return match ? { name: match[1], duration: parseInt(match[2]) } : null;
+                 const match = line.match(/([A-Za-z ]+) took ([0-9]+)ms(\s*\[AUTH_ERROR\])?/);
+                 if (match) {
+                   return {
+                     name: match[1],
+                     duration: parseInt(match[2]),
+                     faked: match[3] !== undefined
+                   };
+                 }
+                 return null;
                })
                .filter(m => m !== null);
              console.log(`Parsed ${metrics.length} metrics from file`);
@@ -651,6 +704,7 @@ export const handler = async (event) => {
          errorOutput: testResult.errorOutput || '',
          performanceMetrics: performanceMetrics,
          metrics: metrics,
+         authError: testResult.authError || null,
          region: region,
          environment: environment,
          executionTime: new Date().toISOString()
@@ -665,6 +719,7 @@ export const handler = async (event) => {
          success: false,
          error: error.message,
          stack: error.stack,
+         authError: testResult && testResult.authError ? testResult.authError : null,
          region: region,
          environment: environment,
          executionTime: new Date().toISOString()
@@ -678,6 +733,7 @@ export const handler = async (event) => {
       body: JSON.stringify({
         error: error.message,
         stack: error.stack,
+        authError: null,
         region: event.region || process.env.AWS_REGION || 'unknown',
         environment: event.environment || 'unknown'
       })

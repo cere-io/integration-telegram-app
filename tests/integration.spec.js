@@ -56,6 +56,25 @@ const logError = (errorName, errorMessage) => {
 };
 
 const login = async (page) => {
+  const consoleErrors = [];
+
+  page.on('console', msg => {
+    const type = msg.type();
+    const text = msg.text();
+
+    console.log(`[Browser Console] [${type}] ${text}`);
+
+    if (type === 'error') {
+      consoleErrors.push({ type, text, time: new Date().toISOString() });
+
+      try {
+        fs.appendFileSync('/tmp/console-errors.txt', `[${type}] [${new Date().toISOString()}] ${text}\n`);
+      } catch (err) {
+        console.error('Failed to write console error to file:', err);
+      }
+    }
+  });
+
   try {
     await page.waitForSelector('#torusIframe', { timeout: 30000 });
     const torusFrame = await page.frameLocator('#torusIframe');
@@ -88,8 +107,8 @@ const login = async (page) => {
     await verifyButton.click();
 
     await page.waitForSelector('.tgui-e6658d0b8927f95e', { timeout: 15000 });
-    
-    return true;
+
+    return { success: true, consoleErrors };
   } catch (error) {
     try {
       await page.screenshot({ path: '/tmp/login-error.png' });
@@ -97,16 +116,28 @@ const login = async (page) => {
     } catch (screenshotError) {
       console.error('Failed to save screenshot:', screenshotError);
     }
-    
-    console.error(`Web3Auth login error: ${error.message}`);
+
+    console.error(`Login error: ${error.message}`);
     authError = {
-      type: 'Web3AuthError',
+      type: 'LoginError',
       message: error.message,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      consoleErrors: consoleErrors
     };
-    
+
     logError('Web3AuthError', error.message);
-    
+
+    if (consoleErrors.length > 0) {
+      try {
+        fs.appendFileSync('/tmp/error-log.txt', '\nConsole Errors during login:\n');
+        consoleErrors.forEach(err => {
+          fs.appendFileSync('/tmp/error-log.txt', `[${err.type}] ${err.text}\n`);
+        });
+      } catch (fileError) {
+        console.error('Failed to write console errors to error log:', fileError);
+      }
+    }
+
     throw error;
   }
 };
@@ -133,7 +164,16 @@ async function testActiveQuestsScreen({ page }) {
     logTime('Active Quests Screen', timeTaken);
     console.log(`✅ Active Quests Screen metric recorded: ${timeTaken}ms`);
 
-    await login(page);
+    const loginResult = await login(page);
+    console.log('Login successful:', loginResult.success);
+
+    if (loginResult.consoleErrors && loginResult.consoleErrors.length > 0) {
+      console.log(`Found ${loginResult.consoleErrors.length} console errors during login`);
+      loginResult.consoleErrors.forEach(err => {
+        console.log(`Console ${err.type}: ${err.text}`);
+      });
+    }
+
     return true;
   } catch (err) {
     console.error(`❌ Error in testActiveQuestsScreen: ${err.message}`);
@@ -240,19 +280,19 @@ export default async function runIntegrationTest({ browser, context }) {
 
     if (authError) {
       testResultData.authError = authError;
-      
+
       if (!metrics.find(m => m.name === 'Leaderboard Screen')) {
         metrics.push({
           name: 'Leaderboard Screen',
-          duration: 0, 
+          duration: 0,
           faked: true,
           reason: 'Auth error prevented test'
         });
-        
+
         console.log('Added placeholder Leaderboard Screen metric due to auth error');
         fs.appendFileSync(`/tmp/performance-log.txt`, `Leaderboard Screen took 0ms [AUTH_ERROR]\n`);
       }
-      
+
       if (!metrics.find(m => m.name === 'Library Screen')) {
         metrics.push({
           name: 'Library Screen',
@@ -260,11 +300,11 @@ export default async function runIntegrationTest({ browser, context }) {
           faked: true,
           reason: 'Auth error prevented test'
         });
-        
+
         console.log('Added placeholder Library Screen metric due to auth error');
         fs.appendFileSync(`/tmp/performance-log.txt`, `Library Screen took 0ms [AUTH_ERROR]\n`);
       }
-      
+
       testResultData.success = false;
       testResultData.errorInfo = {
         type: 'AuthenticationError',
@@ -293,19 +333,19 @@ export default async function runIntegrationTest({ browser, context }) {
 
     if (authError) {
       testResultData.authError = authError;
-      
+
       if (!metrics.find(m => m.name === 'Leaderboard Screen')) {
         metrics.push({
           name: 'Leaderboard Screen',
-          duration: 0, 
+          duration: 0,
           faked: true,
           reason: 'Auth error prevented test'
         });
-        
+
         console.log('Added placeholder Leaderboard Screen metric due to auth error');
         fs.appendFileSync(`/tmp/performance-log.txt`, `Leaderboard Screen took 0ms [AUTH_ERROR]\n`);
       }
-      
+
       if (!metrics.find(m => m.name === 'Library Screen')) {
         metrics.push({
           name: 'Library Screen',
@@ -313,11 +353,11 @@ export default async function runIntegrationTest({ browser, context }) {
           faked: true,
           reason: 'Auth error prevented test'
         });
-        
+
         console.log('Added placeholder Library Screen metric due to auth error');
         fs.appendFileSync(`/tmp/performance-log.txt`, `Library Screen took 0ms [AUTH_ERROR]\n`);
       }
-      
+
       testResultData.success = false;
       testResultData.errorInfo = {
         type: 'AuthenticationError',
