@@ -53,7 +53,8 @@ force_extract_console_errors() {
     
     # Extract the entire consoleErrors array to a separate file
     ERRORS_FILE="${output_dir}/extracted_console_errors.txt"
-    grep -A 200 '"consoleErrors"' "$TEMP_FILE" | grep -B 200 '\]' | head -n 200 > "$ERRORS_FILE"
+    grep -A 500 '"consoleErrors"' "$TEMP_FILE" | grep -B 500 -m 1 '"],' | head -n 500 > "$ERRORS_FILE" || \
+    grep -A 500 '"consoleErrors"' "$TEMP_FILE" | head -n 500 > "$ERRORS_FILE"
     
     # Create a section for console errors in the summary
     echo "" >> "$summary_file"
@@ -61,51 +62,51 @@ force_extract_console_errors() {
     echo "The following errors were found in the test:" >> "$summary_file"
     echo '```' >> "$summary_file"
     
-    # Multiple extraction methods - try each one until one works
+    # Extract error message texts with more flexible approach for malformed JSON
+    # This approach handles cases where closing quotes might be missing
+    ERRORS_EXTRACTED=false
     
-    # Method 1: Use jq if possible
-    if echo "$body" | jq -r '.consoleErrors[].text' 2>/dev/null > "${output_dir}/jq_extracted_errors.txt"; then
-      echo "Extracted errors using jq"
-      cat "${output_dir}/jq_extracted_errors.txt" >> "$summary_file"
-    # Method 2: Use grep with extended pattern
-    elif grep -o '"text":"[^"]*"' "$ERRORS_FILE" | sed 's/"text":"//g; s/"$//g' > "${output_dir}/grep_extracted_errors.txt" && [ -s "${output_dir}/grep_extracted_errors.txt" ]; then
-      echo "Extracted errors using grep pattern matching"
-      cat "${output_dir}/grep_extracted_errors.txt" >> "$summary_file"
-    # Method 3: Use awk to extract between quotes
-    elif awk -F'"text":"' '{for(i=2;i<=NF;i++) {split($i,a,"\""); print a[1]}}' "$ERRORS_FILE" > "${output_dir}/awk_extracted_errors.txt" && [ -s "${output_dir}/awk_extracted_errors.txt" ]; then
-      echo "Extracted errors using awk"
-      cat "${output_dir}/awk_extracted_errors.txt" >> "$summary_file"
-    # Fallback: Just show parts of the errors file
+    # Method 1: Try with simple text pattern matching
+    TEXT_PATTERN='"text": "[^,}]*'
+    if grep -o "$TEXT_PATTERN" "$ERRORS_FILE" | sed 's/"text": "//g' > "${output_dir}/simple_extracted_errors.txt" && [ -s "${output_dir}/simple_extracted_errors.txt" ]; then
+      echo "Extracted errors using simple text pattern"
+      cat "${output_dir}/simple_extracted_errors.txt" >> "$summary_file"
+      ERRORS_EXTRACTED=true
+    # Method 2: Try with broader pattern
+    elif grep -o '"text":[^,}]*' "$ERRORS_FILE" | sed 's/"text": "//g; s/"text":"//g' > "${output_dir}/broad_extracted_errors.txt" && [ -s "${output_dir}/broad_extracted_errors.txt" ]; then
+      echo "Extracted errors using broader pattern"
+      cat "${output_dir}/broad_extracted_errors.txt" >> "$summary_file"
+      ERRORS_EXTRACTED=true
+    # Method 3: Try with line-based approach
+    elif grep -A 1 '"text":' "$ERRORS_FILE" | grep -v '"text":' | sed 's/^ *"//g; s/",$//g; s/",//g' > "${output_dir}/line_extracted_errors.txt" && [ -s "${output_dir}/line_extracted_errors.txt" ]; then
+      echo "Extracted errors using line-based approach"
+      cat "${output_dir}/line_extracted_errors.txt" >> "$summary_file"
+      ERRORS_EXTRACTED=true
+    # Method 4: Use manual extraction with fixed strings
     else
-      echo "Using fallback error extraction"
-      echo "Errors section found but could not extract specific messages." >> "$summary_file"
-      echo "Showing raw error data:" >> "$summary_file"
-      echo "" >> "$summary_file"
-      cat "$ERRORS_FILE" | head -n 20 >> "$summary_file"
-    fi
-    
-    echo '```' >> "$summary_file"
-    
-    # Try to extract detailed error info with type and timestamp
-    echo "" >> "$summary_file"
-    echo "## 📊 Detailed Console Errors" >> "$summary_file"
-    echo '```' >> "$summary_file"
-    
-    # Try multiple methods for detailed errors too
-    if echo "$body" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' 2>/dev/null > "${output_dir}/jq_detailed_errors.txt" && [ -s "${output_dir}/jq_detailed_errors.txt" ]; then
-      echo "Extracted detailed errors using jq"
-      cat "${output_dir}/jq_detailed_errors.txt" >> "$summary_file"
-    elif grep -o '"type":"[^"]*"[^{]*"text":"[^"]*"' "$ERRORS_FILE" | \
-         sed -E 's/"type":"([^"]*)".+"time":"([^"]*)".+"text":"([^"]*)"/[\1] [\2] \3/g; s/"type":"([^"]*)".+"text":"([^"]*)".+"time":"([^"]*)"/[\1] [\3] \2/g; s/"type":"([^"]*)".+"text":"([^"]*)"/[\1] \2/g' > "${output_dir}/grep_detailed_errors.txt" && [ -s "${output_dir}/grep_detailed_errors.txt" ]; then
-      echo "Extracted detailed errors using pattern matching"
-      cat "${output_dir}/grep_detailed_errors.txt" >> "$summary_file"
-    else
-      echo "Could not extract detailed error information" >> "$summary_file"
+      echo "Using manual error extraction for malformed JSON"
       
-      # Debug info
-      echo "" >> "$summary_file"
-      echo "Debug info - Raw error data sample:" >> "$summary_file"
-      head -n 10 "$ERRORS_FILE" >> "$summary_file"
+      # Extract manually with pattern for truncated JSON
+      awk 'BEGIN {FS="\"text\": \""; OFS="\n"} 
+           {
+              for (i=2; i<=NF; i++) {
+                 sub(/[,}].*/,"",$i); 
+                 print $i
+              }
+           }' "$ERRORS_FILE" > "${output_dir}/manual_extracted_errors.txt"
+      
+      if [ -s "${output_dir}/manual_extracted_errors.txt" ]; then
+        cat "${output_dir}/manual_extracted_errors.txt" >> "$summary_file"
+        ERRORS_EXTRACTED=true
+      else
+        echo "Could not extract errors. Showing raw consoleErrors section:" >> "$summary_file"
+        head -n 20 "$ERRORS_FILE" >> "$summary_file"
+        
+        # Last resort - show specific markers where errors should be
+        echo "" >> "$summary_file"
+        echo "Error markers:" >> "$summary_file"
+        grep -n "text" "$ERRORS_FILE" | head -n 10 >> "$summary_file"
+      fi
     fi
     
     echo '```' >> "$summary_file"
@@ -122,15 +123,28 @@ force_extract_console_errors() {
   fi
   
   # No consoleErrors section found, try alternative extraction
-  if grep -q '"text":"' "$TEMP_FILE"; then
+  if grep -q '"text"' "$TEMP_FILE"; then
     echo "Found text fields but no consoleErrors section"
     
-    # Try to extract just the error texts directly
+    # Try to extract just the error texts directly with a more flexible approach
     echo "" >> "$summary_file"
     echo "## 🛑 Console Errors (Alternative Extraction)" >> "$summary_file" 
     echo "The following errors were found in the test:" >> "$summary_file"
     echo '```' >> "$summary_file"
-    grep -o '"text":"[^"]*"' "$TEMP_FILE" | sed 's/"text":"//g; s/"$//g' >> "$summary_file"
+    
+    # Try multiple patterns
+    if grep -o '"text": "[^,}]*' "$TEMP_FILE" | sed 's/"text": "//g' > "${output_dir}/alt_extracted_errors.txt" && [ -s "${output_dir}/alt_extracted_errors.txt" ]; then
+      cat "${output_dir}/alt_extracted_errors.txt" >> "$summary_file"
+    else
+      awk 'BEGIN {FS="\"text\": \""; OFS="\n"} 
+           {
+              for (i=2; i<=NF; i++) {
+                 sub(/[,}].*/,"",$i); 
+                 print $i
+              }
+           }' "$TEMP_FILE" >> "$summary_file"
+    fi
+    
     echo '```' >> "$summary_file"
     
     return 0
