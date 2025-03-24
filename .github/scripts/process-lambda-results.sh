@@ -20,7 +20,23 @@ if echo "$BODY" | jq -e '.consoleErrors' >/dev/null 2>&1; then
   echo "$BODY" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' > "${WORKSPACE_OUTPUT}/extracted-console-errors.txt"
   echo "Console errors extracted and saved to files"
 else
-  echo "No console errors found in response JSON"
+  echo "No direct console errors found in JSON. Checking if body needs parsing..."
+  
+  # Check if body is a string containing JSON (from Lambda response)
+  # This is the case when the Lambda returns JSON inside a string in the body field
+  if echo "$BODY" | grep -q '^{"success":'; then
+    echo "Body appears to be a JSON string with a nested structure."
+    
+    # Try to extract consoleErrors from the nested JSON
+    if echo "$BODY" | jq -e '.consoleErrors' >/dev/null 2>&1; then
+      echo "Found console errors in the JSON body!"
+      echo "$BODY" | jq -c '.consoleErrors' > "${OUTPUT_DIR}/extracted-console-errors.json"
+      echo "$BODY" | jq -c '.consoleErrors' > "${WORKSPACE_OUTPUT}/extracted-console-errors.json"
+      echo "$BODY" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' > "${OUTPUT_DIR}/extracted-console-errors.txt"
+      echo "$BODY" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' > "${WORKSPACE_OUTPUT}/extracted-console-errors.txt"
+      echo "Console errors extracted and saved to files"
+    fi
+  fi
 fi
 
 # Copy console error files if they exist
@@ -101,6 +117,25 @@ if echo "$BODY" | jq -e . >/dev/null 2>&1; then
   fi
 else
   echo "Body is not valid JSON, trying other methods..."
+  
+  # Special case for Lambda responses where the body contains escaped JSON
+  if [[ "$BODY" == *"\"consoleErrors\":"* ]]; then
+    echo "Found console errors in body text. Attempting to extract..."
+    
+    # Extract all console errors with a simple regex to create a pseudo-JSON array
+    ERRORS_TEXT=$(echo "$BODY" | grep -o '"consoleErrors":\[[^]]*\]' | sed 's/"consoleErrors"://g')
+    if [ -n "$ERRORS_TEXT" ]; then
+      echo "Successfully extracted console errors JSON array"
+      echo "$ERRORS_TEXT" > "${OUTPUT_DIR}/extracted-console-errors.json"
+      echo "$ERRORS_TEXT" > "${WORKSPACE_OUTPUT}/extracted-console-errors.json"
+      
+      # Write a formatted version for human reading (this is simplified)
+      echo "$BODY" | grep -o '"type":"[^"]*","time":"[^"]*","text":"[^"]*"' | \
+        sed 's/"type":"\([^"]*\)","time":"\([^"]*\)","text":"\([^"]*\)"/[\1] [\2] \3/g' > "${OUTPUT_DIR}/console-errors-formatted.txt"
+      cp "${OUTPUT_DIR}/console-errors-formatted.txt" "${WORKSPACE_OUTPUT}/"
+      echo "Formatted console errors extracted and saved"
+    fi
+  fi
 fi
 
 # Alternative methods to extract metrics
@@ -368,29 +403,6 @@ else
   echo '```' >> $GITHUB_STEP_SUMMARY
 fi
 
-# Process console errors regardless of test outcome
-if echo "$BODY" | jq -e '.consoleErrors' >/dev/null 2>&1; then
-  CONSOLE_ERRORS_COUNT=$(echo "$BODY" | jq -r '.consoleErrors | length')
-  if [ "$CONSOLE_ERRORS_COUNT" -gt 0 ]; then
-    echo "" >> $GITHUB_STEP_SUMMARY
-    echo "## 🔴 Browser console errors" >> $GITHUB_STEP_SUMMARY
-    echo "During the test execution the following errors were found in the browser console:" >> $GITHUB_STEP_SUMMARY
-    echo '```' >> $GITHUB_STEP_SUMMARY
-    
-    echo "$BODY" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' >> $GITHUB_STEP_SUMMARY
-    
-    echo '```' >> $GITHUB_STEP_SUMMARY
-    echo "Total console errors: $CONSOLE_ERRORS_COUNT" >> $GITHUB_STEP_SUMMARY
-    
-    echo "$BODY" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' > "${OUTPUT_DIR}/console-errors-from-response.txt"
-    echo "$BODY" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' > "${WORKSPACE_OUTPUT}/console-errors-from-response.txt"
-    
-    echo "⚠️ Console errors were found and added to the report." 
-  else
-    echo "✅ There are no console errors"
-  fi
-fi
-
 # ALWAYS check for ANY console errors from ANY available source and display them
 echo "" >> $GITHUB_STEP_SUMMARY
 echo "## 🧪 Console Errors Check" >> $GITHUB_STEP_SUMMARY
@@ -398,21 +410,25 @@ echo "## 🧪 Console Errors Check" >> $GITHUB_STEP_SUMMARY
 # Check for console errors in various possible files and sources
 FOUND_ERRORS=false
 
+# Direct extraction from BODY for Lambda response structure
+if [[ "$BODY" == *"\"consoleErrors\":"* ]]; then
+  FOUND_ERRORS=true
+  echo "Console errors found directly in response body:" >> $GITHUB_STEP_SUMMARY
+  echo '```' >> $GITHUB_STEP_SUMMARY
+  
+  # Extract console errors with grep and format them
+  echo "$BODY" | grep -o '"type":"[^"]*","time":"[^"]*","text":"[^"]*"' | \
+    sed 's/"type":"\([^"]*\)","time":"\([^"]*\)","text":"\([^"]*\)"/[\1] [\2] \3/g' >> $GITHUB_STEP_SUMMARY
+  
+  echo '```' >> $GITHUB_STEP_SUMMARY
+fi
+
 # Check extracted-console-errors.txt
 if [ -f "${OUTPUT_DIR}/extracted-console-errors.txt" ]; then
   FOUND_ERRORS=true
   echo "Console errors found in extracted-console-errors.txt:" >> $GITHUB_STEP_SUMMARY
   echo '```' >> $GITHUB_STEP_SUMMARY
   cat "${OUTPUT_DIR}/extracted-console-errors.txt" >> $GITHUB_STEP_SUMMARY
-  echo '```' >> $GITHUB_STEP_SUMMARY
-fi
-
-# Check console-errors.txt
-if [ -f "${OUTPUT_DIR}/console-errors.txt" ]; then
-  FOUND_ERRORS=true
-  echo "Console errors found in console-errors.txt:" >> $GITHUB_STEP_SUMMARY
-  echo '```' >> $GITHUB_STEP_SUMMARY
-  cat "${OUTPUT_DIR}/console-errors.txt" >> $GITHUB_STEP_SUMMARY
   echo '```' >> $GITHUB_STEP_SUMMARY
 fi
 
@@ -425,6 +441,15 @@ if [ -f "${OUTPUT_DIR}/console-errors-formatted.txt" ]; then
   echo '```' >> $GITHUB_STEP_SUMMARY
 fi
 
+# Check console-errors.txt
+if [ -f "${OUTPUT_DIR}/console-errors.txt" ]; then
+  FOUND_ERRORS=true
+  echo "Console errors found in console-errors.txt:" >> $GITHUB_STEP_SUMMARY
+  echo '```' >> $GITHUB_STEP_SUMMARY
+  cat "${OUTPUT_DIR}/console-errors.txt" >> $GITHUB_STEP_SUMMARY
+  echo '```' >> $GITHUB_STEP_SUMMARY
+fi
+
 # Check console-errors-from-response.txt
 if [ -f "${OUTPUT_DIR}/console-errors-from-response.txt" ]; then
   FOUND_ERRORS=true
@@ -434,39 +459,31 @@ if [ -f "${OUTPUT_DIR}/console-errors-from-response.txt" ]; then
   echo '```' >> $GITHUB_STEP_SUMMARY
 fi
 
-# Check consoleErrors in JSON response
-if echo "$BODY" | jq -e '.consoleErrors' >/dev/null 2>&1; then
-  CONSOLE_ERRORS_COUNT=$(echo "$BODY" | jq -r '.consoleErrors | length')
-  if [ "$CONSOLE_ERRORS_COUNT" -gt 0 ]; then
+# Last resort - try to extract errors from Lambda body even if JSON parsing failed
+if [ "$FOUND_ERRORS" = "false" ]; then
+  # Save the raw body to a file for inspection
+  echo "$BODY" > "${OUTPUT_DIR}/raw-body-debug.txt"
+  
+  # Use grep to find console errors if they're in the raw body
+  if grep -q '"consoleErrors"' "${OUTPUT_DIR}/raw-body-debug.txt"; then
     FOUND_ERRORS=true
-    echo "Console errors found in Lambda response JSON:" >> $GITHUB_STEP_SUMMARY
+    echo "Console errors found in raw body (extracted manually):" >> $GITHUB_STEP_SUMMARY
     echo '```' >> $GITHUB_STEP_SUMMARY
-    echo "$BODY" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' >> $GITHUB_STEP_SUMMARY
+    
+    # Try to extract and format console errors from the raw body
+    grep -o '"type":"[^"]*","time":"[^"]*","text":"[^"]*"' "${OUTPUT_DIR}/raw-body-debug.txt" | \
+      sed 's/"type":"\([^"]*\)","time":"\([^"]*\)","text":"\([^"]*\)"/[\1] [\2] \3/g' >> $GITHUB_STEP_SUMMARY
+    
     echo '```' >> $GITHUB_STEP_SUMMARY
-    echo "Total errors from response: $CONSOLE_ERRORS_COUNT" >> $GITHUB_STEP_SUMMARY
-  fi
-fi
-
-# Check raw-response.json
-if [ -f "${OUTPUT_DIR}/raw-response.json" ]; then
-  if cat "${OUTPUT_DIR}/raw-response.json" | jq -e '.body' >/dev/null 2>&1; then
-    RESPONSE_BODY=$(cat "${OUTPUT_DIR}/raw-response.json" | jq -r '.body')
-    if echo "$RESPONSE_BODY" | jq -e '.consoleErrors' >/dev/null 2>&1; then
-      CONSOLE_ERRORS_COUNT=$(echo "$RESPONSE_BODY" | jq -r '.consoleErrors | length')
-      if [ "$CONSOLE_ERRORS_COUNT" -gt 0 ]; then
-        FOUND_ERRORS=true
-        echo "Console errors found in raw response body:" >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
-        echo "$RESPONSE_BODY" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
-        echo "Total errors from raw response: $CONSOLE_ERRORS_COUNT" >> $GITHUB_STEP_SUMMARY
-      fi
-    fi
   fi
 fi
 
 if [ "$FOUND_ERRORS" = "false" ]; then
   echo "✅ No console errors were found in any of the available sources." >> $GITHUB_STEP_SUMMARY
+  echo "Debug info: Saving raw body for inspection..." >> $GITHUB_STEP_SUMMARY
+  echo '```' >> $GITHUB_STEP_SUMMARY
+  echo "${BODY:0:500}..." >> $GITHUB_STEP_SUMMARY
+  echo '```' >> $GITHUB_STEP_SUMMARY
 fi
 
 # Check test result
