@@ -568,6 +568,85 @@ jobs:
             fi
           fi
 
+          # ALWAYS check for ANY console errors from ANY available source and display them
+          # This section will run regardless of test success or failure
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🧪 Console Errors Check" >> $GITHUB_STEP_SUMMARY
+          
+          # Check for console errors in various possible files and sources
+          FOUND_ERRORS=false
+          
+          # Check method 1: extracted-console-errors.txt
+          if [ -f "${OUTPUT_DIR}/extracted-console-errors.txt" ]; then
+            FOUND_ERRORS=true
+            echo "Console errors found in extracted-console-errors.txt:" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat "${OUTPUT_DIR}/extracted-console-errors.txt" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Check method 2: console-errors.txt
+          if [ -f "${OUTPUT_DIR}/console-errors.txt" ]; then
+            FOUND_ERRORS=true
+            echo "Console errors found in console-errors.txt:" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat "${OUTPUT_DIR}/console-errors.txt" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Check method 3: console-errors-formatted.txt
+          if [ -f "${OUTPUT_DIR}/console-errors-formatted.txt" ]; then
+            FOUND_ERRORS=true
+            echo "Console errors found in console-errors-formatted.txt:" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat "${OUTPUT_DIR}/console-errors-formatted.txt" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Check method 4: console-errors-from-response.txt
+          if [ -f "${OUTPUT_DIR}/console-errors-from-response.txt" ]; then
+            FOUND_ERRORS=true
+            echo "Console errors found in console-errors-from-response.txt:" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat "${OUTPUT_DIR}/console-errors-from-response.txt" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Check method 5: consoleErrors in JSON response
+          if echo "$BODY" | jq -e '.consoleErrors' >/dev/null 2>&1; then
+            CONSOLE_ERRORS_COUNT=$(echo "$BODY" | jq -r '.consoleErrors | length')
+            if [ "$CONSOLE_ERRORS_COUNT" -gt 0 ]; then
+              FOUND_ERRORS=true
+              echo "Console errors found in Lambda response JSON:" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              echo "$BODY" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              echo "Total errors from response: $CONSOLE_ERRORS_COUNT" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+          
+          # Check method 6: raw-response.json
+          if [ -f "${OUTPUT_DIR}/raw-response.json" ]; then
+            if cat "${OUTPUT_DIR}/raw-response.json" | jq -e '.body' >/dev/null 2>&1; then
+              RESPONSE_BODY=$(cat "${OUTPUT_DIR}/raw-response.json" | jq -r '.body')
+              if echo "$RESPONSE_BODY" | jq -e '.consoleErrors' >/dev/null 2>&1; then
+                CONSOLE_ERRORS_COUNT=$(echo "$RESPONSE_BODY" | jq -r '.consoleErrors | length')
+                if [ "$CONSOLE_ERRORS_COUNT" -gt 0 ]; then
+                  FOUND_ERRORS=true
+                  echo "Console errors found in raw response body:" >> $GITHUB_STEP_SUMMARY
+                  echo '```' >> $GITHUB_STEP_SUMMARY
+                  echo "$RESPONSE_BODY" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' >> $GITHUB_STEP_SUMMARY
+                  echo '```' >> $GITHUB_STEP_SUMMARY
+                  echo "Total errors from raw response: $CONSOLE_ERRORS_COUNT" >> $GITHUB_STEP_SUMMARY
+                fi
+              fi
+            fi
+          fi
+          
+          if [ "$FOUND_ERRORS" = "false" ]; then
+            echo "✅ No console errors were found in any of the available sources." >> $GITHUB_STEP_SUMMARY
+          fi
+
           echo "Files in temporary output directory:"
           ls -la "${OUTPUT_DIR}/" || echo "Failed to list temporary directory"
 
