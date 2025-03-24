@@ -43,32 +43,79 @@ force_extract_console_errors() {
   TEMP_FILE="${output_dir}/processed_response_body.txt"
   echo "$body" > "$TEMP_FILE"
   
+  # Save a version with line breaks for better processing
+  TEMP_FILE_PRETTY="${output_dir}/processed_pretty_response.txt"
+  echo "$body" | jq '.' 2>/dev/null > "$TEMP_FILE_PRETTY" || echo "$body" > "$TEMP_FILE_PRETTY"
+  
   # Check if we can find the consoleErrors section
   if grep -q '"consoleErrors"' "$TEMP_FILE"; then
     echo "Found consoleErrors section in response"
     
-    # Extract console errors with simplified approach (already unescaped)
+    # Extract the entire consoleErrors array to a separate file
+    ERRORS_FILE="${output_dir}/extracted_console_errors.txt"
+    grep -A 200 '"consoleErrors"' "$TEMP_FILE" | grep -B 200 '\]' | head -n 200 > "$ERRORS_FILE"
+    
+    # Create a section for console errors in the summary
     echo "" >> "$summary_file"
     echo "## 🛑 Console Errors" >> "$summary_file" 
     echo "The following errors were found in the test:" >> "$summary_file"
     echo '```' >> "$summary_file"
     
-    # Use direct approach with explicit search for the text field
-    grep -o '"text":"[^"]*"' "$TEMP_FILE" | sed 's/"text":"//g; s/"$//g' >> "$summary_file" || \
-    echo "Failed to extract error texts" >> "$summary_file"
+    # Multiple extraction methods - try each one until one works
+    
+    # Method 1: Use jq if possible
+    if echo "$body" | jq -r '.consoleErrors[].text' 2>/dev/null > "${output_dir}/jq_extracted_errors.txt"; then
+      echo "Extracted errors using jq"
+      cat "${output_dir}/jq_extracted_errors.txt" >> "$summary_file"
+    # Method 2: Use grep with extended pattern
+    elif grep -o '"text":"[^"]*"' "$ERRORS_FILE" | sed 's/"text":"//g; s/"$//g' > "${output_dir}/grep_extracted_errors.txt" && [ -s "${output_dir}/grep_extracted_errors.txt" ]; then
+      echo "Extracted errors using grep pattern matching"
+      cat "${output_dir}/grep_extracted_errors.txt" >> "$summary_file"
+    # Method 3: Use awk to extract between quotes
+    elif awk -F'"text":"' '{for(i=2;i<=NF;i++) {split($i,a,"\""); print a[1]}}' "$ERRORS_FILE" > "${output_dir}/awk_extracted_errors.txt" && [ -s "${output_dir}/awk_extracted_errors.txt" ]; then
+      echo "Extracted errors using awk"
+      cat "${output_dir}/awk_extracted_errors.txt" >> "$summary_file"
+    # Fallback: Just show parts of the errors file
+    else
+      echo "Using fallback error extraction"
+      echo "Errors section found but could not extract specific messages." >> "$summary_file"
+      echo "Showing raw error data:" >> "$summary_file"
+      echo "" >> "$summary_file"
+      cat "$ERRORS_FILE" | head -n 20 >> "$summary_file"
+    fi
     
     echo '```' >> "$summary_file"
     
-    # Try to extract detailed error info 
+    # Try to extract detailed error info with type and timestamp
     echo "" >> "$summary_file"
     echo "## 📊 Detailed Console Errors" >> "$summary_file"
     echo '```' >> "$summary_file"
     
-    # Extract type, time and text fields with a robust pattern
-    grep -o '"type":"[^"]*"[^{]*"text":"[^"]*"' "$TEMP_FILE" | \
-    sed -E 's/"type":"([^"]*)".+"time":"([^"]*)".+"text":"([^"]*)"/[\1] [\2] \3/g; s/"type":"([^"]*)".+"text":"([^"]*)".+"time":"([^"]*)"/[\1] [\3] \2/g; s/"type":"([^"]*)".+"text":"([^"]*)"/[\1] \2/g' >> "$summary_file" || \
-    echo "Failed to extract detailed error information" >> "$summary_file"
+    # Try multiple methods for detailed errors too
+    if echo "$body" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' 2>/dev/null > "${output_dir}/jq_detailed_errors.txt" && [ -s "${output_dir}/jq_detailed_errors.txt" ]; then
+      echo "Extracted detailed errors using jq"
+      cat "${output_dir}/jq_detailed_errors.txt" >> "$summary_file"
+    elif grep -o '"type":"[^"]*"[^{]*"text":"[^"]*"' "$ERRORS_FILE" | \
+         sed -E 's/"type":"([^"]*)".+"time":"([^"]*)".+"text":"([^"]*)"/[\1] [\2] \3/g; s/"type":"([^"]*)".+"text":"([^"]*)".+"time":"([^"]*)"/[\1] [\3] \2/g; s/"type":"([^"]*)".+"text":"([^"]*)"/[\1] \2/g' > "${output_dir}/grep_detailed_errors.txt" && [ -s "${output_dir}/grep_detailed_errors.txt" ]; then
+      echo "Extracted detailed errors using pattern matching"
+      cat "${output_dir}/grep_detailed_errors.txt" >> "$summary_file"
+    else
+      echo "Could not extract detailed error information" >> "$summary_file"
+      
+      # Debug info
+      echo "" >> "$summary_file"
+      echo "Debug info - Raw error data sample:" >> "$summary_file"
+      head -n 10 "$ERRORS_FILE" >> "$summary_file"
+    fi
     
+    echo '```' >> "$summary_file"
+    
+    # Add a debug section showing the original consoleErrors section
+    echo "" >> "$summary_file"
+    echo "## 🔍 Raw Console Errors (First Part)" >> "$summary_file"
+    echo "For debugging purposes, here's the first part of the consoleErrors section:" >> "$summary_file"
+    echo '```json' >> "$summary_file"
+    head -n 20 "$ERRORS_FILE" >> "$summary_file"
     echo '```' >> "$summary_file"
     
     return 0
@@ -89,12 +136,24 @@ force_extract_console_errors() {
     return 0
   fi
   
-  # No errors found with any method
+  # No errors found with any method - show more debug info
   echo "" >> "$summary_file"
   echo "## ⚠️ Debug Information" >> "$summary_file"
   echo "Failed to extract console errors. Showing first part of response body:" >> "$summary_file"
   echo '```' >> "$summary_file"
   head -n 30 "$TEMP_FILE" >> "$summary_file"
+  echo '```' >> "$summary_file"
+  
+  # Save full response for deeper inspection
+  echo "$body" > "${output_dir}/full_lambda_response.txt"
+  
+  echo "" >> "$summary_file"
+  echo "## 🔍 Search Keywords" >> "$summary_file"
+  echo "Results of searching for console errors related keywords:" >> "$summary_file"
+  echo '```' >> "$summary_file"
+  grep -n "consoleErrors" "$TEMP_FILE" || echo "No 'consoleErrors' keyword found"
+  echo "" >> "$summary_file"
+  grep -n "text" "$TEMP_FILE" || echo "No 'text' keyword found"
   echo '```' >> "$summary_file"
   
   return 1
