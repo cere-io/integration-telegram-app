@@ -27,6 +27,7 @@ const appUrl = currentConfig.baseURL || process.env.TEST_APP_URL;
 const campaignId = currentConfig.campaignId || process.env.TEST_CAMPAIGN_ID;
 
 const metrics = [];
+let authError = null;
 
 const logTime = (testName, time) => {
   const logMessage = `${testName} took ${time}ms\n`;
@@ -42,36 +43,72 @@ const logTime = (testName, time) => {
   }
 };
 
+const logError = (errorName, errorMessage) => {
+  const logMessage = `${errorName}: ${errorMessage}\n`;
+  console.error(`Recording error: ${logMessage.trim()}`);
+
+  try {
+    fs.appendFileSync(`/tmp/error-log.txt`, logMessage);
+    console.log(`Error recorded for ${errorName}`);
+  } catch (error) {
+    console.error(`Error writing to error file: ${error.message}`);
+  }
+};
+
 const login = async (page) => {
-  await page.waitForSelector('#torusIframe', { timeout: 30000 });
-  const torusFrame = await page.frameLocator('#torusIframe');
+  try {
+    await page.waitForSelector('#torusIframe', { timeout: 30000 });
+    const torusFrame = await page.frameLocator('#torusIframe');
 
-  await torusFrame.locator('iframe[title="Embedded browser"]').waitFor({ timeout: 30000 });
-  const embeddedFrame = await torusFrame.frameLocator('iframe[title="Embedded browser"]');
+    await torusFrame.locator('iframe[title="Embedded browser"]').waitFor({ timeout: 30000 });
+    const embeddedFrame = await torusFrame.frameLocator('iframe[title="Embedded browser"]');
 
-  const buttonLogin = embeddedFrame.locator('button:has-text("I already have a wallet")');
-  await buttonLogin.scrollIntoViewIfNeeded();
-  await buttonLogin.waitFor({ state: 'visible', timeout: 10000 });
-  await buttonLogin.click();
+    const buttonLogin = embeddedFrame.locator('button:has-text("I already have a wallet")');
+    await buttonLogin.scrollIntoViewIfNeeded();
+    await buttonLogin.waitFor({ state: 'visible', timeout: 10000 });
+    await buttonLogin.click();
 
-  const emailInput = embeddedFrame.getByRole('textbox', { name: 'Email' });
-  await emailInput.scrollIntoViewIfNeeded();
-  await emailInput.waitFor({ state: 'visible', timeout: 10000 });
-  await emailInput.fill(userName);
+    const emailInput = embeddedFrame.getByRole('textbox', { name: 'Email' });
+    await emailInput.scrollIntoViewIfNeeded();
+    await emailInput.waitFor({ state: 'visible', timeout: 10000 });
+    await emailInput.fill(userName);
 
-  const signInButton = embeddedFrame.locator('button:has-text("Sign In")');
-  await signInButton.scrollIntoViewIfNeeded();
-  await signInButton.waitFor({ state: 'visible', timeout: 10000 });
-  await signInButton.click();
+    const signInButton = embeddedFrame.locator('button:has-text("Sign In")');
+    await signInButton.scrollIntoViewIfNeeded();
+    await signInButton.waitFor({ state: 'visible', timeout: 10000 });
+    await signInButton.click();
 
-  const otpInput = embeddedFrame.getByRole('textbox', { name: 'OTP input' });
-  await otpInput.waitFor({ state: 'visible', timeout: 10000 });
-  await otpInput.fill(otp);
+    const otpInput = embeddedFrame.getByRole('textbox', { name: 'OTP input' });
+    await otpInput.waitFor({ state: 'visible', timeout: 10000 });
+    await otpInput.fill(otp);
 
-  const verifyButton = embeddedFrame.locator('button:has-text("Verify")');
-  await verifyButton.scrollIntoViewIfNeeded();
-  await verifyButton.waitFor({ state: 'visible', timeout: 10000 });
-  await verifyButton.click();
+    const verifyButton = embeddedFrame.locator('button:has-text("Verify")');
+    await verifyButton.scrollIntoViewIfNeeded();
+    await verifyButton.waitFor({ state: 'visible', timeout: 10000 });
+    await verifyButton.click();
+
+    await page.waitForSelector('.tgui-e6658d0b8927f95e', { timeout: 15000 });
+    
+    return true;
+  } catch (error) {
+    try {
+      await page.screenshot({ path: '/tmp/login-error.png' });
+      console.log('Saved error screenshot to /tmp/login-error.png');
+    } catch (screenshotError) {
+      console.error('Failed to save screenshot:', screenshotError);
+    }
+    
+    console.error(`Web3Auth login error: ${error.message}`);
+    authError = {
+      type: 'Web3AuthError',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    };
+    
+    logError('Web3AuthError', error.message);
+    
+    throw error;
+  }
 };
 
 async function testActiveQuestsScreen({ page }) {
@@ -194,12 +231,49 @@ export default async function runIntegrationTest({ browser, context }) {
     console.log(`Region: ${region}`);
     console.log('========================');
 
-    return {
-      success: true,
+    let testResultData = {
+      success: metrics.length >= 3,
       metrics: metrics,
       environment: environment,
       region: region
     };
+
+    if (authError) {
+      testResultData.authError = authError;
+      
+      if (!metrics.find(m => m.name === 'Leaderboard Screen')) {
+        metrics.push({
+          name: 'Leaderboard Screen',
+          duration: 0, 
+          faked: true,
+          reason: 'Auth error prevented test'
+        });
+        
+        console.log('Added placeholder Leaderboard Screen metric due to auth error');
+        fs.appendFileSync(`/tmp/performance-log.txt`, `Leaderboard Screen took 0ms [AUTH_ERROR]\n`);
+      }
+      
+      if (!metrics.find(m => m.name === 'Library Screen')) {
+        metrics.push({
+          name: 'Library Screen',
+          duration: 0,
+          faked: true,
+          reason: 'Auth error prevented test'
+        });
+        
+        console.log('Added placeholder Library Screen metric due to auth error');
+        fs.appendFileSync(`/tmp/performance-log.txt`, `Library Screen took 0ms [AUTH_ERROR]\n`);
+      }
+      
+      testResultData.success = false;
+      testResultData.errorInfo = {
+        type: 'AuthenticationError',
+        message: `Authentication failed: ${authError.message}`,
+        timestamp: authError.timestamp
+      };
+    }
+
+    return testResultData;
   } catch (err) {
     console.error('Error during integration test:', err);
 
@@ -209,13 +283,50 @@ export default async function runIntegrationTest({ browser, context }) {
     console.log(`Region: ${region}`);
     console.log('=======================');
 
-    return {
+    let testResultData = {
       success: false,
       error: err.message,
       metrics: metrics,
       environment: environment,
       region: region
     };
+
+    if (authError) {
+      testResultData.authError = authError;
+      
+      if (!metrics.find(m => m.name === 'Leaderboard Screen')) {
+        metrics.push({
+          name: 'Leaderboard Screen',
+          duration: 0, 
+          faked: true,
+          reason: 'Auth error prevented test'
+        });
+        
+        console.log('Added placeholder Leaderboard Screen metric due to auth error');
+        fs.appendFileSync(`/tmp/performance-log.txt`, `Leaderboard Screen took 0ms [AUTH_ERROR]\n`);
+      }
+      
+      if (!metrics.find(m => m.name === 'Library Screen')) {
+        metrics.push({
+          name: 'Library Screen',
+          duration: 0,
+          faked: true,
+          reason: 'Auth error prevented test'
+        });
+        
+        console.log('Added placeholder Library Screen metric due to auth error');
+        fs.appendFileSync(`/tmp/performance-log.txt`, `Library Screen took 0ms [AUTH_ERROR]\n`);
+      }
+      
+      testResultData.success = false;
+      testResultData.errorInfo = {
+        type: 'AuthenticationError',
+        message: `Authentication failed: ${authError.message}`,
+        timestamp: authError.timestamp
+      };
+    }
+
+    return testResultData;
   } finally {
     if (page) {
       await page.close();

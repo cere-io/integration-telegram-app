@@ -319,6 +319,37 @@ jobs:
               echo "No metrics found" >> $GITHUB_STEP_SUMMARY
             fi
             
+            if echo "$BODY" | jq -e '.authError' >/dev/null 2>&1; then
+              AUTH_ERROR_TYPE=$(echo "$BODY" | jq -r '.authError.type')
+              AUTH_ERROR_MSG=$(echo "$BODY" | jq -r '.authError.message')
+              AUTH_ERROR_TIME=$(echo "$BODY" | jq -r '.authError.timestamp')
+              
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "## ⚠️ Authentication Error Detected" >> $GITHUB_STEP_SUMMARY
+              echo "Authentication failed during test execution. This prevented testing of Leaderboard and Library screens." >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "### Error Details" >> $GITHUB_STEP_SUMMARY
+              echo "- **Type:** ${AUTH_ERROR_TYPE}" >> $GITHUB_STEP_SUMMARY
+              echo "- **Message:** ${AUTH_ERROR_MSG}" >> $GITHUB_STEP_SUMMARY
+              echo "- **Time:** ${AUTH_ERROR_TIME}" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "### Troubleshooting Steps" >> $GITHUB_STEP_SUMMARY
+              echo "1. Check if the web3auth service is working properly" >> $GITHUB_STEP_SUMMARY
+              echo "2. Verify that the test credentials (email and OTP) are still valid" >> $GITHUB_STEP_SUMMARY
+              echo "3. Check for any recent changes to the authentication flow" >> $GITHUB_STEP_SUMMARY
+              echo "4. Run the test locally with npx playwright test --debug to see detailed steps" >> $GITHUB_STEP_SUMMARY
+              
+              if aws s3 ls s3://playwright-test-artifacts/login-error.png >/dev/null 2>&1; then
+                echo "- **Screenshot:** [View Auth Error Screenshot](https://playwright-test-artifacts.s3.amazonaws.com/login-error.png)" >> $GITHUB_STEP_SUMMARY
+              fi
+            elif [ -f "${OUTPUT_DIR}/error-log.txt" ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "## ⚠️ Test Errors" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              cat "${OUTPUT_DIR}/error-log.txt" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+            fi
+            
             echo "## Environment" >> $GITHUB_STEP_SUMMARY
             echo "- **Environment:** ${{ needs.get-env.outputs.env }}" >> $GITHUB_STEP_SUMMARY
             echo "- **Region:** ${{ matrix.region }}" >> $GITHUB_STEP_SUMMARY
@@ -341,7 +372,9 @@ jobs:
                 TEST_NAME="${BASH_REMATCH[1]}"
                 DURATION="${BASH_REMATCH[2]}"
 
-                if [ "$DURATION" -lt 1000 ]; then
+                if [[ "$line" =~ \[AUTH_ERROR\] ]]; then
+                  STATUS="⛔️ Auth Error"
+                elif [ "$DURATION" -lt 1000 ]; then
                   STATUS="✅ Excellent"
                 elif [ "$DURATION" -lt 5000 ]; then
                   STATUS="✅ Good"
@@ -375,8 +408,12 @@ jobs:
                 DURATION="${BASH_REMATCH[2]}"
 
                 DURATION_SEC=$(awk "BEGIN {printf \"%.1f\", $DURATION/1000}")
-
-                echo "    ${TEST_NAME} :0, ${DURATION_SEC}s" >> $GITHUB_STEP_SUMMARY
+                
+                if [[ "$line" =~ \[AUTH_ERROR\] ]]; then
+                  echo "    ${TEST_NAME} (Auth Error) :crit, 0, 0.1s" >> $GITHUB_STEP_SUMMARY
+                else
+                  echo "    ${TEST_NAME} :0, ${DURATION_SEC}s" >> $GITHUB_STEP_SUMMARY
+                fi
               fi
             done
 
