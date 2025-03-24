@@ -11,6 +11,25 @@ REGION="$7"
 GITHUB_RUN_ID="$8"
 GITHUB_REPOSITORY="$9"
 
+# First, detect if BODY is a Lambda response with escaped JSON and fix it
+echo "Checking if Lambda response body needs unescaping..."
+if [[ "$BODY" == *"\"consoleErrors\":"* ]] || [[ "$BODY" == *"\\\"consoleErrors\\\":\["* ]]; then
+  echo "Detected Lambda response with potential double escaping"
+  
+  # First level of unescaping - from Lambda format
+  UNESCAPED_BODY=$(echo "$BODY" | sed 's/^"//; s/"$//; s/\\"/"/g; s/\\n/\n/g; s/\\\\/\\/g')
+  echo "Created unescaped version of the body"
+  
+  # Save both formats
+  echo "$BODY" > "${OUTPUT_DIR}/original-lambda-body.json"
+  echo "$UNESCAPED_BODY" > "${OUTPUT_DIR}/unescaped-lambda-body.json"
+  echo "$UNESCAPED_BODY" > "${WORKSPACE_OUTPUT}/unescaped-lambda-body.json"
+  
+  # Use the unescaped version for further processing
+  BODY="$UNESCAPED_BODY"
+  echo "Using unescaped version for processing"
+fi
+
 # Special direct function to extract console errors from any response format
 # This function does not rely on JSON parsing which can fail with nested/escaped JSON
 force_extract_console_errors() {
@@ -20,83 +39,75 @@ force_extract_console_errors() {
   
   echo "🔍 Extracting console errors with direct text processing"
   
-  # Save full response to file for processing
-  TEMP_FILE="${output_dir}/raw_response_body.txt"
+  # Save processed body to file for extraction
+  TEMP_FILE="${output_dir}/processed_response_body.txt"
   echo "$body" > "$TEMP_FILE"
   
-  # Process the file to unescape it if needed
-  PROCESSED_FILE="${output_dir}/unescaped_response.txt"
-  cat "$TEMP_FILE" | sed 's/\\"/"/g; s/\\n/\n/g; s/\\\\/\\/g' > "$PROCESSED_FILE"
-  
-  # Try to find error texts with direct pattern matching
-  ERROR_TEXTS=$(grep -o '"text":"[^"]*"' "$PROCESSED_FILE" | sed 's/"text":"//g' | sed 's/"$//g' || echo "")
-  
-  if [ -n "$ERROR_TEXTS" ]; then
-    # Save extracted errors
-    echo "$ERROR_TEXTS" > "${output_dir}/extracted_errors.txt"
+  # Check if we can find the consoleErrors section
+  if grep -q '"consoleErrors"' "$TEMP_FILE"; then
+    echo "Found consoleErrors section in response"
     
-    # Add to summary report
+    # Extract console errors with simplified approach (already unescaped)
     echo "" >> "$summary_file"
     echo "## 🛑 Console Errors" >> "$summary_file" 
     echo "The following errors were found in the test:" >> "$summary_file"
     echo '```' >> "$summary_file"
-    echo "$ERROR_TEXTS" >> "$summary_file"
+    
+    # Use direct approach with explicit search for the text field
+    grep -o '"text":"[^"]*"' "$TEMP_FILE" | sed 's/"text":"//g; s/"$//g' >> "$summary_file" || \
+    echo "Failed to extract error texts" >> "$summary_file"
+    
     echo '```' >> "$summary_file"
     
-    # Try to get more detailed error info if possible
-    DETAILED_ERRORS=$(grep -o '"type":"[^"]*"[^}]*"text":"[^"]*"' "$PROCESSED_FILE" | 
-                      sed -E 's/"type":"([^"]*)".+"time":"([^"]*)".+"text":"([^"]*)"/[\1] [\2] \3/g; s/"type":"([^"]*)".+"text":"([^"]*)".+"time":"([^"]*)"/[\1] [\3] \2/g; s/"type":"([^"]*)".+"text":"([^"]*)"/[\1] \2/g' ||
-                      echo "")
+    # Try to extract detailed error info 
+    echo "" >> "$summary_file"
+    echo "## 📊 Detailed Console Errors" >> "$summary_file"
+    echo '```' >> "$summary_file"
     
-    if [ -n "$DETAILED_ERRORS" ]; then
-      echo "" >> "$summary_file"
-      echo "## 📊 Detailed Console Errors" >> "$summary_file"
-      echo '```' >> "$summary_file"
-      echo "$DETAILED_ERRORS" >> "$summary_file"
-      echo '```' >> "$summary_file"
-    fi
+    # Extract type, time and text fields with a robust pattern
+    grep -o '"type":"[^"]*"[^{]*"text":"[^"]*"' "$TEMP_FILE" | \
+    sed -E 's/"type":"([^"]*)".+"time":"([^"]*)".+"text":"([^"]*)"/[\1] [\2] \3/g; s/"type":"([^"]*)".+"text":"([^"]*)".+"time":"([^"]*)"/[\1] [\3] \2/g; s/"type":"([^"]*)".+"text":"([^"]*)"/[\1] \2/g' >> "$summary_file" || \
+    echo "Failed to extract detailed error information" >> "$summary_file"
+    
+    echo '```' >> "$summary_file"
     
     return 0
   fi
   
-  # No errors found with direct extraction
+  # No consoleErrors section found, try alternative extraction
+  if grep -q '"text":"' "$TEMP_FILE"; then
+    echo "Found text fields but no consoleErrors section"
+    
+    # Try to extract just the error texts directly
+    echo "" >> "$summary_file"
+    echo "## 🛑 Console Errors (Alternative Extraction)" >> "$summary_file" 
+    echo "The following errors were found in the test:" >> "$summary_file"
+    echo '```' >> "$summary_file"
+    grep -o '"text":"[^"]*"' "$TEMP_FILE" | sed 's/"text":"//g; s/"$//g' >> "$summary_file"
+    echo '```' >> "$summary_file"
+    
+    return 0
+  fi
+  
+  # No errors found with any method
   echo "" >> "$summary_file"
   echo "## ⚠️ Debug Information" >> "$summary_file"
-  echo "Failed to extract console errors with direct pattern matching." >> "$summary_file"
-  echo "Showing first part of response body:" >> "$summary_file"
+  echo "Failed to extract console errors. Showing first part of response body:" >> "$summary_file"
   echo '```' >> "$summary_file"
-  head -n 30 "$PROCESSED_FILE" >> "$summary_file"
+  head -n 30 "$TEMP_FILE" >> "$summary_file"
   echo '```' >> "$summary_file"
   
   return 1
 }
 
-# Process console errors from response JSON
+# Process console errors from response JSON using jq
 if echo "$BODY" | jq -e '.consoleErrors' >/dev/null 2>&1; then
-  echo "Extracting console errors from response JSON..."
+  echo "Extracting console errors from response JSON using jq..."
   echo "$BODY" | jq -c '.consoleErrors' > "${OUTPUT_DIR}/extracted-console-errors.json"
   echo "$BODY" | jq -c '.consoleErrors' > "${WORKSPACE_OUTPUT}/extracted-console-errors.json"
   echo "$BODY" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' > "${OUTPUT_DIR}/extracted-console-errors.txt"
   echo "$BODY" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' > "${WORKSPACE_OUTPUT}/extracted-console-errors.txt"
-  echo "Console errors extracted and saved to files"
-else
-  echo "No direct console errors found in JSON. Checking if body needs parsing..."
-  
-  # Check if body is a string containing JSON (from Lambda response)
-  # This is the case when the Lambda returns JSON inside a string in the body field
-  if echo "$BODY" | grep -q '^{"success":'; then
-    echo "Body appears to be a JSON string with a nested structure."
-    
-    # Try to extract consoleErrors from the nested JSON
-    if echo "$BODY" | jq -e '.consoleErrors' >/dev/null 2>&1; then
-      echo "Found console errors in the JSON body!"
-      echo "$BODY" | jq -c '.consoleErrors' > "${OUTPUT_DIR}/extracted-console-errors.json"
-      echo "$BODY" | jq -c '.consoleErrors' > "${WORKSPACE_OUTPUT}/extracted-console-errors.json"
-      echo "$BODY" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' > "${OUTPUT_DIR}/extracted-console-errors.txt"
-      echo "$BODY" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' > "${WORKSPACE_OUTPUT}/extracted-console-errors.txt"
-      echo "Console errors extracted and saved to files"
-    fi
-  fi
+  echo "Console errors extracted and saved to files using jq"
 fi
 
 # ALWAYS force extract console errors regardless of anything else
@@ -110,15 +121,6 @@ for file in /tmp/console-errors.txt /tmp/console-errors.json; do
     cp "$file" "${WORKSPACE_OUTPUT}/"
   fi
 done
-
-# Parse body if it's a JSON string
-if [[ "$BODY" == \"* ]] && [[ "$BODY" == *\" ]]; then
-  echo "Body appears to be a JSON string, attempting to parse..."
-  PARSED_BODY=$(echo "$BODY" | sed 's/^"//; s/"$//; s/\\"/"/g; s/\\n/\n/g; s/\\\\/\\/g')
-  echo "$PARSED_BODY" > "${OUTPUT_DIR}/parsed-body.txt"
-  echo "$PARSED_BODY" > "${WORKSPACE_OUTPUT}/parsed-body.txt"
-  BODY="$PARSED_BODY"
-fi
 
 METRICS=""
 
