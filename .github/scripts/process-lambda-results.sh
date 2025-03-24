@@ -190,6 +190,64 @@ fi
 METRICS_COUNT=$(echo "$METRICS" | grep -o "took [0-9]\+ms" | wc -l)
 echo "Found $METRICS_COUNT metrics"
 
+# Extract and process console errors first (regardless of test outcome)
+if [[ "$BODY" == *"consoleErrors"* ]]; then
+  echo "Detected console errors in body, extracting them for the report..."
+  
+  # Create debug log with original body content
+  echo "$BODY" > "${OUTPUT_DIR}/debug-body.txt"
+  
+  # Try different methods to extract errors
+  if [[ "$BODY" == *"\"consoleErrors\":"* ]]; then
+    # Method 1: Extract using explicit pattern
+    CONSOLE_ERRORS=$(echo "$BODY" | grep -o '"consoleErrors":\[[^]]*\]' | sed 's/"consoleErrors"://g')
+    if [ -n "$CONSOLE_ERRORS" ]; then
+      echo "Extracted console errors array from body"
+      echo "$CONSOLE_ERRORS" > "${OUTPUT_DIR}/console-errors-extracted.json"
+      echo "$CONSOLE_ERRORS" > "${WORKSPACE_OUTPUT}/console-errors-extracted.json"
+      
+      # Extract formatted errors for human reading
+      echo "$BODY" | grep -o '"type":"[^"]*","time":"[^"]*","text":"[^"]*"' | \
+        sed 's/"type":"\([^"]*\)","time":"\([^"]*\)","text":"\([^"]*\)"/[\1] [\2] \3/g' > "${OUTPUT_DIR}/console-errors-raw.txt"
+      cp "${OUTPUT_DIR}/console-errors-raw.txt" "${WORKSPACE_OUTPUT}/"
+      
+      # Always add console errors to report
+      echo "" >> $GITHUB_STEP_SUMMARY
+      echo "## 🚨 Browser Console Errors" >> $GITHUB_STEP_SUMMARY
+      echo "The following errors were detected in the browser console during test execution:" >> $GITHUB_STEP_SUMMARY
+      echo "" >> $GITHUB_STEP_SUMMARY
+      echo "```" >> $GITHUB_STEP_SUMMARY
+      cat "${OUTPUT_DIR}/console-errors-raw.txt" >> $GITHUB_STEP_SUMMARY
+      echo "```" >> $GITHUB_STEP_SUMMARY
+      
+      echo "Console errors extracted and added to report"
+    else
+      # If we didn't extract anything but know there are errors, try a more aggressive approach
+      echo "First extraction attempt failed, trying alternative method..."
+      
+      # Save original body to a temp file
+      echo "$BODY" > "${OUTPUT_DIR}/body_with_errors.txt"
+      
+      # Try to extract just the text of the errors using grep
+      ERROR_LINES=$(grep -o '"text":"[^"]*"' "${OUTPUT_DIR}/body_with_errors.txt" | sed 's/"text":"//g' | sed 's/"$//g')
+      if [ -n "$ERROR_LINES" ]; then
+        echo "$ERROR_LINES" > "${OUTPUT_DIR}/console-error-messages.txt"
+        cp "${OUTPUT_DIR}/console-error-messages.txt" "${WORKSPACE_OUTPUT}/"
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## 🚨 Browser Console Error Messages" >> $GITHUB_STEP_SUMMARY
+        echo "The following error messages were found in the browser console during testing:" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "```" >> $GITHUB_STEP_SUMMARY
+        cat "${OUTPUT_DIR}/console-error-messages.txt" >> $GITHUB_STEP_SUMMARY
+        echo "```" >> $GITHUB_STEP_SUMMARY
+        
+        echo "Console error messages extracted using alternative method"
+      fi
+    fi
+  fi
+fi
+
 # Handle case with missing or incomplete metrics
 if [ -z "$METRICS" ] || [ "$METRICS_COUNT" -lt 3 ]; then
   echo "Metrics missing or incomplete, test is considered FAILED"
