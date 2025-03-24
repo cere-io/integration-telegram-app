@@ -283,6 +283,94 @@ process_metrics() {
   echo "$metrics"
 }
 
+# Extract metrics from response
+echo "Extracting performance metrics from Lambda response..."
+METRICS=$(process_metrics "$BODY" "$OUTPUT_DIR" "$WORKSPACE_OUTPUT")
+
+# Count how many metrics we found
+METRICS_COUNT=$(echo "$METRICS" | grep -c "took" || echo "0")
+echo "Found $METRICS_COUNT metrics"
+
+# Extract console errors and warnings
+echo "Extracting console errors and warnings..."
+ERROR_REPORT_FILE=$(extract_console_messages "$BODY" "$OUTPUT_DIR" "$GITHUB_STEP_SUMMARY" "error" "🛑")
+WARNING_REPORT_FILE=$(extract_console_messages "$BODY" "$OUTPUT_DIR" "$GITHUB_STEP_SUMMARY" "warning" "⚠️")
+
+# Check for test errors
+HAS_TEST_ERROR=false
+if echo "$BODY" | jq -e '.success == false' >/dev/null 2>&1; then
+  HAS_TEST_ERROR=true
+  TEST_ERROR=$(echo "$BODY" | jq -r '.errorOutput // "Unknown error"')
+  echo "Test error detected: $TEST_ERROR"
+  echo "$TEST_ERROR" > "${OUTPUT_DIR}/error-log.txt"
+fi
+
+# Generate report for GitHub Step Summary
+generate_report() {
+  local metrics="$1"
+  local metrics_count="$2"
+  local body="$3"
+  local output_dir="$4"
+  local summary_file="$5"
+  local environment="$6"
+  local region="$7"
+  local run_id="$8"
+  local repository="$9"
+  local error_report="${10}"
+  local warning_report="${11}"
+  local has_error="${12}"
+
+  # Determine test status
+  local status_emoji="✅"
+  local status_text="PASSED"
+  local auth_error_detected=false
+
+  if [ "$has_error" = "true" ] || [ "$metrics_count" -lt 3 ]; then
+    status_emoji="❌"
+    status_text="FAILED"
+  fi
+
+  # Check for auth error
+  if echo "$body" | jq -e '.authError' >/dev/null 2>&1; then
+    auth_error_detected=true
+  fi
+
+  # Append error and warning reports if they exist
+  if [ -f "$error_report" ]; then
+    cat "$error_report" >> "$summary_file"
+  fi
+
+  if [ -f "$warning_report" ]; then
+    cat "$warning_report" >> "$summary_file"
+  fi
+
+  # Add auth error information if detected
+  if [ "$auth_error_detected" = "true" ]; then
+    AUTH_ERROR_TYPE=$(echo "$body" | jq -r '.authError.type')
+    AUTH_ERROR_MSG=$(echo "$body" | jq -r '.authError.message')
+    AUTH_ERROR_TIME=$(echo "$body" | jq -r '.authError.timestamp')
+
+    echo "" >> "$summary_file"
+    echo "## ⚠️ Authentication Error Detected" >> "$summary_file"
+    echo "Authentication failed during test execution. This affected the test results." >> "$summary_file"
+    echo "" >> "$summary_file"
+    echo "### Error Details" >> "$summary_file"
+    echo "- **Type:** ${AUTH_ERROR_TYPE}" >> "$summary_file"
+    echo "- **Message:** ${AUTH_ERROR_MSG}" >> "$summary_file"
+    echo "- **Time:** ${AUTH_ERROR_TIME}" >> "$summary_file"
+  fi
+
+  # Add region information
+  local region_info=$(get_region_info "$region")
+  
+  echo "" >> "$summary_file"
+  echo "## Environment" >> "$summary_file"
+  echo "- **Environment:** ${environment}" >> "$summary_file"
+  echo "- **Region:** ${region} (${region_info})" >> "$summary_file"
+  echo "- **Run ID:** [#${run_id}](https://github.com/${repository}/actions/runs/${run_id})" >> "$summary_file"
+  echo "- **Execution Time:** $(echo "$body" | jq -r '.executionTime // "Unknown"')" >> "$summary_file"
+}
+
 # Handle case with missing or incomplete metrics
 if [ -z "$METRICS" ] || [ "$METRICS_COUNT" -lt 3 ]; then
   echo "Metrics missing or incomplete, test is considered FAILED"
@@ -313,13 +401,13 @@ if [ -z "$METRICS" ] || [ "$METRICS_COUNT" -lt 3 ]; then
     echo "- **Message:** ${AUTH_ERROR_MSG}" >> $GITHUB_STEP_SUMMARY
     echo "- **Time:** ${AUTH_ERROR_TIME}" >> $GITHUB_STEP_SUMMARY
 
-    if echo "$AUTH_ERROR" | jq -e '.consoleErrors' >/dev/null 2>&1; then
+    if echo "$BODY" | jq -e '.authError.consoleErrors' >/dev/null 2>&1; then
       echo "" >> $GITHUB_STEP_SUMMARY
       echo "### Browser Console Errors" >> $GITHUB_STEP_SUMMARY
       echo "The following errors were detected in the browser console during authentication:" >> $GITHUB_STEP_SUMMARY
       echo "" >> $GITHUB_STEP_SUMMARY
       echo "```" >> $GITHUB_STEP_SUMMARY
-      echo "$AUTH_ERROR" | jq -r '.consoleErrors[] | "[\(.type)] \(.text)"' >> $GITHUB_STEP_SUMMARY
+      echo "$BODY" | jq -r '.authError.consoleErrors[] | "[\(.type)] \(.text)"' >> $GITHUB_STEP_SUMMARY
       echo "```" >> $GITHUB_STEP_SUMMARY
     fi
 
@@ -341,6 +429,16 @@ if [ -z "$METRICS" ] || [ "$METRICS_COUNT" -lt 3 ]; then
   echo "- **Environment:** ${ENVIRONMENT}" >> $GITHUB_STEP_SUMMARY
   echo "- **Region:** ${REGION}" >> $GITHUB_STEP_SUMMARY
   echo "- **Run ID:** [#${GITHUB_RUN_ID}](https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})" >> $GITHUB_STEP_SUMMARY
+
+  # Debug: print the full Lambda response to help troubleshoot
+  echo "" >> $GITHUB_STEP_SUMMARY
+  echo "## Debug: Lambda Response" >> $GITHUB_STEP_SUMMARY
+  echo "<details><summary>Click to view full Lambda response</summary>" >> $GITHUB_STEP_SUMMARY
+  echo "" >> $GITHUB_STEP_SUMMARY
+  echo '```json' >> $GITHUB_STEP_SUMMARY
+  echo "$BODY" >> $GITHUB_STEP_SUMMARY
+  echo '```' >> $GITHUB_STEP_SUMMARY
+  echo "</details>" >> $GITHUB_STEP_SUMMARY
 
   # This will make the workflow fail
   echo "Test failed due to incomplete metrics" >> "${OUTPUT_DIR}/error.txt"
