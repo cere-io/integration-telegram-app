@@ -39,7 +39,7 @@ export type ActiveTab = {
 
 export const App = () => {
   const [initDataUnsafe] = useInitData() || {};
-  const { campaignExpired } = useData();
+  const { campaignExpired, campaignPaused } = useData();
   const [theme] = useThemeParams();
   const { campaignId, referrerId } = useStartParam();
 
@@ -131,6 +131,24 @@ export const App = () => {
         >
           <Text>Campaign Unavailable</Text>
           <Text>This campaign is no longer available or an error occurred.</Text>
+        </div>
+      );
+    }
+    if (campaignPaused) {
+      return (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100vh',
+            textAlign: 'center',
+            padding: '2rem',
+          }}
+        >
+          <Text>This campaign has been paused</Text>
+          <Text>Please circle back late</Text>
         </div>
       );
     }
