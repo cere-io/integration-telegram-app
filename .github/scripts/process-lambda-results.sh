@@ -62,13 +62,13 @@ if echo "$BODY" | jq -e . >/dev/null 2>&1; then
       NAME=$(echo "$metric" | jq -r '.name')
       DURATION=$(echo "$metric" | jq -r '.duration')
       FAKED=$(echo "$metric" | jq -r '.faked // false')
-
+      
       if [ "$FAKED" == "true" ]; then
         METRIC_LINE="${NAME} took ${DURATION}ms [AUTH_ERROR]"
       else
         METRIC_LINE="${NAME} took ${DURATION}ms"
       fi
-
+      
       echo "$METRIC_LINE" >> "${OUTPUT_DIR}/performance-metrics.txt"
       echo "$METRIC_LINE" >> "${WORKSPACE_OUTPUT}/performance-metrics.txt"
     done
@@ -92,11 +92,11 @@ if echo "$BODY" | jq -e . >/dev/null 2>&1; then
     echo "$AUTH_ERROR" > "${OUTPUT_DIR}/auth-error.json"
     echo "$AUTH_ERROR" > "${WORKSPACE_OUTPUT}/auth-error.json"
     echo "Authentication error saved to files"
-
+    
     AUTH_ERROR_TYPE=$(echo "$AUTH_ERROR" | jq -r '.type')
     AUTH_ERROR_MSG=$(echo "$AUTH_ERROR" | jq -r '.message')
     AUTH_ERROR_TIME=$(echo "$AUTH_ERROR" | jq -r '.timestamp')
-
+    
     echo "Auth error details - Type: $AUTH_ERROR_TYPE, Message: $AUTH_ERROR_MSG, Time: $AUTH_ERROR_TIME"
   fi
 else
@@ -106,13 +106,22 @@ fi
 # Alternative methods to extract metrics
 if [ -z "$METRICS" ]; then
   echo "Method 2: Using direct grep for metrics strings..."
-  GREP_METRICS=$(echo "$BODY" | grep -o '[A-Za-z ]\+ took [0-9]\+ms' || echo "")
+  # Normalize the body by removing carriage returns, replacing newlines with spaces
+  CLEANED_BODY=$(echo "$BODY" | tr -d '\r' | tr '\n' ' ')
+  
+  # Extract metrics with grep
+  GREP_METRICS=$(echo "$CLEANED_BODY" | grep -o '[A-Za-z ]\+ took [0-9]\+ms' || echo "")
+  
+  # Clean up any 'n' prefixes from metrics (due to newlines in the source)
+  GREP_METRICS=$(echo "$GREP_METRICS" | sed 's/^n//g')
 
   if [ -n "$GREP_METRICS" ]; then
     echo "Found metrics with grep: $GREP_METRICS"
-    echo "$GREP_METRICS" > "${OUTPUT_DIR}/performance-metrics.txt"
-    echo "$GREP_METRICS" > "${WORKSPACE_OUTPUT}/performance-metrics.txt"
-    METRICS="$GREP_METRICS"
+    # Format metrics to be one per line
+    FORMATTED_METRICS=$(echo "$GREP_METRICS" | sed 's/\([A-Za-z ]\+ took [0-9]\+ms\) /\1\n/g')
+    echo "$FORMATTED_METRICS" > "${OUTPUT_DIR}/performance-metrics.txt"
+    echo "$FORMATTED_METRICS" > "${WORKSPACE_OUTPUT}/performance-metrics.txt"
+    METRICS="$FORMATTED_METRICS"
   else
     echo "No metrics found with grep"
   fi
@@ -120,7 +129,17 @@ fi
 
 if [ -z "$METRICS" ]; then
   echo "Method 3: Extracting from escaped JSON string..."
-  ESCAPED_METRICS=$(echo "$BODY" | grep -o '"performanceMetrics":"[^"]*"' | sed 's/"performanceMetrics":"//g' | sed 's/"$//g' | sed 's/\\n/\n/g')
+  # Normalize the body
+  CLEANED_BODY=$(echo "$BODY" | tr -d '\r' | tr '\n' ' ')
+  
+  # Extract metrics from performance metrics string
+  ESCAPED_METRICS=$(echo "$CLEANED_BODY" | grep -o '"performanceMetrics":"[^"]*"' | sed 's/"performanceMetrics":"//g' | sed 's/"$//g' | sed 's/\\n/\n/g')
+  
+  # Clean up any 'n' prefixes
+  ESCAPED_METRICS=$(echo "$ESCAPED_METRICS" | sed 's/^n//g')
+  
+  # Format metrics to be one per line
+  ESCAPED_METRICS=$(echo "$ESCAPED_METRICS" | sed 's/\([A-Za-z ]\+ took [0-9]\+ms\) /\1\n/g')
 
   if [ -n "$ESCAPED_METRICS" ]; then
     echo "Found metrics in escaped string: $ESCAPED_METRICS"
@@ -132,13 +151,17 @@ if [ -z "$METRICS" ]; then
   fi
 fi
 
+# Count metrics regardless of how they are formatted
+METRICS_COUNT=$(echo "$METRICS" | grep -o "took [0-9]\+ms" | wc -l)
+echo "Found $METRICS_COUNT metrics"
+
 # Handle case with missing or incomplete metrics
-if [ -z "$METRICS" ] || [ "$(echo "$METRICS" | wc -l)" -lt 3 ]; then
+if [ -z "$METRICS" ] || [ "$METRICS_COUNT" -lt 3 ]; then
   echo "Metrics missing or incomplete, test is considered FAILED"
   echo "# ❌ Performance Test Results" >> $GITHUB_STEP_SUMMARY
   echo "Test is FAILED: Expected 3 metrics (Active Quests Screen, Leaderboard Screen, Library Screen)" >> $GITHUB_STEP_SUMMARY
-  echo "Only found $(echo "$METRICS" | wc -l) metrics:" >> $GITHUB_STEP_SUMMARY
-
+  echo "Only found $METRICS_COUNT metrics:" >> $GITHUB_STEP_SUMMARY
+  
   if [ -n "$METRICS" ]; then
     echo '```' >> $GITHUB_STEP_SUMMARY
     echo "$METRICS" >> $GITHUB_STEP_SUMMARY
@@ -146,13 +169,13 @@ if [ -z "$METRICS" ] || [ "$(echo "$METRICS" | wc -l)" -lt 3 ]; then
   else
     echo "No metrics found" >> $GITHUB_STEP_SUMMARY
   fi
-
+  
   # Process auth error details
   if echo "$BODY" | jq -e '.authError' >/dev/null 2>&1; then
     AUTH_ERROR_TYPE=$(echo "$BODY" | jq -r '.authError.type')
     AUTH_ERROR_MSG=$(echo "$BODY" | jq -r '.authError.message')
     AUTH_ERROR_TIME=$(echo "$BODY" | jq -r '.authError.timestamp')
-
+    
     echo "" >> $GITHUB_STEP_SUMMARY
     echo "## ⚠️ Authentication Error Detected" >> $GITHUB_STEP_SUMMARY
     echo "Authentication failed during test execution. This prevented testing of Leaderboard and Library screens." >> $GITHUB_STEP_SUMMARY
@@ -161,7 +184,7 @@ if [ -z "$METRICS" ] || [ "$(echo "$METRICS" | wc -l)" -lt 3 ]; then
     echo "- **Type:** ${AUTH_ERROR_TYPE}" >> $GITHUB_STEP_SUMMARY
     echo "- **Message:** ${AUTH_ERROR_MSG}" >> $GITHUB_STEP_SUMMARY
     echo "- **Time:** ${AUTH_ERROR_TIME}" >> $GITHUB_STEP_SUMMARY
-
+    
     if echo "$AUTH_ERROR" | jq -e '.consoleErrors' >/dev/null 2>&1; then
       echo "" >> $GITHUB_STEP_SUMMARY
       echo "### Browser Console Errors" >> $GITHUB_STEP_SUMMARY
@@ -171,7 +194,7 @@ if [ -z "$METRICS" ] || [ "$(echo "$METRICS" | wc -l)" -lt 3 ]; then
       echo "$AUTH_ERROR" | jq -r '.consoleErrors[] | "[\(.type)] \(.text)"' >> $GITHUB_STEP_SUMMARY
       echo "```" >> $GITHUB_STEP_SUMMARY
     fi
-
+    
     echo "" >> $GITHUB_STEP_SUMMARY
     echo "### Troubleshooting Steps" >> $GITHUB_STEP_SUMMARY
     echo "1. Check if the web3auth service is working properly" >> $GITHUB_STEP_SUMMARY
@@ -185,10 +208,10 @@ if [ -z "$METRICS" ] || [ "$(echo "$METRICS" | wc -l)" -lt 3 ]; then
     cat "${OUTPUT_DIR}/error-log.txt" >> $GITHUB_STEP_SUMMARY
     echo '```' >> $GITHUB_STEP_SUMMARY
   fi
-
+  
   # Process console errors
   HAS_CONSOLE_ERRORS=false
-
+  
   if [ -f "${OUTPUT_DIR}/console-errors.txt" ]; then
     HAS_CONSOLE_ERRORS=true
     echo "" >> $GITHUB_STEP_SUMMARY
@@ -235,23 +258,23 @@ if [ -z "$METRICS" ] || [ "$(echo "$METRICS" | wc -l)" -lt 3 ]; then
         echo "... and $((CONSOLE_ERRORS_COUNT - 20)) more console errors" >> $GITHUB_STEP_SUMMARY
       fi
       echo '```' >> $GITHUB_STEP_SUMMARY
-
+      
       echo "$BODY" | jq -r '.consoleErrors | map("[\(.type)] [\(.time)] \(.text)") | .[]' > "${OUTPUT_DIR}/console-errors-from-response.txt"
       echo "$BODY" | jq -r '.consoleErrors | map("[\(.type)] [\(.time)] \(.text)") | .[]' > "${WORKSPACE_OUTPUT}/console-errors-from-response.txt"
     fi
   fi
-
+  
   if [ "$HAS_CONSOLE_ERRORS" = "true" ]; then
     echo "Console errors were found and added to the report"
   else
     echo "No console errors were found in any source"
   fi
-
+  
   echo "## Environment" >> $GITHUB_STEP_SUMMARY
   echo "- **Environment:** ${ENVIRONMENT}" >> $GITHUB_STEP_SUMMARY
   echo "- **Region:** ${REGION}" >> $GITHUB_STEP_SUMMARY
   echo "- **Run ID:** [#${GITHUB_RUN_ID}](https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})" >> $GITHUB_STEP_SUMMARY
-
+  
   # This will make the workflow fail
   echo "Test failed due to incomplete metrics" >> "${OUTPUT_DIR}/error.txt"
   exit 1
@@ -266,6 +289,14 @@ if [ -n "$METRICS" ]; then
   echo "| ---- | -------- | ------ |" >> $GITHUB_STEP_SUMMARY
 
   echo "$METRICS" | while IFS= read -r line; do
+    # Skip empty lines
+    if [ -z "$line" ]; then
+      continue
+    fi
+    
+    # Remove any leading 'n' character (from newlines)
+    line=$(echo "$line" | sed 's/^n//')
+    
     if [[ "$line" =~ ([A-Za-z\ ]+)\ took\ ([0-9]+)ms ]]; then
       TEST_NAME="${BASH_REMATCH[1]}"
       DURATION="${BASH_REMATCH[2]}"
@@ -301,12 +332,20 @@ if [ -n "$METRICS" ]; then
   echo '    axisFormat %s' >> $GITHUB_STEP_SUMMARY
 
   echo "$METRICS" | while IFS= read -r line; do
+    # Skip empty lines
+    if [ -z "$line" ]; then
+      continue
+    fi
+    
+    # Remove any leading 'n' character (from newlines)
+    line=$(echo "$line" | sed 's/^n//')
+    
     if [[ "$line" =~ ([A-Za-z\ ]+)\ took\ ([0-9]+)ms ]]; then
       TEST_NAME="${BASH_REMATCH[1]}"
       DURATION="${BASH_REMATCH[2]}"
 
       DURATION_SEC=$(awk "BEGIN {printf \"%.1f\", $DURATION/1000}")
-
+      
       if [[ "$line" =~ \[AUTH_ERROR\] ]]; then
         echo "    ${TEST_NAME} (Auth Error) :crit, 0, 0.1s" >> $GITHUB_STEP_SUMMARY
       else
@@ -337,16 +376,16 @@ if echo "$BODY" | jq -e '.consoleErrors' >/dev/null 2>&1; then
     echo "## 🔴 Browser console errors" >> $GITHUB_STEP_SUMMARY
     echo "During the test execution the following errors were found in the browser console:" >> $GITHUB_STEP_SUMMARY
     echo '```' >> $GITHUB_STEP_SUMMARY
-
+    
     echo "$BODY" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' >> $GITHUB_STEP_SUMMARY
-
+    
     echo '```' >> $GITHUB_STEP_SUMMARY
     echo "Total console errors: $CONSOLE_ERRORS_COUNT" >> $GITHUB_STEP_SUMMARY
-
+    
     echo "$BODY" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' > "${OUTPUT_DIR}/console-errors-from-response.txt"
     echo "$BODY" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' > "${WORKSPACE_OUTPUT}/console-errors-from-response.txt"
-
-    echo "⚠️ Console errors were found and added to the report."
+    
+    echo "⚠️ Console errors were found and added to the report." 
   else
     echo "✅ There are no console errors"
   fi
@@ -440,4 +479,4 @@ elif echo "$RESPONSE" | jq -e '.StatusCode == 200' >/dev/null 2>&1; then
 else
   echo "Tests failed. Check output for details."
   exit 1
-fi
+fi 
