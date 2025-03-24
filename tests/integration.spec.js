@@ -353,21 +353,10 @@ export default async function runIntegrationTest({ browser, context }) {
         console.error('Failed to write formatted console errors file:', fileError);
       }
     } else {
-      const testError = {
-        type: 'error',
-        text: 'TEST_ERROR_HANDLER: Тестовая ошибка консоли из обработчика ошибок теста',
-        time: new Date().toISOString()
-      };
       globalConsoleErrors.push(testError);
       testResultData.consoleErrors = globalConsoleErrors;
       console.log('Added test console error from error handler');
     }
-
-    globalConsoleErrors.push({
-      type: 'error',
-      text: 'FORCED_ERROR_HANDLER: Принудительная ошибка из обработчика ошибок теста',
-      time: new Date().toISOString()
-    });
     testResultData.consoleErrors = globalConsoleErrors;
     console.log('Added forced console error from error handler');
 
