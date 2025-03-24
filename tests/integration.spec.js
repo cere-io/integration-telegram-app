@@ -8,7 +8,7 @@ const envConfigs = {
   },
   stage: {
     baseURL: 'https://telegram-viewer-app.stage.cere.io',
-    campaignId: '120',
+    campaignId: '105',
   },
   prod: {
     baseURL: 'https://telegram-viewer-app.cere.io',
@@ -237,6 +237,13 @@ export default async function runIntegrationTest({ browser, context }) {
   metrics.length = 0;
 
   try {
+    fs.writeFileSync('/tmp/console-errors.txt', '');
+    console.log('Console errors file cleared');
+  } catch (error) {
+    console.error(`Error clearing console errors file: ${error.message}`);
+  }
+
+  try {
     console.log('Testing file system access...');
     fs.writeFileSync('/tmp/test-file.txt', 'Test file system access');
     const content = fs.readFileSync('/tmp/test-file.txt', 'utf8');
@@ -256,10 +263,50 @@ export default async function runIntegrationTest({ browser, context }) {
   }
 
   let page;
+  const globalConsoleErrors = [];
 
   try {
     page = await context.newPage();
     console.log('Page created successfully');
+
+    page.on('console', msg => {
+      const type = msg.type();
+      const text = msg.text();
+      const time = new Date().toISOString();
+
+      console.log(`[BROWSER CONSOLE] [${type}] ${text}`);
+
+      if (type === 'error' || type === 'warning') {
+        const consoleEvent = { type, text, time };
+        globalConsoleErrors.push(consoleEvent);
+
+        try {
+          fs.appendFileSync('/tmp/console-errors.txt', `[${type}] [${time}] ${text}\n`);
+          console.log(`Console ${type} logged to file: ${text.substring(0, 100)}${text.length > 100 ? '...' : ''}`);
+        } catch (err) {
+          console.error('Failed to write console error to file:', err);
+        }
+      }
+    });
+
+    page.on('pageerror', error => {
+      const time = new Date().toISOString();
+      console.error(`[PAGE ERROR] ${error.message}`);
+
+      const errorInfo = {
+        type: 'pageerror',
+        text: error.message,
+        stack: error.stack || 'No stack trace',
+        time
+      };
+      globalConsoleErrors.push(errorInfo);
+
+      try {
+        fs.appendFileSync('/tmp/console-errors.txt', `[pageerror] [${time}] ${error.message}\n${error.stack || 'No stack trace'}\n\n`);
+      } catch (err) {
+        console.error('Failed to write page error to file:', err);
+      }
+    });
 
     await testActiveQuestsScreen({ page });
     await testLeaderboardScreen({ page });
@@ -278,8 +325,26 @@ export default async function runIntegrationTest({ browser, context }) {
       region: region
     };
 
+    if (globalConsoleErrors.length > 0) {
+      testResultData.consoleErrors = globalConsoleErrors;
+
+      console.log(`Found ${globalConsoleErrors.length} console errors/warnings during test`);
+
+      globalConsoleErrors.slice(0, 5).forEach((err, index) => {
+        console.log(`Console error ${index+1}/${globalConsoleErrors.length}: [${err.type}] ${err.text.substring(0, 200)}${err.text.length > 200 ? '...' : ''}`);
+      });
+
+      if (globalConsoleErrors.length > 5) {
+        console.log(`... and ${globalConsoleErrors.length - 5} more console errors`);
+      }
+    }
+
     if (authError) {
       testResultData.authError = authError;
+
+      if (!authError.consoleErrors || authError.consoleErrors.length === 0) {
+        authError.consoleErrors = globalConsoleErrors;
+      }
 
       if (!metrics.find(m => m.name === 'Leaderboard Screen')) {
         metrics.push({
@@ -330,6 +395,11 @@ export default async function runIntegrationTest({ browser, context }) {
       environment: environment,
       region: region
     };
+
+    if (globalConsoleErrors.length > 0) {
+      testResultData.consoleErrors = globalConsoleErrors;
+      console.log(`Found ${globalConsoleErrors.length} console errors/warnings during failed test`);
+    }
 
     if (authError) {
       testResultData.authError = authError;

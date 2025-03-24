@@ -382,12 +382,28 @@ jobs:
               echo '```' >> $GITHUB_STEP_SUMMARY
             fi
             
+            # Проверяем наличие файла с консольными ошибками
             if [ -f "${OUTPUT_DIR}/console-errors.txt" ]; then
               echo "" >> $GITHUB_STEP_SUMMARY
               echo "## 🔴 Browser Console Errors" >> $GITHUB_STEP_SUMMARY
               echo "Browser console errors were detected during test execution:" >> $GITHUB_STEP_SUMMARY
               echo '```' >> $GITHUB_STEP_SUMMARY
               cat "${OUTPUT_DIR}/console-errors.txt" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+            elif echo "$BODY" | jq -e '.consoleErrors' >/dev/null 2>&1; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "## 🔴 Browser Console Errors" >> $GITHUB_STEP_SUMMARY
+              echo "Browser console errors were detected during test execution:" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              
+              echo "$BODY" | jq -r '.consoleErrors | map("[\(.type)] \(.text)") | .[0:20] | .[]' >> $GITHUB_STEP_SUMMARY
+              
+              CONSOLE_ERRORS_COUNT=$(echo "$BODY" | jq -r '.consoleErrors | length')
+              if [ "$CONSOLE_ERRORS_COUNT" -gt 20 ]; then
+                echo "" >> $GITHUB_STEP_SUMMARY
+                echo "... and $((CONSOLE_ERRORS_COUNT - 20)) more console errors" >> $GITHUB_STEP_SUMMARY
+              fi
+              
               echo '```' >> $GITHUB_STEP_SUMMARY
             fi
             

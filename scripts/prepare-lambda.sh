@@ -705,6 +705,7 @@ export const handler = async (event) => {
          performanceMetrics: performanceMetrics,
          metrics: metrics,
          authError: testResult.authError || null,
+         consoleErrors: testResult.consoleErrors || [],
          region: region,
          environment: environment,
          executionTime: new Date().toISOString()
@@ -720,6 +721,7 @@ export const handler = async (event) => {
          error: error.message,
          stack: error.stack,
          authError: testResult && testResult.authError ? testResult.authError : null,
+         consoleErrors: testResult && testResult.consoleErrors ? testResult.consoleErrors : [],
          region: region,
          environment: environment,
          executionTime: new Date().toISOString()
