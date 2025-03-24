@@ -231,6 +231,17 @@ jobs:
           echo "$BODY" > "${OUTPUT_DIR}/lambda-body.txt"
           echo "$BODY" > "${WORKSPACE_OUTPUT}/lambda-body.txt"
 
+          if echo "$BODY" | jq -e '.consoleErrors' >/dev/null 2>&1; then
+            echo "Extracting console errors from response JSON..."
+            echo "$BODY" | jq -c '.consoleErrors' > "${OUTPUT_DIR}/extracted-console-errors.json"
+            echo "$BODY" | jq -c '.consoleErrors' > "${WORKSPACE_OUTPUT}/extracted-console-errors.json"
+            echo "$BODY" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' > "${OUTPUT_DIR}/extracted-console-errors.txt"
+            echo "$BODY" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' > "${WORKSPACE_OUTPUT}/extracted-console-errors.txt"
+            echo "Console errors extracted and saved to files"
+          else
+            echo "No console errors found in response JSON"
+          fi
+
           if [ -f "/tmp/console-errors.txt" ]; then
             echo "Copying console-errors.txt from /tmp to output directories..."
             cp "/tmp/console-errors.txt" "${OUTPUT_DIR}/"
@@ -394,7 +405,7 @@ jobs:
               echo '```' >> $GITHUB_STEP_SUMMARY
             fi
             
-            HAS_CONSOLE_ERRORS=true
+            HAS_CONSOLE_ERRORS=false
             
             if [ -f "${OUTPUT_DIR}/console-errors.txt" ]; then
               HAS_CONSOLE_ERRORS=true
@@ -533,6 +544,28 @@ jobs:
             echo '```' >> $GITHUB_STEP_SUMMARY
             echo "${BODY:0:200}..." >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if echo "$BODY" | jq -e '.consoleErrors' >/dev/null 2>&1; then
+            CONSOLE_ERRORS_COUNT=$(echo "$BODY" | jq -r '.consoleErrors | length')
+            if [ "$CONSOLE_ERRORS_COUNT" -gt 0 ]; then
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "## 🔴 Browser console errors" >> $GITHUB_STEP_SUMMARY
+              echo "During the test execution the following errors were found in the browser console:" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              
+              echo "$BODY" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' >> $GITHUB_STEP_SUMMARY
+              
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              echo "Total console errors: $CONSOLE_ERRORS_COUNT" >> $GITHUB_STEP_SUMMARY
+              
+              echo "$BODY" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' > "${OUTPUT_DIR}/console-errors-from-response.txt"
+              echo "$BODY" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' > "${WORKSPACE_OUTPUT}/console-errors-from-response.txt"
+              
+              echo "⚠️ Console errors were found and added to the report." 
+            else
+              echo "✅ There are no console errors"
+            fi
           fi
 
           echo "Files in temporary output directory:"

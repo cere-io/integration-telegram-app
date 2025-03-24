@@ -333,48 +333,46 @@ export default async function runIntegrationTest({ browser, context }) {
 
     if (globalConsoleErrors.length > 0) {
       testResultData.consoleErrors = globalConsoleErrors;
+      console.log(`Found ${globalConsoleErrors.length} console errors/warnings during failed test`);
 
-      console.log(`Found ${globalConsoleErrors.length} console errors/warnings during test`);
-
-      globalConsoleErrors.slice(0, 5).forEach((err, index) => {
-        console.log(`Console error ${index+1}/${globalConsoleErrors.length}: [${err.type}] ${err.text.substring(0, 200)}${err.text.length > 200 ? '...' : ''}`);
-      });
-
-      if (globalConsoleErrors.length > 5) {
-        console.log(`... and ${globalConsoleErrors.length - 5} more console errors`);
-      }
-    } else {
-      globalConsoleErrors.push(testError);
-      testResultData.consoleErrors = globalConsoleErrors;
-      console.log('Added test console error for logging verification');
-    }
-
-    try {
-      if (globalConsoleErrors.length > 0) {
+      try {
         fs.writeFileSync('/tmp/console-errors.json', JSON.stringify(globalConsoleErrors, null, 2));
         console.log(`Wrote ${globalConsoleErrors.length} console errors to /tmp/console-errors.json for debugging`);
+      } catch (fileError) {
+        console.error('Failed to write console errors JSON file:', fileError);
       }
-    } catch (fileError) {
-      console.error('Failed to write console errors JSON file:', fileError);
+
+      try {
+        let consoleErrorsText = globalConsoleErrors.map(err =>
+          `[${err.type}] [${err.time}] ${err.text}`
+        ).join('\n');
+
+        fs.writeFileSync('/tmp/console-errors-formatted.txt', consoleErrorsText);
+        console.log('Wrote formatted console errors to /tmp/console-errors-formatted.txt');
+      } catch (fileError) {
+        console.error('Failed to write formatted console errors file:', fileError);
+      }
+    } else {
+      const testError = {
+        type: 'error', 
+        text: 'TEST_ERROR_HANDLER: Тестовая ошибка консоли из обработчика ошибок теста',
+        time: new Date().toISOString()
+      };
+      globalConsoleErrors.push(testError);
+      testResultData.consoleErrors = globalConsoleErrors;
+      console.log('Added test console error from error handler');
     }
 
-    try {
-      let consoleErrorsText = globalConsoleErrors.map(err =>
-        `[${err.type}] [${err.time}] ${err.text}`
-      ).join('\n');
-
-      fs.writeFileSync('/tmp/console-errors-formatted.txt', consoleErrorsText);
-      console.log('Wrote formatted console errors to /tmp/console-errors-formatted.txt');
-    } catch (fileError) {
-      console.error('Failed to write formatted console errors file:', fileError);
-    }
+    globalConsoleErrors.push({
+      type: 'error',
+      text: 'FORCED_ERROR_HANDLER: Принудительная ошибка из обработчика ошибок теста',
+      time: new Date().toISOString()
+    });
+    testResultData.consoleErrors = globalConsoleErrors;
+    console.log('Added forced console error from error handler');
 
     if (authError) {
       testResultData.authError = authError;
-
-      if (!authError.consoleErrors || authError.consoleErrors.length === 0) {
-        authError.consoleErrors = globalConsoleErrors;
-      }
 
       if (!metrics.find(m => m.name === 'Leaderboard Screen')) {
         metrics.push({
@@ -436,7 +434,35 @@ export default async function runIntegrationTest({ browser, context }) {
       } catch (fileError) {
         console.error('Failed to write console errors JSON file:', fileError);
       }
+
+      try {
+        let consoleErrorsText = globalConsoleErrors.map(err =>
+          `[${err.type}] [${err.time}] ${err.text}`
+        ).join('\n');
+
+        fs.writeFileSync('/tmp/console-errors-formatted.txt', consoleErrorsText);
+        console.log('Wrote formatted console errors to /tmp/console-errors-formatted.txt');
+      } catch (fileError) {
+        console.error('Failed to write formatted console errors file:', fileError);
+      }
+    } else {
+      const testError = {
+        type: 'error', 
+        text: 'TEST_ERROR_HANDLER: Тестовая ошибка консоли из обработчика ошибок теста',
+        time: new Date().toISOString()
+      };
+      globalConsoleErrors.push(testError);
+      testResultData.consoleErrors = globalConsoleErrors;
+      console.log('Added test console error from error handler');
     }
+
+    globalConsoleErrors.push({
+      type: 'error',
+      text: 'FORCED_ERROR_HANDLER: Принудительная ошибка из обработчика ошибок теста (catch блок)',
+      time: new Date().toISOString()
+    });
+    testResultData.consoleErrors = globalConsoleErrors;
+    console.log('Added forced console error from error handler (catch block)');
 
     if (authError) {
       testResultData.authError = authError;
