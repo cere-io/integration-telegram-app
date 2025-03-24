@@ -201,51 +201,49 @@ force_extract_console_errors() {
   # Save full response for debugging
   echo "$body" > "${output_dir}/full-lambda-response.txt"
   
-  # Extract console errors section using string manipulation
-  if [[ "$body" == *"consoleErrors"* ]]; then
-    echo "Found consoleErrors keyword in response body"
+  # Extract error texts directly regardless of JSON structure
+  DIRECT_ERRORS=$(echo "$body" | grep -o '"text":"[^"]*"' | sed 's/"text":"//g' | sed 's/"$//g')
+  if [ -n "$DIRECT_ERRORS" ]; then
+    echo "Extracted error texts directly from response"
+    echo "$DIRECT_ERRORS" > "${output_dir}/direct-errors.txt"
     
-    # Extract the consoleErrors array using sed
-    # This looks for "consoleErrors": [ ... ] pattern
-    errors_json=$(echo "$body" | sed -n 's/.*"consoleErrors":\(\[[^]]*\]\).*/\1/p')
-    
-    if [ -n "$errors_json" ]; then
-      echo "Found console errors JSON array"
-      echo "$errors_json" > "${output_dir}/extracted-errors.json"
-      
-      # Extract error messages
-      echo "Console errors extracted from Lambda response:" > "${output_dir}/extracted-errors.txt"
-      echo "$body" | grep -o '"type":"[^"]*","time":"[^"]*","text":"[^"]*"' | \
-        sed 's/"type":"\([^"]*\)","time":"\([^"]*\)","text":"\([^"]*\)"/[\1] [\2] \3/g' >> "${output_dir}/extracted-errors.txt"
-      
-      # Add to GitHub summary report
-      echo "" >> "$summary_file"
-      echo "## 🛑 Console Errors (forced extraction)" >> "$summary_file"
-      echo "The following errors were found in the Lambda response:" >> "$summary_file"
-      echo '```' >> "$summary_file"
-      cat "${output_dir}/extracted-errors.txt" >> "$summary_file"
-      echo '```' >> "$summary_file"
-      
-      return 0
-    else
-      echo "Could not extract console errors JSON array"
-    fi
-  fi
-  
-  # Last resort: just grep for error texts
-  error_texts=$(echo "$body" | grep -o '"text":"[^"]*"' | sed 's/"text":"//g' | sed 's/"//g')
-  if [ -n "$error_texts" ]; then
-    echo "Found error texts with grep"
-    echo "$error_texts" > "${output_dir}/error-texts.txt"
-    
+    # Add to GitHub summary report
     echo "" >> "$summary_file"
-    echo "## 🛑 Error Messages (text only)" >> "$summary_file"
-    echo "The following error messages were found:" >> "$summary_file"
+    echo "## 🛑 Console Errors" >> "$summary_file"
+    echo "The following errors were found in the Lambda response:" >> "$summary_file"
     echo '```' >> "$summary_file"
-    cat "${output_dir}/error-texts.txt" >> "$summary_file"
+    cat "${output_dir}/direct-errors.txt" >> "$summary_file"
+    echo '```' >> "$summary_file"
+    
+    # Also try to extract type and time if possible
+    echo "" >> "$summary_file"
+    echo "## 🛑 Formatted Console Errors" >> "$summary_file"
+    echo "Errors with type and timestamp:" >> "$summary_file"
+    echo '```' >> "$summary_file"
+    echo "$body" | grep -o '"type":"[^"]*","time":"[^"]*","text":"[^"]*"' | \
+      sed 's/"type":"\([^"]*\)","time":"\([^"]*\)","text":"\([^"]*\)"/[\1] [\2] \3/g' >> "$summary_file" || echo "Could not extract formatted errors"
     echo '```' >> "$summary_file"
     
     return 0
+  fi
+  
+  # If we couldn't extract errors with the methods above, just dump a portion of the response
+  echo "" >> "$summary_file"
+  echo "## ⚠️ Raw Response (Debug)" >> "$summary_file"
+  echo "Could not properly extract console errors. Here's a portion of the raw response:" >> "$summary_file"
+  echo '```json' >> "$summary_file"
+  echo "${body:0:1000}..." >> "$summary_file"
+  echo '```' >> "$summary_file"
+  
+  # Try one last method - raw regex for error array
+  if [[ "$body" == *"consoleErrors"* ]]; then
+    echo "" >> "$summary_file"
+    echo "## 🔎 Debug Info" >> "$summary_file"
+    echo "Response contains 'consoleErrors' keyword but extraction failed." >> "$summary_file"
+    echo "Manual methods returned:" >> "$summary_file"
+    echo '```' >> "$summary_file"
+    grep -o '"consoleErrors":\[[^]]*\]' "${output_dir}/full-lambda-response.txt" || echo "No match with grep" >> "$summary_file"
+    echo '```' >> "$summary_file"
   fi
   
   return 1
