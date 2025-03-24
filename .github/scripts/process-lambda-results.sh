@@ -11,235 +11,365 @@ REGION="$7"
 GITHUB_RUN_ID="$8"
 GITHUB_REPOSITORY="$9"
 
+# Map AWS regions to human-readable locations and countries
+get_region_info() {
+  local region="$1"
+  case "$region" in
+    "us-east-1")
+      echo "N. Virginia (US East) - United States"
+      ;;
+    "us-east-2")
+      echo "Ohio (US East) - United States"
+      ;;
+    "us-west-1")
+      echo "N. California (US West) - United States"
+      ;;
+    "us-west-2")
+      echo "Oregon (US West) - United States"
+      ;;
+    "ca-central-1")
+      echo "Central - Canada"
+      ;;
+    "eu-west-1")
+      echo "Ireland (EU West) - Ireland"
+      ;;
+    "eu-west-2")
+      echo "London (EU West) - United Kingdom"
+      ;;
+    "eu-west-3")
+      echo "Paris (EU West) - France"
+      ;;
+    "eu-central-1")
+      echo "Frankfurt (EU Central) - Germany"
+      ;;
+    "eu-north-1")
+      echo "Stockholm (EU North) - Sweden"
+      ;;
+    "ap-northeast-1")
+      echo "Tokyo (Asia Pacific Northeast) - Japan"
+      ;;
+    "ap-northeast-2")
+      echo "Seoul (Asia Pacific Northeast) - South Korea"
+      ;;
+    "ap-southeast-1")
+      echo "Singapore (Asia Pacific Southeast) - Singapore"
+      ;;
+    "ap-southeast-2")
+      echo "Sydney (Asia Pacific Southeast) - Australia"
+      ;;
+    "ap-south-1")
+      echo "Mumbai (Asia Pacific South) - India"
+      ;;
+    "sa-east-1")
+      echo "São Paulo (South America East) - Brazil"
+      ;;
+    *)
+      echo "$region - Unknown region"
+      ;;
+  esac
+}
+
 # First, detect if BODY is a Lambda response with escaped JSON and fix it
 echo "Checking if Lambda response body needs unescaping..."
 if [[ "$BODY" == *"\"consoleErrors\":"* ]] || [[ "$BODY" == *"\\\"consoleErrors\\\":\["* ]]; then
   echo "Detected Lambda response with potential double escaping"
-  
+
   # First level of unescaping - from Lambda format
   UNESCAPED_BODY=$(echo "$BODY" | sed 's/^"//; s/"$//; s/\\"/"/g; s/\\n/\n/g; s/\\\\/\\/g')
   echo "Created unescaped version of the body"
-  
+
   # Save both formats
   echo "$BODY" > "${OUTPUT_DIR}/original-lambda-body.json"
   echo "$UNESCAPED_BODY" > "${OUTPUT_DIR}/unescaped-lambda-body.json"
   echo "$UNESCAPED_BODY" > "${WORKSPACE_OUTPUT}/unescaped-lambda-body.json"
-  
+
   # Use the unescaped version for further processing
   BODY="$UNESCAPED_BODY"
   echo "Using unescaped version for processing"
 fi
 
-# Special direct function to extract console errors from any response format
-# This function does not rely on JSON parsing which can fail with nested/escaped JSON
-force_extract_console_errors() {
+# Save full response to a file for analysis
+echo "$BODY" > "${OUTPUT_DIR}/full_response.txt"
+
+# Extract console messages (both errors and warnings) from any response format
+extract_console_messages() {
   local body="$1"
   local output_dir="$2"
   local summary_file="$3"
-  
-  echo "🔍 Extracting console errors with direct text processing"
-  
-  # Save full response to a file for analysis
-  echo "$body" > "${output_dir}/full_response.txt"
-  
-  # Create a section for console errors in the summary
-  echo "" >> "$summary_file"
-  echo "## 🛑 Console Errors" >> "$summary_file" 
-  echo "The following errors were found in the test:" >> "$summary_file"
-  echo '```' >> "$summary_file"
-  
-  # SUPER BASIC APPROACH:
-  # 1. Find all lines with "text": 
-  # 2. Clean up the output to show only error text
-  # 3. Put each on a separate line
-  ERRORS=$(grep -o '"text": "[^"]*"' "${output_dir}/full_response.txt" || \
-          grep -o '"text":"[^"]*"' "${output_dir}/full_response.txt" || \
-          grep -o '"text":"[^,}]*' "${output_dir}/full_response.txt" || \
-          grep -o '"text": "[^,}]*' "${output_dir}/full_response.txt")
-  
-  if [ -n "$ERRORS" ]; then
-    # Clean up the format for display
-    echo "$ERRORS" | sed 's/"text": "//g; s/"text":"//g; s/"$//g' >> "$summary_file"
-    echo "Extracted console error texts directly"
-  else
-    echo "No error texts could be extracted with grep." >> "$summary_file"
-    echo "Trying a direct line scan using grep..." >> "$summary_file"
-    echo "" >> "$summary_file"
-    
-    # Try another approach - find lines with "text" and show what's there
-    LINES_WITH_ERRORS=$(grep -n "text" "${output_dir}/full_response.txt")
-    if [ -n "$LINES_WITH_ERRORS" ]; then
-      echo "Lines containing 'text' keyword:" >> "$summary_file"
-      echo "$LINES_WITH_ERRORS" >> "$summary_file"
-      
-      # Get a few lines around each "text" mention
-      echo "" >> "$summary_file"
-      echo "Content of lines with errors:" >> "$summary_file"
-      echo "$LINES_WITH_ERRORS" | cut -d ":" -f 1 | while read -r line_num; do
-        start=$((line_num - 1))
-        end=$((line_num + 1))
-        sed -n "${start},${end}p" "${output_dir}/full_response.txt" >> "$summary_file"
-        echo "---" >> "$summary_file"
-      done
-    else
-      echo "No lines with 'text' keyword found." >> "$summary_file"
+  local message_type="$4" # "error" or "warning"
+  local emoji="$5"        # 🛑 or ⚠️
+
+  echo "🔍 Extracting console $message_type messages with direct text processing"
+
+  # Create a section for console messages in a temporary file to be moved later
+  local temp_file="${output_dir}/temp_${message_type}_report.md"
+  echo "" > "$temp_file"
+  echo "## $emoji Console ${message_type^}s" > "$temp_file"
+  echo "The following ${message_type}s were found in the test:" >> "$temp_file"
+  echo '<details><summary>Click to expand (scrollable)</summary>' >> "$temp_file"
+  echo "" >> "$temp_file"
+  echo '```' >> "$temp_file"
+
+  # First attempt: extract all messages with their type, time and text
+  local FORMATTED_MESSAGES=""
+  if echo "$body" | jq -e '.consoleErrors' >/dev/null 2>&1; then
+    FORMATTED_MESSAGES=$(echo "$body" | jq -r --arg type "$message_type" '.consoleErrors[] | select(.type==$type) | "[\(.type)] [\(.time)] \(.text)"' 2>/dev/null || echo "")
+  fi
+
+  # Second attempt: grep using multiple patterns to catch various JSON formats
+  if [ -z "$FORMATTED_MESSAGES" ]; then
+    # Find blocks that mention the message type we're looking for
+    local TYPE_BLOCKS=$(grep -A 5 "\"type\":.*\"$message_type\"" "${output_dir}/full_response.txt" || \
+                       grep -A 5 "\"type\": *\"$message_type\"" "${output_dir}/full_response.txt" || echo "")
+
+    if [ -n "$TYPE_BLOCKS" ]; then
+      # Extract text fields from those blocks
+      local MESSAGE_TEXTS=$(echo "$TYPE_BLOCKS" | grep -o '"text":[^,}]*' | sed 's/"text"://; s/"//g; s/^[ \t]*//')
+
+      # Extract time fields if available
+      local TIME_STAMPS=$(echo "$TYPE_BLOCKS" | grep -o '"time":[^,}]*' | sed 's/"time"://; s/"//g; s/^[ \t]*//')
+
+      # Combine if both available, otherwise just use texts
+      if [ -n "$TIME_STAMPS" ] && [ -n "$MESSAGE_TEXTS" ]; then
+        # Combine timestamps and messages (limited approach)
+        FORMATTED_MESSAGES=$(paste -d " " <(echo "$TIME_STAMPS") <(echo "$MESSAGE_TEXTS") | sed "s/^/[$message_type] /")
+      elif [ -n "$MESSAGE_TEXTS" ]; then
+        FORMATTED_MESSAGES=$(echo "$MESSAGE_TEXTS" | sed "s/^/[$message_type] /")
+      fi
     fi
   fi
-  
-  echo '```' >> "$summary_file"
-  
-  # Display informational note about the JSON parsing issue
-  echo "" >> "$summary_file"
-  echo "## ℹ️ Note" >> "$summary_file"
-  echo "The Lambda response contains console errors but they may not be properly displayed above due to JSON formatting issues." >> "$summary_file"
-  echo "Check the original response below to see the raw data." >> "$summary_file"
-  
-  # Display part of the raw response for debugging
-  echo "" >> "$summary_file"
-  echo "## 🔍 Raw Response (First Part)" >> "$summary_file"
-  echo "For debugging purposes, here's part of the raw response:" >> "$summary_file"
-  echo '```json' >> "$summary_file"
-  grep -A 30 '"consoleErrors"' "${output_dir}/full_response.txt" | head -n 50 >> "$summary_file"
-  echo '```' >> "$summary_file"
-  
-  return 0
+
+  # Third attempt: simple grep for text fields in the entire response
+  if [ -z "$FORMATTED_MESSAGES" ]; then
+    # Find all text fields that might be errors or warnings
+    local ALL_TEXTS=$(grep -o '"text": "[^"]*"' "${output_dir}/full_response.txt" || \
+                     grep -o '"text":"[^"]*"' "${output_dir}/full_response.txt" || \
+                     grep -o '"text":"[^,}]*' "${output_dir}/full_response.txt" || \
+                     grep -o '"text": "[^,}]*' "${output_dir}/full_response.txt" || echo "")
+
+    if [ -n "$ALL_TEXTS" ]; then
+      # Clean up the format
+      FORMATTED_MESSAGES=$(echo "$ALL_TEXTS" | sed 's/"text": "//g; s/"text":"//g; s/"$//g' | sed "s/^/[$message_type] /")
+    fi
+  fi
+
+  # Output messages if found
+  if [ -n "$FORMATTED_MESSAGES" ]; then
+    echo "$FORMATTED_MESSAGES" >> "$temp_file"
+    echo "Extracted console $message_type messages directly"
+  else
+    echo "No $message_type messages could be extracted." >> "$temp_file"
+  fi
+
+  echo '```' >> "$temp_file"
+  echo '</details>' >> "$temp_file"
+
+  # Add a debug section with raw data
+  echo "" >> "$temp_file"
+  echo "### 🔍 Raw $message_type Response Sample" >> "$temp_file"
+  echo "For debugging purposes, here's a sample of the raw response:" >> "$temp_file"
+  echo '<details><summary>Click to expand</summary>' >> "$temp_file"
+  echo "" >> "$temp_file"
+  echo '```json' >> "$temp_file"
+  grep -A 15 -B 2 "\"type\":.*\"$message_type\"" "${output_dir}/full_response.txt" | head -n 30 >> "$temp_file"
+  echo '```' >> "$temp_file"
+  echo '</details>' >> "$temp_file"
+
+  # Return the path to the temporary file for later incorporation into the report
+  echo "$temp_file"
 }
 
-# Process console errors from response JSON using jq
-if echo "$BODY" | jq -e '.consoleErrors' >/dev/null 2>&1; then
-  echo "Extracting console errors from response JSON using jq..."
-  echo "$BODY" | jq -c '.consoleErrors' > "${OUTPUT_DIR}/extracted-console-errors.json"
-  echo "$BODY" | jq -c '.consoleErrors' > "${WORKSPACE_OUTPUT}/extracted-console-errors.json"
-  echo "$BODY" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' > "${OUTPUT_DIR}/extracted-console-errors.txt"
-  echo "$BODY" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' > "${WORKSPACE_OUTPUT}/extracted-console-errors.txt"
-  echo "Console errors extracted and saved to files using jq"
+# Process metrics from various sources
+process_metrics() {
+  local body="$1"
+  local output_dir="$2"
+  local workspace_output="$3"
+
+  local metrics=""
+
+  # Try to parse metrics from JSON body
+  echo "Method 1: Trying to parse body as JSON..."
+  if echo "$body" | jq -e . >/dev/null 2>&1; then
+    echo "Body is valid JSON"
+
+    # Check for metrics array
+    if echo "$body" | jq -e '.metrics' >/dev/null 2>&1; then
+      echo "Found metrics array in body JSON"
+      local metrics_json=$(echo "$body" | jq -c '.metrics')
+      echo "$metrics_json" > "${output_dir}/metrics-json.json"
+      echo "$metrics_json" > "${workspace_output}/metrics-json.json"
+
+      echo "Formatting metrics from JSON array..."
+      echo "" > "${output_dir}/performance-metrics.txt"
+      echo "" > "${workspace_output}/performance-metrics.txt"
+      echo "$metrics_json" | jq -c '.[]' | while read -r metric; do
+        local name=$(echo "$metric" | jq -r '.name')
+        local duration=$(echo "$metric" | jq -r '.duration')
+        local faked=$(echo "$metric" | jq -r '.faked // false')
+
+        if [ "$faked" == "true" ]; then
+          local metric_line="${name} took ${duration}ms [AUTH_ERROR]"
+        else
+          local metric_line="${name} took ${duration}ms"
+        fi
+
+        echo "$metric_line" >> "${output_dir}/performance-metrics.txt"
+        echo "$metric_line" >> "${workspace_output}/performance-metrics.txt"
+      done
+
+      metrics=$(cat "${output_dir}/performance-metrics.txt")
+      echo "Metrics from JSON array: $metrics"
+    elif echo "$body" | jq -e '.performanceMetrics' >/dev/null 2>&1; then
+      echo "Found performanceMetrics string in body JSON"
+      metrics=$(echo "$body" | jq -r '.performanceMetrics')
+      echo "$metrics" > "${output_dir}/performance-metrics.txt"
+      echo "$metrics" > "${workspace_output}/performance-metrics.txt"
+      echo "Metrics from performanceMetrics: $metrics"
+    else
+      echo "No metrics fields found in JSON body"
+    fi
+  else
+    echo "Body is not valid JSON, trying other methods..."
+  fi
+
+  # Alternative methods to extract metrics
+  if [ -z "$metrics" ]; then
+    echo "Method 2: Using direct grep for metrics strings..."
+    # Normalize the body by removing carriage returns, replacing newlines with spaces
+    local cleaned_body=$(echo "$body" | tr -d '\r' | tr '\n' ' ')
+
+    # Extract metrics with grep
+    local grep_metrics=$(echo "$cleaned_body" | grep -o '[A-Za-z ]\+ took [0-9]\+ms' || echo "")
+
+    # Clean up any 'n' prefixes from metrics (due to newlines in the source)
+    grep_metrics=$(echo "$grep_metrics" | sed 's/^n//g')
+
+    if [ -n "$grep_metrics" ]; then
+      echo "Found metrics with grep: $grep_metrics"
+      # Format metrics to be one per line
+      local formatted_metrics=$(echo "$grep_metrics" | sed 's/\([A-Za-z ]\+ took [0-9]\+ms\) /\1\n/g')
+      echo "$formatted_metrics" > "${output_dir}/performance-metrics.txt"
+      echo "$formatted_metrics" > "${workspace_output}/performance-metrics.txt"
+      metrics="$formatted_metrics"
+    else
+      echo "No metrics found with grep"
+    fi
+  fi
+
+  if [ -z "$metrics" ]; then
+    echo "Method 3: Extracting from escaped JSON string..."
+    # Normalize the body
+    local cleaned_body=$(echo "$body" | tr -d '\r' | tr '\n' ' ')
+
+    # Extract metrics from performance metrics string
+    local escaped_metrics=$(echo "$cleaned_body" | grep -o '"performanceMetrics":"[^"]*"' | sed 's/"performanceMetrics":"//g' | sed 's/"$//g' | sed 's/\\n/\n/g')
+
+    # Clean up any 'n' prefixes
+    escaped_metrics=$(echo "$escaped_metrics" | sed 's/^n//g')
+
+    # Format metrics to be one per line
+    escaped_metrics=$(echo "$escaped_metrics" | sed 's/\([A-Za-z ]\+ took [0-9]\+ms\) /\1\n/g')
+
+    if [ -n "$escaped_metrics" ]; then
+      echo "Found metrics in escaped string: $escaped_metrics"
+      echo "$escaped_metrics" > "${output_dir}/performance-metrics.txt"
+      echo "$escaped_metrics" > "${workspace_output}/performance-metrics.txt"
+      metrics="$escaped_metrics"
+    else
+      echo "No metrics found in escaped strings"
+    fi
+  fi
+
+  echo "$metrics"
+}
+
+# Extract metrics from response
+echo "Extracting performance metrics from Lambda response..."
+METRICS=$(process_metrics "$BODY" "$OUTPUT_DIR" "$WORKSPACE_OUTPUT")
+
+# Count how many metrics we found
+METRICS_COUNT=$(echo "$METRICS" | grep -c "took" || echo "0")
+echo "Found $METRICS_COUNT metrics"
+
+# Extract console errors and warnings
+echo "Extracting console errors and warnings..."
+ERROR_REPORT_FILE=$(extract_console_messages "$BODY" "$OUTPUT_DIR" "$GITHUB_STEP_SUMMARY" "error" "🛑")
+WARNING_REPORT_FILE=$(extract_console_messages "$BODY" "$OUTPUT_DIR" "$GITHUB_STEP_SUMMARY" "warning" "⚠️")
+
+# Check for test errors
+HAS_TEST_ERROR=false
+if echo "$BODY" | jq -e '.success == false' >/dev/null 2>&1; then
+  HAS_TEST_ERROR=true
+  TEST_ERROR=$(echo "$BODY" | jq -r '.errorOutput // "Unknown error"')
+  echo "Test error detected: $TEST_ERROR"
+  echo "$TEST_ERROR" > "${OUTPUT_DIR}/error-log.txt"
 fi
 
-# ALWAYS force extract console errors regardless of anything else
-force_extract_console_errors "$BODY" "$OUTPUT_DIR" "$GITHUB_STEP_SUMMARY"
+# Generate report for GitHub Step Summary
+generate_report() {
+  local metrics="$1"
+  local metrics_count="$2"
+  local body="$3"
+  local output_dir="$4"
+  local summary_file="$5"
+  local environment="$6"
+  local region="$7"
+  local run_id="$8"
+  local repository="$9"
+  local error_report="${10}"
+  local warning_report="${11}"
+  local has_error="${12}"
 
-# Copy console error files if they exist
-for file in /tmp/console-errors.txt /tmp/console-errors.json; do
-  if [ -f "$file" ]; then
-    echo "Copying $(basename $file) from /tmp to output directories..."
-    cp "$file" "${OUTPUT_DIR}/"
-    cp "$file" "${WORKSPACE_OUTPUT}/"
-  fi
-done
+  # Determine test status
+  local status_emoji="✅"
+  local status_text="PASSED"
+  local auth_error_detected=false
 
-METRICS=""
-
-# Try to parse metrics from JSON body
-echo "Method 1: Trying to parse body as JSON..."
-if echo "$BODY" | jq -e . >/dev/null 2>&1; then
-  echo "Body is valid JSON"
-
-  # Check for metrics array
-  if echo "$BODY" | jq -e '.metrics' >/dev/null 2>&1; then
-    echo "Found metrics array in body JSON"
-    METRICS_JSON=$(echo "$BODY" | jq -c '.metrics')
-    echo "$METRICS_JSON" > "${OUTPUT_DIR}/metrics-json.json"
-    echo "$METRICS_JSON" > "${WORKSPACE_OUTPUT}/metrics-json.json"
-
-    echo "Formatting metrics from JSON array..."
-    echo "" > "${OUTPUT_DIR}/performance-metrics.txt"
-    echo "" > "${WORKSPACE_OUTPUT}/performance-metrics.txt"
-    echo "$METRICS_JSON" | jq -c '.[]' | while read -r metric; do
-      NAME=$(echo "$metric" | jq -r '.name')
-      DURATION=$(echo "$metric" | jq -r '.duration')
-      FAKED=$(echo "$metric" | jq -r '.faked // false')
-      
-      if [ "$FAKED" == "true" ]; then
-        METRIC_LINE="${NAME} took ${DURATION}ms [AUTH_ERROR]"
-      else
-        METRIC_LINE="${NAME} took ${DURATION}ms"
-      fi
-      
-      echo "$METRIC_LINE" >> "${OUTPUT_DIR}/performance-metrics.txt"
-      echo "$METRIC_LINE" >> "${WORKSPACE_OUTPUT}/performance-metrics.txt"
-    done
-
-    METRICS=$(cat "${OUTPUT_DIR}/performance-metrics.txt")
-    echo "Metrics from JSON array: $METRICS"
-  elif echo "$BODY" | jq -e '.performanceMetrics' >/dev/null 2>&1; then
-    echo "Found performanceMetrics string in body JSON"
-    METRICS=$(echo "$BODY" | jq -r '.performanceMetrics')
-    echo "$METRICS" > "${OUTPUT_DIR}/performance-metrics.txt"
-    echo "$METRICS" > "${WORKSPACE_OUTPUT}/performance-metrics.txt"
-    echo "Metrics from performanceMetrics: $METRICS"
-  else
-    echo "No metrics fields found in JSON body"
+  if [ "$has_error" = "true" ] || [ "$metrics_count" -lt 3 ]; then
+    status_emoji="❌"
+    status_text="FAILED"
   fi
 
   # Check for auth error
-  if echo "$BODY" | jq -e '.authError' >/dev/null 2>&1; then
-    echo "Found authentication error in response"
-    AUTH_ERROR=$(echo "$BODY" | jq -c '.authError')
-    echo "$AUTH_ERROR" > "${OUTPUT_DIR}/auth-error.json"
-    echo "$AUTH_ERROR" > "${WORKSPACE_OUTPUT}/auth-error.json"
-    echo "Authentication error saved to files"
-    
-    AUTH_ERROR_TYPE=$(echo "$AUTH_ERROR" | jq -r '.type')
-    AUTH_ERROR_MSG=$(echo "$AUTH_ERROR" | jq -r '.message')
-    AUTH_ERROR_TIME=$(echo "$AUTH_ERROR" | jq -r '.timestamp')
-    
-    echo "Auth error details - Type: $AUTH_ERROR_TYPE, Message: $AUTH_ERROR_MSG, Time: $AUTH_ERROR_TIME"
+  if echo "$body" | jq -e '.authError' >/dev/null 2>&1; then
+    auth_error_detected=true
   fi
-else
-  echo "Body is not valid JSON, trying other methods..."
-fi
 
-# Alternative methods to extract metrics
-if [ -z "$METRICS" ]; then
-  echo "Method 2: Using direct grep for metrics strings..."
-  # Normalize the body by removing carriage returns, replacing newlines with spaces
-  CLEANED_BODY=$(echo "$BODY" | tr -d '\r' | tr '\n' ' ')
-  
-  # Extract metrics with grep
-  GREP_METRICS=$(echo "$CLEANED_BODY" | grep -o '[A-Za-z ]\+ took [0-9]\+ms' || echo "")
-  
-  # Clean up any 'n' prefixes from metrics (due to newlines in the source)
-  GREP_METRICS=$(echo "$GREP_METRICS" | sed 's/^n//g')
-
-  if [ -n "$GREP_METRICS" ]; then
-    echo "Found metrics with grep: $GREP_METRICS"
-    # Format metrics to be one per line
-    FORMATTED_METRICS=$(echo "$GREP_METRICS" | sed 's/\([A-Za-z ]\+ took [0-9]\+ms\) /\1\n/g')
-    echo "$FORMATTED_METRICS" > "${OUTPUT_DIR}/performance-metrics.txt"
-    echo "$FORMATTED_METRICS" > "${WORKSPACE_OUTPUT}/performance-metrics.txt"
-    METRICS="$FORMATTED_METRICS"
-  else
-    echo "No metrics found with grep"
+  # Append error and warning reports if they exist
+  if [ -f "$error_report" ]; then
+    cat "$error_report" >> "$summary_file"
   fi
-fi
 
-if [ -z "$METRICS" ]; then
-  echo "Method 3: Extracting from escaped JSON string..."
-  # Normalize the body
-  CLEANED_BODY=$(echo "$BODY" | tr -d '\r' | tr '\n' ' ')
-  
-  # Extract metrics from performance metrics string
-  ESCAPED_METRICS=$(echo "$CLEANED_BODY" | grep -o '"performanceMetrics":"[^"]*"' | sed 's/"performanceMetrics":"//g' | sed 's/"$//g' | sed 's/\\n/\n/g')
-  
-  # Clean up any 'n' prefixes
-  ESCAPED_METRICS=$(echo "$ESCAPED_METRICS" | sed 's/^n//g')
-  
-  # Format metrics to be one per line
-  ESCAPED_METRICS=$(echo "$ESCAPED_METRICS" | sed 's/\([A-Za-z ]\+ took [0-9]\+ms\) /\1\n/g')
-
-  if [ -n "$ESCAPED_METRICS" ]; then
-    echo "Found metrics in escaped string: $ESCAPED_METRICS"
-    echo "$ESCAPED_METRICS" > "${OUTPUT_DIR}/performance-metrics.txt"
-    echo "$ESCAPED_METRICS" > "${WORKSPACE_OUTPUT}/performance-metrics.txt"
-    METRICS="$ESCAPED_METRICS"
-  else
-    echo "No metrics found in escaped strings"
+  if [ -f "$warning_report" ]; then
+    cat "$warning_report" >> "$summary_file"
   fi
-fi
 
-# Count metrics regardless of how they are formatted
-METRICS_COUNT=$(echo "$METRICS" | grep -o "took [0-9]\+ms" | wc -l)
-echo "Found $METRICS_COUNT metrics"
+  # Add auth error information if detected
+  if [ "$auth_error_detected" = "true" ]; then
+    AUTH_ERROR_TYPE=$(echo "$body" | jq -r '.authError.type')
+    AUTH_ERROR_MSG=$(echo "$body" | jq -r '.authError.message')
+    AUTH_ERROR_TIME=$(echo "$body" | jq -r '.authError.timestamp')
+
+    echo "" >> "$summary_file"
+    echo "## ⚠️ Authentication Error Detected" >> "$summary_file"
+    echo "Authentication failed during test execution. This affected the test results." >> "$summary_file"
+    echo "" >> "$summary_file"
+    echo "### Error Details" >> "$summary_file"
+    echo "- **Type:** ${AUTH_ERROR_TYPE}" >> "$summary_file"
+    echo "- **Message:** ${AUTH_ERROR_MSG}" >> "$summary_file"
+    echo "- **Time:** ${AUTH_ERROR_TIME}" >> "$summary_file"
+  fi
+
+  # Add region information
+  local region_info=$(get_region_info "$region")
+  
+  echo "" >> "$summary_file"
+  echo "## Environment" >> "$summary_file"
+  echo "- **Environment:** ${environment}" >> "$summary_file"
+  echo "- **Region:** ${region} (${region_info})" >> "$summary_file"
+  echo "- **Run ID:** [#${run_id}](https://github.com/${repository}/actions/runs/${run_id})" >> "$summary_file"
+  echo "- **Execution Time:** $(echo "$body" | jq -r '.executionTime // "Unknown"')" >> "$summary_file"
+}
 
 # Handle case with missing or incomplete metrics
 if [ -z "$METRICS" ] || [ "$METRICS_COUNT" -lt 3 ]; then
@@ -247,7 +377,7 @@ if [ -z "$METRICS" ] || [ "$METRICS_COUNT" -lt 3 ]; then
   echo "# ❌ Performance Test Results" >> $GITHUB_STEP_SUMMARY
   echo "Test is FAILED: Expected 3 metrics (Active Quests Screen, Leaderboard Screen, Library Screen)" >> $GITHUB_STEP_SUMMARY
   echo "Only found $METRICS_COUNT metrics:" >> $GITHUB_STEP_SUMMARY
-  
+
   if [ -n "$METRICS" ]; then
     echo '```' >> $GITHUB_STEP_SUMMARY
     echo "$METRICS" >> $GITHUB_STEP_SUMMARY
@@ -255,13 +385,13 @@ if [ -z "$METRICS" ] || [ "$METRICS_COUNT" -lt 3 ]; then
   else
     echo "No metrics found" >> $GITHUB_STEP_SUMMARY
   fi
-  
+
   # Process auth error details
   if echo "$BODY" | jq -e '.authError' >/dev/null 2>&1; then
     AUTH_ERROR_TYPE=$(echo "$BODY" | jq -r '.authError.type')
     AUTH_ERROR_MSG=$(echo "$BODY" | jq -r '.authError.message')
     AUTH_ERROR_TIME=$(echo "$BODY" | jq -r '.authError.timestamp')
-    
+
     echo "" >> $GITHUB_STEP_SUMMARY
     echo "## ⚠️ Authentication Error Detected" >> $GITHUB_STEP_SUMMARY
     echo "Authentication failed during test execution. This prevented testing of Leaderboard and Library screens." >> $GITHUB_STEP_SUMMARY
@@ -270,17 +400,17 @@ if [ -z "$METRICS" ] || [ "$METRICS_COUNT" -lt 3 ]; then
     echo "- **Type:** ${AUTH_ERROR_TYPE}" >> $GITHUB_STEP_SUMMARY
     echo "- **Message:** ${AUTH_ERROR_MSG}" >> $GITHUB_STEP_SUMMARY
     echo "- **Time:** ${AUTH_ERROR_TIME}" >> $GITHUB_STEP_SUMMARY
-    
-    if echo "$AUTH_ERROR" | jq -e '.consoleErrors' >/dev/null 2>&1; then
+
+    if echo "$BODY" | jq -e '.authError.consoleErrors' >/dev/null 2>&1; then
       echo "" >> $GITHUB_STEP_SUMMARY
       echo "### Browser Console Errors" >> $GITHUB_STEP_SUMMARY
       echo "The following errors were detected in the browser console during authentication:" >> $GITHUB_STEP_SUMMARY
       echo "" >> $GITHUB_STEP_SUMMARY
       echo "```" >> $GITHUB_STEP_SUMMARY
-      echo "$AUTH_ERROR" | jq -r '.consoleErrors[] | "[\(.type)] \(.text)"' >> $GITHUB_STEP_SUMMARY
+      echo "$BODY" | jq -r '.authError.consoleErrors[] | "[\(.type)] \(.text)"' >> $GITHUB_STEP_SUMMARY
       echo "```" >> $GITHUB_STEP_SUMMARY
     fi
-    
+
     echo "" >> $GITHUB_STEP_SUMMARY
     echo "### Troubleshooting Steps" >> $GITHUB_STEP_SUMMARY
     echo "1. Check if the web3auth service is working properly" >> $GITHUB_STEP_SUMMARY
@@ -294,12 +424,22 @@ if [ -z "$METRICS" ] || [ "$METRICS_COUNT" -lt 3 ]; then
     cat "${OUTPUT_DIR}/error-log.txt" >> $GITHUB_STEP_SUMMARY
     echo '```' >> $GITHUB_STEP_SUMMARY
   fi
-  
+
   echo "## Environment" >> $GITHUB_STEP_SUMMARY
   echo "- **Environment:** ${ENVIRONMENT}" >> $GITHUB_STEP_SUMMARY
   echo "- **Region:** ${REGION}" >> $GITHUB_STEP_SUMMARY
   echo "- **Run ID:** [#${GITHUB_RUN_ID}](https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})" >> $GITHUB_STEP_SUMMARY
-  
+
+  # Debug: print the full Lambda response to help troubleshoot
+  echo "" >> $GITHUB_STEP_SUMMARY
+  echo "## Debug: Lambda Response" >> $GITHUB_STEP_SUMMARY
+  echo "<details><summary>Click to view full Lambda response</summary>" >> $GITHUB_STEP_SUMMARY
+  echo "" >> $GITHUB_STEP_SUMMARY
+  echo '```json' >> $GITHUB_STEP_SUMMARY
+  echo "$BODY" >> $GITHUB_STEP_SUMMARY
+  echo '```' >> $GITHUB_STEP_SUMMARY
+  echo "</details>" >> $GITHUB_STEP_SUMMARY
+
   # This will make the workflow fail
   echo "Test failed due to incomplete metrics" >> "${OUTPUT_DIR}/error.txt"
   exit 1
@@ -318,10 +458,10 @@ if [ -n "$METRICS" ]; then
     if [ -z "$line" ]; then
       continue
     fi
-    
+
     # Remove any leading 'n' character (from newlines)
     line=$(echo "$line" | sed 's/^n//')
-    
+
     if [[ "$line" =~ ([A-Za-z\ ]+)\ took\ ([0-9]+)ms ]]; then
       TEST_NAME="${BASH_REMATCH[1]}"
       DURATION="${BASH_REMATCH[2]}"
@@ -361,16 +501,16 @@ if [ -n "$METRICS" ]; then
     if [ -z "$line" ]; then
       continue
     fi
-    
+
     # Remove any leading 'n' character (from newlines)
     line=$(echo "$line" | sed 's/^n//')
-    
+
     if [[ "$line" =~ ([A-Za-z\ ]+)\ took\ ([0-9]+)ms ]]; then
       TEST_NAME="${BASH_REMATCH[1]}"
       DURATION="${BASH_REMATCH[2]}"
 
       DURATION_SEC=$(awk "BEGIN {printf \"%.1f\", $DURATION/1000}")
-      
+
       if [[ "$line" =~ \[AUTH_ERROR\] ]]; then
         echo "    ${TEST_NAME} (Auth Error) :crit, 0, 0.1s" >> $GITHUB_STEP_SUMMARY
       else
@@ -393,6 +533,12 @@ else
   echo '```' >> $GITHUB_STEP_SUMMARY
 fi
 
+# Generate the final report
+generate_report "$METRICS" "$METRICS_COUNT" "$BODY" "$OUTPUT_DIR" "$GITHUB_STEP_SUMMARY" "$ENVIRONMENT" "$REGION" "$GITHUB_RUN_ID" "$GITHUB_REPOSITORY" "$ERROR_REPORT_FILE" "$WARNING_REPORT_FILE" "$HAS_TEST_ERROR"
+
+# Clean up temporary files
+rm -f "$ERROR_REPORT_FILE" "$WARNING_REPORT_FILE"
+
 # Check test result
 if echo "$BODY" | jq -e '.success == true' >/dev/null 2>&1; then
   echo "Tests completed successfully (found success:true in response body)"
@@ -403,4 +549,4 @@ elif echo "$RESPONSE" | jq -e '.StatusCode == 200' >/dev/null 2>&1; then
 else
   echo "Tests failed. Check output for details."
   exit 1
-fi 
+fi
