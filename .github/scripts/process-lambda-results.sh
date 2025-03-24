@@ -196,55 +196,55 @@ force_extract_console_errors() {
   local output_dir="$2"
   local summary_file="$3"
   
-  echo "🔍 FORCE EXTRACTING CONSOLE ERRORS FROM LAMBDA RESPONSE" 
+  echo "🔍 BRUTE FORCE EXTRACTING CONSOLE ERRORS" 
   
   # Save full response for debugging
   echo "$body" > "${output_dir}/full-lambda-response.txt"
   
-  # Extract error texts directly regardless of JSON structure
-  DIRECT_ERRORS=$(echo "$body" | grep -o '"text":"[^"]*"' | sed 's/"text":"//g' | sed 's/"$//g')
-  if [ -n "$DIRECT_ERRORS" ]; then
-    echo "Extracted error texts directly from response"
-    echo "$DIRECT_ERRORS" > "${output_dir}/direct-errors.txt"
+  # Get raw text of all errors by matching text fields
+  ERRORS_LIST=""
+  
+  # This is a super direct approach - just find all "text":"..." entries
+  if echo "$body" | grep -q "text\":" ; then
+    # Create temporary file with just the content of the body
+    TEMP_FILE="${output_dir}/temp_body.txt"
+    echo "$body" > "$TEMP_FILE"
     
-    # Add to GitHub summary report
-    echo "" >> "$summary_file"
+    # Try to extract errors directly
     echo "## 🛑 Console Errors" >> "$summary_file"
-    echo "The following errors were found in the Lambda response:" >> "$summary_file"
-    echo '```' >> "$summary_file"
-    cat "${output_dir}/direct-errors.txt" >> "$summary_file"
+    echo "The following errors were found in the test:" >> "$summary_file"
     echo '```' >> "$summary_file"
     
-    # Also try to extract type and time if possible
-    echo "" >> "$summary_file"
-    echo "## 🛑 Formatted Console Errors" >> "$summary_file"
-    echo "Errors with type and timestamp:" >> "$summary_file"
+    # Extract all text fields directly
+    grep -o 'text":"[^"]*"' "$TEMP_FILE" | sed 's/text":"//g' | sed 's/"$//g' >> "$summary_file"
+    
     echo '```' >> "$summary_file"
-    echo "$body" | grep -o '"type":"[^"]*","time":"[^"]*","text":"[^"]*"' | \
-      sed 's/"type":"\([^"]*\)","time":"\([^"]*\)","text":"\([^"]*\)"/[\1] [\2] \3/g' >> "$summary_file" || echo "Could not extract formatted errors"
-    echo '```' >> "$summary_file"
+    
+    # Try to extract type and timestamp information if possible
+    if grep -q 'type":"[^"]*","time":"[^"]*","text":"[^"]*"' "$TEMP_FILE"; then
+      echo "" >> "$summary_file"
+      echo "## 🔍 Detailed Error Information" >> "$summary_file"
+      echo "Errors with type and timestamp:" >> "$summary_file"
+      echo '```' >> "$summary_file"
+      
+      # Try a more direct sed approach
+      sed -n 's/.*"type":"\([^"]*\)","time":"\([^"]*\)","text":"\([^"]*\)".*/[\1] [\2] \3/p' "$TEMP_FILE" >> "$summary_file" || \
+      echo "Could not extract detailed error information" >> "$summary_file"
+      
+      echo '```' >> "$summary_file"
+    fi
     
     return 0
   fi
   
-  # If we couldn't extract errors with the methods above, just dump a portion of the response
+  # If we get here, we couldn't extract errors with any method
   echo "" >> "$summary_file"
-  echo "## ⚠️ Raw Response (Debug)" >> "$summary_file"
-  echo "Could not properly extract console errors. Here's a portion of the raw response:" >> "$summary_file"
+  echo "## ⚠️ Warning: Failed to Extract Console Errors" >> "$summary_file"
+  echo "Could not extract console errors from the Lambda response." >> "$summary_file"
+  echo "Raw response body (first 1000 characters):" >> "$summary_file"
   echo '```json' >> "$summary_file"
   echo "${body:0:1000}..." >> "$summary_file"
   echo '```' >> "$summary_file"
-  
-  # Try one last method - raw regex for error array
-  if [[ "$body" == *"consoleErrors"* ]]; then
-    echo "" >> "$summary_file"
-    echo "## 🔎 Debug Info" >> "$summary_file"
-    echo "Response contains 'consoleErrors' keyword but extraction failed." >> "$summary_file"
-    echo "Manual methods returned:" >> "$summary_file"
-    echo '```' >> "$summary_file"
-    grep -o '"consoleErrors":\[[^]]*\]' "${output_dir}/full-lambda-response.txt" || echo "No match with grep" >> "$summary_file"
-    echo '```' >> "$summary_file"
-  fi
   
   return 1
 }
