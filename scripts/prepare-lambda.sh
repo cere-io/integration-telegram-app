@@ -623,16 +623,61 @@ export const handler = async (event) => {
      ]);
      console.log(`Tests completed with success=${testResult.success}`);
 
+     let consoleErrorsFromFile = [];
      if (fs.existsSync('/tmp/console-errors.txt')) {
-       console.log('Console errors log found, copying to output directory');
+       console.log('Console errors log found, processing...');
        try {
-         fs.copyFileSync('/tmp/console-errors.txt', `${tmpDir}/console-errors.txt`);
-         console.log('Console errors log copied successfully');
-       } catch (copyError) {
-         console.error('Error copying console errors log:', copyError);
+         const consoleErrorsContent = fs.readFileSync('/tmp/console-errors.txt', 'utf8');
+
+         if (consoleErrorsContent.trim()) {
+           consoleErrorsFromFile = consoleErrorsContent.split('\n')
+             .filter(line => line.trim())
+             .map(line => {
+               const match = line.match(/\[(error|warning|pageerror)\]\s*\[(.*?)\]\s*(.*)/);
+               if (match) {
+                 return {
+                   type: match[1],
+                   time: match[2],
+                   text: match[3]
+                 };
+               }
+               return { type: 'unknown', text: line, time: new Date().toISOString() };
+             });
+
+           console.log(`Parsed ${consoleErrorsFromFile.length} console errors from file`);
+
+           fs.copyFileSync('/tmp/console-errors.txt', `${tmpDir}/console-errors.txt`);
+           console.log('Console errors log copied successfully');
+         } else {
+           console.log('Console errors file is empty');
+         }
+       } catch (fileError) {
+         console.error('Error processing console errors file:', fileError);
        }
      } else {
        console.log('No console errors log found');
+     }
+
+     if (fs.existsSync('/tmp/console-errors.json')) {
+       console.log('Console errors JSON file found, processing...');
+       try {
+         const jsonContent = fs.readFileSync('/tmp/console-errors.json', 'utf8');
+         const jsonErrors = JSON.parse(jsonContent);
+
+         if (Array.isArray(jsonErrors) && jsonErrors.length > 0) {
+           console.log(`Found ${jsonErrors.length} console errors in JSON file`);
+           consoleErrorsFromFile = [...consoleErrorsFromFile, ...jsonErrors];
+
+           fs.copyFileSync('/tmp/console-errors.json', `${tmpDir}/console-errors.json`);
+           console.log('Console errors JSON file copied successfully');
+         } else {
+           console.log('Console errors JSON file is empty or invalid');
+         }
+       } catch (jsonError) {
+         console.error('Error processing console errors JSON file:', jsonError);
+       }
+     } else {
+       console.log('No console errors JSON file found');
      }
 
      let metrics = testResult.metrics || [];
@@ -696,6 +741,13 @@ export const handler = async (event) => {
      console.log('Final metrics to be returned:');
      console.log(metrics);
 
+     const combinedConsoleErrors = [
+       ...(testResult.consoleErrors || []),
+       ...consoleErrorsFromFile
+     ];
+
+     console.log(`Total console errors: ${combinedConsoleErrors.length} (${testResult.consoleErrors ? testResult.consoleErrors.length : 0} from test result, ${consoleErrorsFromFile.length} from file)`);
+
      return {
        statusCode: testResult.success ? 200 : 500,
        body: JSON.stringify({
@@ -705,7 +757,7 @@ export const handler = async (event) => {
          performanceMetrics: performanceMetrics,
          metrics: metrics,
          authError: testResult.authError || null,
-         consoleErrors: testResult.consoleErrors || [],
+         consoleErrors: combinedConsoleErrors.length > 0 ? combinedConsoleErrors : [],
          region: region,
          environment: environment,
          executionTime: new Date().toISOString()
@@ -714,6 +766,49 @@ export const handler = async (event) => {
    } catch (error) {
      console.error('Error in Lambda handler:', error);
 
+     let consoleErrorsFromFile = [];
+     try {
+       if (fs.existsSync('/tmp/console-errors.txt')) {
+         const consoleErrorsContent = fs.readFileSync('/tmp/console-errors.txt', 'utf8');
+
+         if (consoleErrorsContent.trim()) {
+           consoleErrorsFromFile = consoleErrorsContent.split('\n')
+             .filter(line => line.trim())
+             .map(line => {
+               const match = line.match(/\[(error|warning|pageerror)\]\s*\[(.*?)\]\s*(.*)/);
+               if (match) {
+                 return {
+                   type: match[1],
+                   time: match[2],
+                   text: match[3]
+                 };
+               }
+               return { type: 'unknown', text: line, time: new Date().toISOString() };
+             });
+           console.log(`Parsed ${consoleErrorsFromFile.length} console errors from file in error handler`);
+         }
+       }
+
+       if (fs.existsSync('/tmp/console-errors.json')) {
+         console.log('Console errors JSON file found in error handler, processing...');
+         try {
+           const jsonContent = fs.readFileSync('/tmp/console-errors.json', 'utf8');
+           const jsonErrors = JSON.parse(jsonContent);
+
+           if (Array.isArray(jsonErrors) && jsonErrors.length > 0) {
+             console.log(`Found ${jsonErrors.length} console errors in JSON file in error handler`);
+             consoleErrorsFromFile = [...consoleErrorsFromFile, ...jsonErrors];
+
+             fs.copyFileSync('/tmp/console-errors.json', `${tmpDir}/console-errors.json`);
+           }
+         } catch (jsonError) {
+           console.error('Error processing console errors JSON file in error handler:', jsonError);
+         }
+       }
+     } catch (fileError) {
+       console.error('Error reading console errors in catch block:', fileError);
+     }
+
      return {
        statusCode: 500,
        body: JSON.stringify({
@@ -721,7 +816,8 @@ export const handler = async (event) => {
          error: error.message,
          stack: error.stack,
          authError: testResult && testResult.authError ? testResult.authError : null,
-         consoleErrors: testResult && testResult.consoleErrors ? testResult.consoleErrors : [],
+         consoleErrors: (testResult && testResult.consoleErrors && testResult.consoleErrors.length > 0) ?
+                         testResult.consoleErrors : consoleErrorsFromFile,
          region: region,
          environment: environment,
          executionTime: new Date().toISOString()

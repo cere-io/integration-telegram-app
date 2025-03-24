@@ -339,6 +339,15 @@ export default async function runIntegrationTest({ browser, context }) {
       }
     }
 
+    try {
+      if (globalConsoleErrors.length > 0) {
+        fs.writeFileSync('/tmp/console-errors.json', JSON.stringify(globalConsoleErrors, null, 2));
+        console.log(`Wrote ${globalConsoleErrors.length} console errors to /tmp/console-errors.json for debugging`);
+      }
+    } catch (fileError) {
+      console.error('Failed to write console errors JSON file:', fileError);
+    }
+
     if (authError) {
       testResultData.authError = authError;
 
@@ -399,6 +408,13 @@ export default async function runIntegrationTest({ browser, context }) {
     if (globalConsoleErrors.length > 0) {
       testResultData.consoleErrors = globalConsoleErrors;
       console.log(`Found ${globalConsoleErrors.length} console errors/warnings during failed test`);
+
+      try {
+        fs.writeFileSync('/tmp/console-errors.json', JSON.stringify(globalConsoleErrors, null, 2));
+        console.log(`Wrote ${globalConsoleErrors.length} console errors to /tmp/console-errors.json for debugging`);
+      } catch (fileError) {
+        console.error('Failed to write console errors JSON file:', fileError);
+      }
     }
 
     if (authError) {
