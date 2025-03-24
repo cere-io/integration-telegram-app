@@ -189,19 +189,13 @@ async function testLeaderboardScreen({ page }) {
   let start = Date.now();
 
   try {
-    const loginResult = await login(page);
-    if (!loginResult.success) {
-      console.log('Login failed, skipping Leaderboard Screen test.');
-      return false;
-    }
-
     const leaderboardTabButton = page.locator('xpath=/html/body/div[1]/div/div/div[2]/button[2]');
     await leaderboardTabButton.scrollIntoViewIfNeeded();
     await leaderboardTabButton.click();
 
     let timeTaken = Date.now() - start;
     logTime('Leaderboard Screen', timeTaken);
-    return true;
+    return true
   } catch (err) {
     console.error(`❌ Error in testLeaderboardScreen: ${err.message}`);
     let timeTaken = Date.now() - start;
@@ -250,7 +244,7 @@ export default async function runIntegrationTest({ browser, context }) {
   }
 
   try {
-    fs.appendFileSync('/tmp/console-errors.txt');
+    fs.appendFileSync('/tmp/console-errors.txt', `[error] [${new Date().toISOString()}] TEST_CONSOLE_ERROR: This is a test console error to verify error logging\n`);
   } catch (err) {
     console.error('Failed to write test console error to file:', err);
   }
@@ -363,6 +357,12 @@ export default async function runIntegrationTest({ browser, context }) {
       testResultData.consoleErrors = globalConsoleErrors;
       console.log('Added test console error from error handler');
     }
+
+    globalConsoleErrors.push({
+      type: 'error',
+      text: 'FORCED_ERROR_HANDLER: forced console error from error handler',
+      time: new Date().toISOString()
+    });
     testResultData.consoleErrors = globalConsoleErrors;
     console.log('Added forced console error from error handler');
 
