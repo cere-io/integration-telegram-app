@@ -306,28 +306,27 @@ jobs:
           fi
 
           if [ -z "$METRICS" ] || [ "$(echo "$METRICS" | wc -l)" -lt 3 ]; then
-            echo "Metrics missing or incomplete, creating dummy metrics..."
-
-            if ! echo "$METRICS" | grep -q "Active Quests Screen"; then
-              echo "Adding dummy Active Quests Screen metric"
-              echo "Active Quests Screen took 15000ms" >> "${OUTPUT_DIR}/performance-metrics.txt"
-              echo "Active Quests Screen took 15000ms" >> "${WORKSPACE_OUTPUT}/performance-metrics.txt"
+            echo "Metrics missing or incomplete, test is considered FAILED"
+            echo "# ❌ Performance Test Results" >> $GITHUB_STEP_SUMMARY
+            echo "Test is FAILED: Expected 3 metrics (Active Quests Screen, Leaderboard Screen, Library Screen)" >> $GITHUB_STEP_SUMMARY
+            echo "Only found $(echo "$METRICS" | wc -l) metrics:" >> $GITHUB_STEP_SUMMARY
+            
+            if [ -n "$METRICS" ]; then
+              echo '```' >> $GITHUB_STEP_SUMMARY
+              echo "$METRICS" >> $GITHUB_STEP_SUMMARY
+              echo '```' >> $GITHUB_STEP_SUMMARY
+            else
+              echo "No metrics found" >> $GITHUB_STEP_SUMMARY
             fi
-
-            if ! echo "$METRICS" | grep -q "Leaderboard Screen"; then
-              echo "Adding dummy Leaderboard Screen metric"
-              echo "Leaderboard Screen took 5000ms" >> "${OUTPUT_DIR}/performance-metrics.txt"
-              echo "Leaderboard Screen took 5000ms" >> "${WORKSPACE_OUTPUT}/performance-metrics.txt"
-            fi
-
-            if ! echo "$METRICS" | grep -q "Library Screen"; then
-              echo "Adding dummy Library Screen metric"
-              echo "Library Screen took 500ms" >> "${OUTPUT_DIR}/performance-metrics.txt"
-              echo "Library Screen took 500ms" >> "${WORKSPACE_OUTPUT}/performance-metrics.txt"
-            fi
-
-            METRICS=$(cat "${OUTPUT_DIR}/performance-metrics.txt")
-            echo "Updated metrics with dummy data: $METRICS"
+            
+            echo "## Environment" >> $GITHUB_STEP_SUMMARY
+            echo "- **Environment:** ${{ needs.get-env.outputs.env }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Region:** ${{ matrix.region }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Run ID:** [#${{ github.run_id }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+            
+            # This will make the workflow fail
+            echo "Test failed due to incomplete metrics" >> "${OUTPUT_DIR}/error.txt"
+            exit 1
           fi
 
           if [ -n "$METRICS" ]; then
