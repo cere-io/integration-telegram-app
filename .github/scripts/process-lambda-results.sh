@@ -190,6 +190,70 @@ fi
 METRICS_COUNT=$(echo "$METRICS" | grep -o "took [0-9]\+ms" | wc -l)
 echo "Found $METRICS_COUNT metrics"
 
+# Special manual function to force extraction of errors from Lambda response body
+force_extract_console_errors() {
+  local body="$1"
+  local output_dir="$2"
+  local summary_file="$3"
+  
+  echo "🔍 FORCE EXTRACTING CONSOLE ERRORS FROM LAMBDA RESPONSE" 
+  
+  # Save full response for debugging
+  echo "$body" > "${output_dir}/full-lambda-response.txt"
+  
+  # Extract console errors section using string manipulation
+  if [[ "$body" == *"consoleErrors"* ]]; then
+    echo "Found consoleErrors keyword in response body"
+    
+    # Extract the consoleErrors array using sed
+    # This looks for "consoleErrors": [ ... ] pattern
+    errors_json=$(echo "$body" | sed -n 's/.*"consoleErrors":\(\[[^]]*\]\).*/\1/p')
+    
+    if [ -n "$errors_json" ]; then
+      echo "Found console errors JSON array"
+      echo "$errors_json" > "${output_dir}/extracted-errors.json"
+      
+      # Extract error messages
+      echo "Console errors extracted from Lambda response:" > "${output_dir}/extracted-errors.txt"
+      echo "$body" | grep -o '"type":"[^"]*","time":"[^"]*","text":"[^"]*"' | \
+        sed 's/"type":"\([^"]*\)","time":"\([^"]*\)","text":"\([^"]*\)"/[\1] [\2] \3/g' >> "${output_dir}/extracted-errors.txt"
+      
+      # Add to GitHub summary report
+      echo "" >> "$summary_file"
+      echo "## 🛑 Console Errors (forced extraction)" >> "$summary_file"
+      echo "The following errors were found in the Lambda response:" >> "$summary_file"
+      echo '```' >> "$summary_file"
+      cat "${output_dir}/extracted-errors.txt" >> "$summary_file"
+      echo '```' >> "$summary_file"
+      
+      return 0
+    else
+      echo "Could not extract console errors JSON array"
+    fi
+  fi
+  
+  # Last resort: just grep for error texts
+  error_texts=$(echo "$body" | grep -o '"text":"[^"]*"' | sed 's/"text":"//g' | sed 's/"//g')
+  if [ -n "$error_texts" ]; then
+    echo "Found error texts with grep"
+    echo "$error_texts" > "${output_dir}/error-texts.txt"
+    
+    echo "" >> "$summary_file"
+    echo "## 🛑 Error Messages (text only)" >> "$summary_file"
+    echo "The following error messages were found:" >> "$summary_file"
+    echo '```' >> "$summary_file"
+    cat "${output_dir}/error-texts.txt" >> "$summary_file"
+    echo '```' >> "$summary_file"
+    
+    return 0
+  fi
+  
+  return 1
+}
+
+# ALWAYS force extract console errors regardless of anything else
+force_extract_console_errors "$BODY" "$OUTPUT_DIR" "$GITHUB_STEP_SUMMARY"
+
 # Extract and process console errors first (regardless of test outcome)
 if [[ "$BODY" == *"consoleErrors"* ]]; then
   echo "Detected console errors in body, extracting them for the report..."
