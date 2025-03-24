@@ -39,138 +39,70 @@ force_extract_console_errors() {
   
   echo "🔍 Extracting console errors with direct text processing"
   
-  # Save processed body to file for extraction
-  TEMP_FILE="${output_dir}/processed_response_body.txt"
-  echo "$body" > "$TEMP_FILE"
+  # Save full response to a file for analysis
+  echo "$body" > "${output_dir}/full_response.txt"
   
-  # Save a version with line breaks for better processing
-  TEMP_FILE_PRETTY="${output_dir}/processed_pretty_response.txt"
-  echo "$body" | jq '.' 2>/dev/null > "$TEMP_FILE_PRETTY" || echo "$body" > "$TEMP_FILE_PRETTY"
+  # Create a section for console errors in the summary
+  echo "" >> "$summary_file"
+  echo "## 🛑 Console Errors" >> "$summary_file" 
+  echo "The following errors were found in the test:" >> "$summary_file"
+  echo '```' >> "$summary_file"
   
-  # Check if we can find the consoleErrors section
-  if grep -q '"consoleErrors"' "$TEMP_FILE"; then
-    echo "Found consoleErrors section in response"
-    
-    # Extract the entire consoleErrors array to a separate file
-    ERRORS_FILE="${output_dir}/extracted_console_errors.txt"
-    grep -A 500 '"consoleErrors"' "$TEMP_FILE" | grep -B 500 -m 1 '"],' | head -n 500 > "$ERRORS_FILE" || \
-    grep -A 500 '"consoleErrors"' "$TEMP_FILE" | head -n 500 > "$ERRORS_FILE"
-    
-    # Create a section for console errors in the summary
+  # SUPER BASIC APPROACH:
+  # 1. Find all lines with "text": 
+  # 2. Clean up the output to show only error text
+  # 3. Put each on a separate line
+  ERRORS=$(grep -o '"text": "[^"]*"' "${output_dir}/full_response.txt" || \
+          grep -o '"text":"[^"]*"' "${output_dir}/full_response.txt" || \
+          grep -o '"text":"[^,}]*' "${output_dir}/full_response.txt" || \
+          grep -o '"text": "[^,}]*' "${output_dir}/full_response.txt")
+  
+  if [ -n "$ERRORS" ]; then
+    # Clean up the format for display
+    echo "$ERRORS" | sed 's/"text": "//g; s/"text":"//g; s/"$//g' >> "$summary_file"
+    echo "Extracted console error texts directly"
+  else
+    echo "No error texts could be extracted with grep." >> "$summary_file"
+    echo "Trying a direct line scan using grep..." >> "$summary_file"
     echo "" >> "$summary_file"
-    echo "## 🛑 Console Errors" >> "$summary_file" 
-    echo "The following errors were found in the test:" >> "$summary_file"
-    echo '```' >> "$summary_file"
     
-    # Extract error message texts with more flexible approach for malformed JSON
-    # This approach handles cases where closing quotes might be missing
-    ERRORS_EXTRACTED=false
-    
-    # Method 1: Try with simple text pattern matching
-    TEXT_PATTERN='"text": "[^,}]*'
-    if grep -o "$TEXT_PATTERN" "$ERRORS_FILE" | sed 's/"text": "//g' > "${output_dir}/simple_extracted_errors.txt" && [ -s "${output_dir}/simple_extracted_errors.txt" ]; then
-      echo "Extracted errors using simple text pattern"
-      cat "${output_dir}/simple_extracted_errors.txt" >> "$summary_file"
-      ERRORS_EXTRACTED=true
-    # Method 2: Try with broader pattern
-    elif grep -o '"text":[^,}]*' "$ERRORS_FILE" | sed 's/"text": "//g; s/"text":"//g' > "${output_dir}/broad_extracted_errors.txt" && [ -s "${output_dir}/broad_extracted_errors.txt" ]; then
-      echo "Extracted errors using broader pattern"
-      cat "${output_dir}/broad_extracted_errors.txt" >> "$summary_file"
-      ERRORS_EXTRACTED=true
-    # Method 3: Try with line-based approach
-    elif grep -A 1 '"text":' "$ERRORS_FILE" | grep -v '"text":' | sed 's/^ *"//g; s/",$//g; s/",//g' > "${output_dir}/line_extracted_errors.txt" && [ -s "${output_dir}/line_extracted_errors.txt" ]; then
-      echo "Extracted errors using line-based approach"
-      cat "${output_dir}/line_extracted_errors.txt" >> "$summary_file"
-      ERRORS_EXTRACTED=true
-    # Method 4: Use manual extraction with fixed strings
+    # Try another approach - find lines with "text" and show what's there
+    LINES_WITH_ERRORS=$(grep -n "text" "${output_dir}/full_response.txt")
+    if [ -n "$LINES_WITH_ERRORS" ]; then
+      echo "Lines containing 'text' keyword:" >> "$summary_file"
+      echo "$LINES_WITH_ERRORS" >> "$summary_file"
+      
+      # Get a few lines around each "text" mention
+      echo "" >> "$summary_file"
+      echo "Content of lines with errors:" >> "$summary_file"
+      echo "$LINES_WITH_ERRORS" | cut -d ":" -f 1 | while read -r line_num; do
+        start=$((line_num - 1))
+        end=$((line_num + 1))
+        sed -n "${start},${end}p" "${output_dir}/full_response.txt" >> "$summary_file"
+        echo "---" >> "$summary_file"
+      done
     else
-      echo "Using manual error extraction for malformed JSON"
-      
-      # Extract manually with pattern for truncated JSON
-      awk 'BEGIN {FS="\"text\": \""; OFS="\n"} 
-           {
-              for (i=2; i<=NF; i++) {
-                 sub(/[,}].*/,"",$i); 
-                 print $i
-              }
-           }' "$ERRORS_FILE" > "${output_dir}/manual_extracted_errors.txt"
-      
-      if [ -s "${output_dir}/manual_extracted_errors.txt" ]; then
-        cat "${output_dir}/manual_extracted_errors.txt" >> "$summary_file"
-        ERRORS_EXTRACTED=true
-      else
-        echo "Could not extract errors. Showing raw consoleErrors section:" >> "$summary_file"
-        head -n 20 "$ERRORS_FILE" >> "$summary_file"
-        
-        # Last resort - show specific markers where errors should be
-        echo "" >> "$summary_file"
-        echo "Error markers:" >> "$summary_file"
-        grep -n "text" "$ERRORS_FILE" | head -n 10 >> "$summary_file"
-      fi
+      echo "No lines with 'text' keyword found." >> "$summary_file"
     fi
-    
-    echo '```' >> "$summary_file"
-    
-    # Add a debug section showing the original consoleErrors section
-    echo "" >> "$summary_file"
-    echo "## 🔍 Raw Console Errors (First Part)" >> "$summary_file"
-    echo "For debugging purposes, here's the first part of the consoleErrors section:" >> "$summary_file"
-    echo '```json' >> "$summary_file"
-    head -n 20 "$ERRORS_FILE" >> "$summary_file"
-    echo '```' >> "$summary_file"
-    
-    return 0
   fi
   
-  # No consoleErrors section found, try alternative extraction
-  if grep -q '"text"' "$TEMP_FILE"; then
-    echo "Found text fields but no consoleErrors section"
-    
-    # Try to extract just the error texts directly with a more flexible approach
-    echo "" >> "$summary_file"
-    echo "## 🛑 Console Errors (Alternative Extraction)" >> "$summary_file" 
-    echo "The following errors were found in the test:" >> "$summary_file"
-    echo '```' >> "$summary_file"
-    
-    # Try multiple patterns
-    if grep -o '"text": "[^,}]*' "$TEMP_FILE" | sed 's/"text": "//g' > "${output_dir}/alt_extracted_errors.txt" && [ -s "${output_dir}/alt_extracted_errors.txt" ]; then
-      cat "${output_dir}/alt_extracted_errors.txt" >> "$summary_file"
-    else
-      awk 'BEGIN {FS="\"text\": \""; OFS="\n"} 
-           {
-              for (i=2; i<=NF; i++) {
-                 sub(/[,}].*/,"",$i); 
-                 print $i
-              }
-           }' "$TEMP_FILE" >> "$summary_file"
-    fi
-    
-    echo '```' >> "$summary_file"
-    
-    return 0
-  fi
+  echo '```' >> "$summary_file"
   
-  # No errors found with any method - show more debug info
+  # Display informational note about the JSON parsing issue
   echo "" >> "$summary_file"
-  echo "## ⚠️ Debug Information" >> "$summary_file"
-  echo "Failed to extract console errors. Showing first part of response body:" >> "$summary_file"
-  echo '```' >> "$summary_file"
-  head -n 30 "$TEMP_FILE" >> "$summary_file"
-  echo '```' >> "$summary_file"
+  echo "## ℹ️ Note" >> "$summary_file"
+  echo "The Lambda response contains console errors but they may not be properly displayed above due to JSON formatting issues." >> "$summary_file"
+  echo "Check the original response below to see the raw data." >> "$summary_file"
   
-  # Save full response for deeper inspection
-  echo "$body" > "${output_dir}/full_lambda_response.txt"
-  
+  # Display part of the raw response for debugging
   echo "" >> "$summary_file"
-  echo "## 🔍 Search Keywords" >> "$summary_file"
-  echo "Results of searching for console errors related keywords:" >> "$summary_file"
-  echo '```' >> "$summary_file"
-  grep -n "consoleErrors" "$TEMP_FILE" || echo "No 'consoleErrors' keyword found"
-  echo "" >> "$summary_file"
-  grep -n "text" "$TEMP_FILE" || echo "No 'text' keyword found"
+  echo "## 🔍 Raw Response (First Part)" >> "$summary_file"
+  echo "For debugging purposes, here's part of the raw response:" >> "$summary_file"
+  echo '```json' >> "$summary_file"
+  grep -A 30 '"consoleErrors"' "${output_dir}/full_response.txt" | head -n 50 >> "$summary_file"
   echo '```' >> "$summary_file"
   
-  return 1
+  return 0
 }
 
 # Process console errors from response JSON using jq
