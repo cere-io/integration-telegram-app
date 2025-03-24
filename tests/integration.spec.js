@@ -244,7 +244,7 @@ export default async function runIntegrationTest({ browser, context }) {
   }
 
   try {
-    fs.appendFileSync('/tmp/console-errors.txt', `[error] [${new Date().toISOString()}] TEST_CONSOLE_ERROR: This is a test console error to verify error logging\n`);
+    fs.appendFileSync('/tmp/console-errors.txt');
   } catch (err) {
     console.error('Failed to write test console error to file:', err);
   }
@@ -354,7 +354,7 @@ export default async function runIntegrationTest({ browser, context }) {
       }
     } else {
       const testError = {
-        type: 'error', 
+        type: 'error',
         text: 'TEST_ERROR_HANDLER: Тестовая ошибка консоли из обработчика ошибок теста',
         time: new Date().toISOString()
       };
@@ -447,7 +447,7 @@ export default async function runIntegrationTest({ browser, context }) {
       }
     } else {
       const testError = {
-        type: 'error', 
+        type: 'error',
         text: 'TEST_ERROR_HANDLER: Тестовая ошибка консоли из обработчика ошибок теста',
         time: new Date().toISOString()
       };
