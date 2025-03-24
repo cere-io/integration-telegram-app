@@ -189,13 +189,19 @@ async function testLeaderboardScreen({ page }) {
   let start = Date.now();
 
   try {
+    const loginResult = await login(page);
+    if (!loginResult.success) {
+      console.log('Login failed, skipping Leaderboard Screen test.');
+      return false;
+    }
+
     const leaderboardTabButton = page.locator('xpath=/html/body/div[1]/div/div/div[2]/button[2]');
     await leaderboardTabButton.scrollIntoViewIfNeeded();
     await leaderboardTabButton.click();
 
     let timeTaken = Date.now() - start;
     logTime('Leaderboard Screen', timeTaken);
-    return true
+    return true;
   } catch (err) {
     console.error(`❌ Error in testLeaderboardScreen: ${err.message}`);
     let timeTaken = Date.now() - start;
