@@ -122,48 +122,48 @@ fi
 
 # Save full response to a file for analysis
 echo "$BODY" > "${OUTPUT_DIR}/full_response.txt"
+echo "Saved response to ${OUTPUT_DIR}/full_response.txt"
 
 # Clean JSON for better parsing - handle control characters
 CLEANED_JSON=$(echo "$BODY" | tr -d '\000-\037')
 echo "$CLEANED_JSON" > "${OUTPUT_DIR}/cleaned_response.json"
+echo "Saved cleaned JSON to ${OUTPUT_DIR}/cleaned_response.json"
 
-# Extremely reliable console error extraction
+# Super simple console error extraction - just get text fields
 extract_console_messages() {
-  local body="$1"
-  local output_file="$2"
-
-  echo "Extracting console errors with ultra-reliable method..."
-
-  # Create section for console errors
+  local output_file="$1"
+  
+  echo "Extracting console errors with simplest possible method..."
+  
+  # Create console errors section
   echo "" >> "$output_file"
   echo "## 🛑 Console Errors" >> "$output_file"
   echo "The following errors were found in the test:" >> "$output_file"
   echo '<details open><summary>Click to collapse (scrollable)</summary>' >> "$output_file"
   echo "" >> "$output_file"
   echo '```' >> "$output_file"
-
-  # Very basic approach - just dump all relevant parts of the response
-  echo "TEST_CONSOLE_ERROR entries:" >> "$output_file"
-  echo "$body" | grep -o "TEST_CONSOLE_ERROR[^\"]*" >> "$output_file"
+  
+  echo "TypeErrors:" >> "$output_file"
+  cat "${OUTPUT_DIR}/full_response.txt" | grep -o 'TypeError:[^"]*' | sort | uniq >> "$output_file"
   echo "" >> "$output_file"
-
-  echo "TypeError entries:" >> "$output_file"
-  echo "$body" | grep -o "TypeError[^\"]*" >> "$output_file"
+  
+  echo "Cannot read properties errors:" >> "$output_file"
+  cat "${OUTPUT_DIR}/full_response.txt" | grep -o 'Cannot read properties[^"]*' | sort | uniq >> "$output_file"
   echo "" >> "$output_file"
-
-  echo "Cannot read properties entries:" >> "$output_file"
-  echo "$body" | grep -o "Cannot read properties[^\"]*" >> "$output_file"
-
+  
+  echo "Stack traces:" >> "$output_file"
+  cat "${OUTPUT_DIR}/full_response.txt" | grep -o 'at [^"]*\.js:[0-9]*:[0-9]*' | sort | uniq >> "$output_file"
+  
   echo '```' >> "$output_file"
   echo '</details>' >> "$output_file"
-
-  # Add raw console errors section
+  
+  # Raw console errors section
   echo "" >> "$output_file"
-  echo "### Raw console errors" >> "$output_file"
-  echo '<details><summary>Click to view raw console errors JSON</summary>' >> "$output_file"
+  echo "### Raw Console Errors" >> "$output_file"
+  echo '<details><summary>Raw error data from response</summary>' >> "$output_file"
   echo "" >> "$output_file"
   echo '```json' >> "$output_file"
-  echo "$body" | sed -n '/"consoleErrors":/,/"region":/p' >> "$output_file"
+  sed -n '/"consoleErrors":/,/"region":/p' "${OUTPUT_DIR}/full_response.txt" >> "$output_file"
   echo '```' >> "$output_file"
   echo '</details>' >> "$output_file"
 }
@@ -179,21 +179,19 @@ process_metrics() {
   echo "Processing metrics from Lambda response..."
 
   # First attempt: Try to extract metrics array directly from cleaned JSON
-  if jq -e '.metrics' "${output_dir}/cleaned_response.json" >/dev/null 2>&1; then
+  if grep -q '"metrics":\[' "${output_dir}/cleaned_response.json"; then
     echo "Found metrics array in response"
 
-    # Extract and format metrics
+    # Save the metrics JSON for examination
+    grep -o '"metrics":\[.*\]' "${output_dir}/cleaned_response.json" > "${output_dir}/metrics_array.json"
+    
+    # Extract metrics with simple grep approach
     local metrics_text=""
-    jq -c '.metrics[]' "${output_dir}/cleaned_response.json" 2>/dev/null | while read -r metric; do
-      local name=$(echo "$metric" | jq -r '.name')
-      local duration=$(echo "$metric" | jq -r '.duration')
-      local faked=$(echo "$metric" | jq -r '.faked // false')
-
-      if [ "$faked" == "true" ]; then
-        metrics_text="${metrics_text}${name} took ${duration}ms [AUTH_ERROR]\n"
-      else
-        metrics_text="${metrics_text}${name} took ${duration}ms\n"
-      fi
+    cat "${output_dir}/cleaned_response.json" | grep -o '"name":"[^"]*","duration":[0-9]*' | 
+    while read -r line; do
+      local name=$(echo "$line" | grep -o '"name":"[^"]*' | sed 's/"name":"//g')
+      local duration=$(echo "$line" | grep -o '"duration":[0-9]*' | sed 's/"duration"://g')
+      metrics_text="${metrics_text}${name} took ${duration}ms\n"
     done
 
     # Save formatted metrics
@@ -207,7 +205,7 @@ process_metrics() {
     echo "Found performanceMetrics field in response"
 
     # Extract using grep for reliability
-    local perf_metrics=$(grep -o '"performanceMetrics":"[^"]*"' "${output_dir}/cleaned_response.json" |
+    local perf_metrics=$(grep -o '"performanceMetrics":"[^"]*"' "${output_dir}/cleaned_response.json" | 
                          sed 's/"performanceMetrics":"//g; s/"$//g')
 
     # Normalize line breaks in the metrics
@@ -320,23 +318,25 @@ else
   echo '```' >> $GITHUB_STEP_SUMMARY
 fi
 
-# Extract console errors first - this places them right after the performance results
-extract_console_messages "$BODY" "$GITHUB_STEP_SUMMARY"
+# Extract console errors - uses simplest possible method
+extract_console_messages "$GITHUB_STEP_SUMMARY"
 
 # Process auth error if present
-if jq -e '.authError != null' "${OUTPUT_DIR}/cleaned_response.json" >/dev/null 2>&1; then
-  AUTH_ERROR_TYPE=$(jq -r '.authError.type' "${OUTPUT_DIR}/cleaned_response.json" 2>/dev/null || echo "Unknown")
-  AUTH_ERROR_MSG=$(jq -r '.authError.message' "${OUTPUT_DIR}/cleaned_response.json" 2>/dev/null || echo "Unknown error")
-  AUTH_ERROR_TIME=$(jq -r '.authError.timestamp' "${OUTPUT_DIR}/cleaned_response.json" 2>/dev/null || echo "Unknown")
-
+if grep -q '"authError":[^n]' "${OUTPUT_DIR}/cleaned_response.json"; then
   echo "" >> $GITHUB_STEP_SUMMARY
   echo "## ⚠️ Authentication Error Detected" >> $GITHUB_STEP_SUMMARY
   echo "Authentication failed during test execution." >> $GITHUB_STEP_SUMMARY
   echo "" >> $GITHUB_STEP_SUMMARY
   echo "### Error Details" >> $GITHUB_STEP_SUMMARY
-  echo "- **Type:** ${AUTH_ERROR_TYPE}" >> $GITHUB_STEP_SUMMARY
-  echo "- **Message:** ${AUTH_ERROR_MSG}" >> $GITHUB_STEP_SUMMARY
-  echo "- **Time:** ${AUTH_ERROR_TIME}" >> $GITHUB_STEP_SUMMARY
+  
+  # Extract auth error details with grep
+  AUTH_ERROR_TYPE=$(grep -o '"authError":{[^}]*"type":"[^"]*"' "${OUTPUT_DIR}/cleaned_response.json" | grep -o '"type":"[^"]*"' | sed 's/"type":"//g; s/"$//g')
+  AUTH_ERROR_MSG=$(grep -o '"authError":{[^}]*"message":"[^"]*"' "${OUTPUT_DIR}/cleaned_response.json" | grep -o '"message":"[^"]*"' | sed 's/"message":"//g; s/"$//g')
+  AUTH_ERROR_TIME=$(grep -o '"authError":{[^}]*"timestamp":"[^"]*"' "${OUTPUT_DIR}/cleaned_response.json" | grep -o '"timestamp":"[^"]*"' | sed 's/"timestamp":"//g; s/"$//g')
+  
+  echo "- **Type:** ${AUTH_ERROR_TYPE:-Unknown}" >> $GITHUB_STEP_SUMMARY
+  echo "- **Message:** ${AUTH_ERROR_MSG:-Unknown error}" >> $GITHUB_STEP_SUMMARY
+  echo "- **Time:** ${AUTH_ERROR_TIME:-Unknown}" >> $GITHUB_STEP_SUMMARY
 fi
 
 # Add enhanced environment information with geographic details
@@ -369,8 +369,8 @@ echo "- **Location:** ${REGION_INFO}" >> $GITHUB_STEP_SUMMARY
 echo "- **Run ID:** [#${GITHUB_RUN_ID}](https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})" >> $GITHUB_STEP_SUMMARY
 
 # Get execution time safely
-EXEC_TIME=$(jq -r '.executionTime // "Unknown"' "${OUTPUT_DIR}/cleaned_response.json" 2>/dev/null || echo "Unknown")
-echo "- **Execution Time:** ${EXEC_TIME}" >> $GITHUB_STEP_SUMMARY
+EXEC_TIME=$(grep -o '"executionTime":"[^"]*"' "${OUTPUT_DIR}/cleaned_response.json" | sed 's/"executionTime":"//g; s/"$//g')
+echo "- **Execution Time:** ${EXEC_TIME:-Unknown}" >> $GITHUB_STEP_SUMMARY
 
 # Add network latency information
 echo "" >> $GITHUB_STEP_SUMMARY
@@ -425,14 +425,9 @@ echo "- **Success:** ${SUCCESS:-Unknown}" >> $GITHUB_STEP_SUMMARY
 echo "- **Error Output:** ${ERROR_OUTPUT:-None}" >> $GITHUB_STEP_SUMMARY
 echo "" >> $GITHUB_STEP_SUMMARY
 
-echo "**Raw Response (first 100 lines):**" >> $GITHUB_STEP_SUMMARY
+echo "**Raw Response (first 40 lines):**" >> $GITHUB_STEP_SUMMARY
 echo '```json' >> $GITHUB_STEP_SUMMARY
-head -n 100 "${OUTPUT_DIR}/full_response.txt" >> $GITHUB_STEP_SUMMARY
-echo '```' >> $GITHUB_STEP_SUMMARY
-
-echo "**Full console errors array:**" >> $GITHUB_STEP_SUMMARY
-echo '```json' >> $GITHUB_STEP_SUMMARY
-grep -A 1000 '"consoleErrors":' "${OUTPUT_DIR}/full_response.txt" | grep -B 1000 -m 1 '"region":' >> $GITHUB_STEP_SUMMARY
+head -n 40 "${OUTPUT_DIR}/full_response.txt" >> $GITHUB_STEP_SUMMARY
 echo '```' >> $GITHUB_STEP_SUMMARY
 echo "</details>" >> $GITHUB_STEP_SUMMARY
 
