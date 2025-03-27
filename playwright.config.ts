@@ -15,7 +15,7 @@ const isLambda = process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined;
 const envConfigs = {
   dev: {
     baseURL: 'https://telegram-viewer-app.stage.cere.io',
-    campaignId: '117',
+    campaignId: '120',
   },
   stage: {
     baseURL: 'https://telegram-viewer-app.stage.cere.io',
@@ -23,7 +23,7 @@ const envConfigs = {
   },
   prod: {
     baseURL: 'https://telegram-viewer-app.cere.io',
-    campaignId: '117',
+    campaignId: '40',
   },
 };
 
