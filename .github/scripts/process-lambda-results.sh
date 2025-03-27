@@ -491,20 +491,20 @@ echo "  $REGION:::current" >> $GITHUB_STEP_SUMMARY
 echo '  classDef current fill:#f96,stroke:#333,stroke-width:4px;' >> $GITHUB_STEP_SUMMARY
 echo '```' >> $GITHUB_STEP_SUMMARY
 
-## Add expected latency information
-#echo "" >> $GITHUB_STEP_SUMMARY
-#echo "## 📊 Expected Response Times by Region" >> $GITHUB_STEP_SUMMARY
-#echo "Typical latency expectations when accessing services from different AWS regions:" >> $GITHUB_STEP_SUMMARY
-#echo "" >> $GITHUB_STEP_SUMMARY
-#echo "| User Location | Best Region | Expected Latency |" >> $GITHUB_STEP_SUMMARY
-#echo "| ------------- | ----------- | ---------------- |" >> $GITHUB_STEP_SUMMARY
-#echo "| North America | us-east-1, us-west-2 | 30-80ms |" >> $GITHUB_STEP_SUMMARY
-#echo "| Europe | eu-west-1, eu-central-1 | 20-60ms |" >> $GITHUB_STEP_SUMMARY
-#echo "| Asia | ap-northeast-1, ap-southeast-1 | 50-100ms |" >> $GITHUB_STEP_SUMMARY
-#echo "| Australia | ap-southeast-2 | 30-70ms |" >> $GITHUB_STEP_SUMMARY
-#echo "| South America | sa-east-1 | 40-90ms |" >> $GITHUB_STEP_SUMMARY
-#echo "" >> $GITHUB_STEP_SUMMARY
-#echo "This test was run from **$REGION_INFO**" >> $GITHUB_STEP_SUMMARY
+# Add expected latency information
+echo "" >> $GITHUB_STEP_SUMMARY
+echo "## 📊 Expected Response Times by Region" >> $GITHUB_STEP_SUMMARY
+echo "Typical latency expectations when accessing services from different AWS regions:" >> $GITHUB_STEP_SUMMARY
+echo "" >> $GITHUB_STEP_SUMMARY
+echo "| User Location | Best Region | Expected Latency |" >> $GITHUB_STEP_SUMMARY
+echo "| ------------- | ----------- | ---------------- |" >> $GITHUB_STEP_SUMMARY
+echo "| North America | us-east-1, us-west-2 | 30-80ms |" >> $GITHUB_STEP_SUMMARY
+echo "| Europe | eu-west-1, eu-central-1 | 20-60ms |" >> $GITHUB_STEP_SUMMARY
+echo "| Asia | ap-northeast-1, ap-southeast-1 | 50-100ms |" >> $GITHUB_STEP_SUMMARY
+echo "| Australia | ap-southeast-2 | 30-70ms |" >> $GITHUB_STEP_SUMMARY
+echo "| South America | sa-east-1 | 40-90ms |" >> $GITHUB_STEP_SUMMARY
+echo "" >> $GITHUB_STEP_SUMMARY
+echo "This test was run from **$REGION_INFO**" >> $GITHUB_STEP_SUMMARY
 
 # Determine test status based on metrics and response
 if [ "$METRICS_COUNT" -lt 3 ]; then
