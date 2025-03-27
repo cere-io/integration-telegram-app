@@ -923,7 +923,7 @@ find node_modules -path "*/playwright*/browsers" -type d -exec rm -rf {} \; 2>/d
 find node_modules -path "*/.cache/ms-playwright" -type d -exec rm -rf {} \; 2>/dev/null || true
 
 echo "➡ Compiling test files..."
-tsc "$PROJECT_ROOT/tests/integration.spec.ts" --outDir "$PROJECT_ROOT/lambda-build/tests/"
+tsc "$PROJECT_ROOT/tests/integration.spec.js" --outDir "$PROJECT_ROOT/lambda-build/tests/"
 
 echo "➡ Creating ZIP archive..."
 cd "$PROJECT_ROOT/lambda-build" && zip -9 -r ../lambda-package.zip . && cd ..
