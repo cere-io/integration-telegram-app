@@ -131,9 +131,9 @@ echo "$CLEANED_JSON" > "${OUTPUT_DIR}/cleaned_response.json"
 extract_console_messages() {
   local body="$1"
   local output_file="$2"
-  
+
   echo "Extracting console errors with ultra-reliable method..."
-  
+
   # Create section for console errors
   echo "" >> "$output_file"
   echo "## 🛑 Console Errors" >> "$output_file"
@@ -141,22 +141,22 @@ extract_console_messages() {
   echo '<details open><summary>Click to collapse (scrollable)</summary>' >> "$output_file"
   echo "" >> "$output_file"
   echo '```' >> "$output_file"
-  
+
   # Very basic approach - just dump all relevant parts of the response
   echo "TEST_CONSOLE_ERROR entries:" >> "$output_file"
   echo "$body" | grep -o "TEST_CONSOLE_ERROR[^\"]*" >> "$output_file"
   echo "" >> "$output_file"
-  
+
   echo "TypeError entries:" >> "$output_file"
   echo "$body" | grep -o "TypeError[^\"]*" >> "$output_file"
   echo "" >> "$output_file"
-  
+
   echo "Cannot read properties entries:" >> "$output_file"
   echo "$body" | grep -o "Cannot read properties[^\"]*" >> "$output_file"
-  
+
   echo '```' >> "$output_file"
   echo '</details>' >> "$output_file"
-  
+
   # Add raw console errors section
   echo "" >> "$output_file"
   echo "### Raw console errors" >> "$output_file"
@@ -173,57 +173,57 @@ process_metrics() {
   local body="$1"
   local output_dir="$2"
   local workspace_output="$3"
-  
+
   local metrics=""
-  
+
   echo "Processing metrics from Lambda response..."
-  
+
   # First attempt: Try to extract metrics array directly from cleaned JSON
   if jq -e '.metrics' "${output_dir}/cleaned_response.json" >/dev/null 2>&1; then
     echo "Found metrics array in response"
-    
+
     # Extract and format metrics
     local metrics_text=""
     jq -c '.metrics[]' "${output_dir}/cleaned_response.json" 2>/dev/null | while read -r metric; do
       local name=$(echo "$metric" | jq -r '.name')
       local duration=$(echo "$metric" | jq -r '.duration')
       local faked=$(echo "$metric" | jq -r '.faked // false')
-      
+
       if [ "$faked" == "true" ]; then
         metrics_text="${metrics_text}${name} took ${duration}ms [AUTH_ERROR]\n"
       else
         metrics_text="${metrics_text}${name} took ${duration}ms\n"
       fi
     done
-    
+
     # Save formatted metrics
     echo -e "$metrics_text" > "${output_dir}/performance-metrics.txt"
     echo -e "$metrics_text" > "${workspace_output}/performance-metrics.txt"
     metrics=$(cat "${output_dir}/performance-metrics.txt")
   fi
-  
+
   # Second attempt: Try to extract from performanceMetrics field
   if [ -z "$metrics" ] && grep -q '"performanceMetrics":' "${output_dir}/cleaned_response.json"; then
     echo "Found performanceMetrics field in response"
-    
+
     # Extract using grep for reliability
-    local perf_metrics=$(grep -o '"performanceMetrics":"[^"]*"' "${output_dir}/cleaned_response.json" | 
+    local perf_metrics=$(grep -o '"performanceMetrics":"[^"]*"' "${output_dir}/cleaned_response.json" |
                          sed 's/"performanceMetrics":"//g; s/"$//g')
-    
+
     # Normalize line breaks in the metrics
     metrics=$(echo "$perf_metrics" | tr -d '\r' | tr '\\n' '\n')
     echo "$metrics" > "${output_dir}/performance-metrics.txt"
     echo "$metrics" > "${workspace_output}/performance-metrics.txt"
   fi
-  
+
   # Third attempt: Use grep to find metrics directly from full response
   if [ -z "$metrics" ]; then
     echo "Attempting direct extraction of metrics..."
-    
+
     # Normalize body and extract metrics patterns
     local cleaned_body=$(cat "${output_dir}/full_response.txt" | tr -d '\r' | tr '\n' ' ')
     local grep_metrics=$(echo "$cleaned_body" | grep -o '[A-Za-z ]\+ took [0-9]\+ms' || echo "")
-    
+
     if [ -n "$grep_metrics" ]; then
       echo "Found metrics with direct pattern matching"
       metrics=$(echo "$grep_metrics" | sed 's/\([A-Za-z ]\+ took [0-9]\+ms\) /\1\n/g')
@@ -231,7 +231,7 @@ process_metrics() {
       echo "$metrics" > "${workspace_output}/performance-metrics.txt"
     fi
   fi
-  
+
   echo "$metrics"
 }
 
@@ -252,7 +252,7 @@ if [ -z "$METRICS" ] || [ "$METRICS_COUNT" -lt 3 ]; then
   # Test is failing due to missing metrics
   echo "❌ Test is FAILED: Expected 3 metrics (Active Quests Screen, Leaderboard Screen, Library Screen)" >> $GITHUB_STEP_SUMMARY
   echo "Only found $METRICS_COUNT metrics:" >> $GITHUB_STEP_SUMMARY
-  
+
   if [ -n "$METRICS" ]; then
     echo '```' >> $GITHUB_STEP_SUMMARY
     echo "$METRICS" >> $GITHUB_STEP_SUMMARY
@@ -264,17 +264,17 @@ else
   # Format successful test results
   echo "| Test | Duration | Status |" >> $GITHUB_STEP_SUMMARY
   echo "| ---- | -------- | ------ |" >> $GITHUB_STEP_SUMMARY
-  
+
   echo "$METRICS" | while IFS= read -r line; do
     # Skip empty lines
     if [ -z "$line" ]; then
       continue
     fi
-    
+
     if [[ "$line" =~ ([A-Za-z\ ]+)\ took\ ([0-9]+)ms ]]; then
       TEST_NAME="${BASH_REMATCH[1]}"
       DURATION="${BASH_REMATCH[2]}"
-      
+
       if [[ "$line" =~ \[AUTH_ERROR\] ]]; then
         STATUS="⛔️ Auth Error"
       elif [ "$DURATION" -lt 1000 ]; then
@@ -286,11 +286,11 @@ else
       else
         STATUS="🔴 Slow"
       fi
-      
+
       echo "| $TEST_NAME | ${DURATION}ms | $STATUS |" >> $GITHUB_STEP_SUMMARY
     fi
   done
-  
+
   # Add performance chart
   echo "" >> $GITHUB_STEP_SUMMARY
   echo "## Performance Chart" >> $GITHUB_STEP_SUMMARY
@@ -299,16 +299,16 @@ else
   echo '    title Test Duration from '$REGION' ('$CONTINENT') - lower is better' >> $GITHUB_STEP_SUMMARY
   echo '    dateFormat  X' >> $GITHUB_STEP_SUMMARY
   echo '    axisFormat %s' >> $GITHUB_STEP_SUMMARY
-  
+
   echo "$METRICS" | while IFS= read -r line; do
     if [ -z "$line" ]; then continue; fi
-    
+
     if [[ "$line" =~ ([A-Za-z\ ]+)\ took\ ([0-9]+)ms ]]; then
       TEST_NAME="${BASH_REMATCH[1]}"
       DURATION="${BASH_REMATCH[2]}"
-      
+
       DURATION_SEC=$(awk "BEGIN {printf \"%.1f\", $DURATION/1000}")
-      
+
       if [[ "$line" =~ \[AUTH_ERROR\] ]]; then
         echo "    ${TEST_NAME} (Auth Error) :crit, 0, 0.1s" >> $GITHUB_STEP_SUMMARY
       else
@@ -316,7 +316,7 @@ else
       fi
     fi
   done
-  
+
   echo '```' >> $GITHUB_STEP_SUMMARY
 fi
 
@@ -328,7 +328,7 @@ if jq -e '.authError != null' "${OUTPUT_DIR}/cleaned_response.json" >/dev/null 2
   AUTH_ERROR_TYPE=$(jq -r '.authError.type' "${OUTPUT_DIR}/cleaned_response.json" 2>/dev/null || echo "Unknown")
   AUTH_ERROR_MSG=$(jq -r '.authError.message' "${OUTPUT_DIR}/cleaned_response.json" 2>/dev/null || echo "Unknown error")
   AUTH_ERROR_TIME=$(jq -r '.authError.timestamp' "${OUTPUT_DIR}/cleaned_response.json" 2>/dev/null || echo "Unknown")
-  
+
   echo "" >> $GITHUB_STEP_SUMMARY
   echo "## ⚠️ Authentication Error Detected" >> $GITHUB_STEP_SUMMARY
   echo "Authentication failed during test execution." >> $GITHUB_STEP_SUMMARY
@@ -491,26 +491,26 @@ echo "  $REGION:::current" >> $GITHUB_STEP_SUMMARY
 echo '  classDef current fill:#f96,stroke:#333,stroke-width:4px;' >> $GITHUB_STEP_SUMMARY
 echo '```' >> $GITHUB_STEP_SUMMARY
 
-# Add expected latency information
-echo "" >> $GITHUB_STEP_SUMMARY
-echo "## 📊 Expected Response Times by Region" >> $GITHUB_STEP_SUMMARY
-echo "Typical latency expectations when accessing services from different AWS regions:" >> $GITHUB_STEP_SUMMARY
-echo "" >> $GITHUB_STEP_SUMMARY
-echo "| User Location | Best Region | Expected Latency |" >> $GITHUB_STEP_SUMMARY
-echo "| ------------- | ----------- | ---------------- |" >> $GITHUB_STEP_SUMMARY
-echo "| North America | us-east-1, us-west-2 | 30-80ms |" >> $GITHUB_STEP_SUMMARY
-echo "| Europe | eu-west-1, eu-central-1 | 20-60ms |" >> $GITHUB_STEP_SUMMARY
-echo "| Asia | ap-northeast-1, ap-southeast-1 | 50-100ms |" >> $GITHUB_STEP_SUMMARY
-echo "| Australia | ap-southeast-2 | 30-70ms |" >> $GITHUB_STEP_SUMMARY
-echo "| South America | sa-east-1 | 40-90ms |" >> $GITHUB_STEP_SUMMARY
-echo "" >> $GITHUB_STEP_SUMMARY
-echo "This test was run from **$REGION_INFO**" >> $GITHUB_STEP_SUMMARY
+## Add expected latency information
+#echo "" >> $GITHUB_STEP_SUMMARY
+#echo "## 📊 Expected Response Times by Region" >> $GITHUB_STEP_SUMMARY
+#echo "Typical latency expectations when accessing services from different AWS regions:" >> $GITHUB_STEP_SUMMARY
+#echo "" >> $GITHUB_STEP_SUMMARY
+#echo "| User Location | Best Region | Expected Latency |" >> $GITHUB_STEP_SUMMARY
+#echo "| ------------- | ----------- | ---------------- |" >> $GITHUB_STEP_SUMMARY
+#echo "| North America | us-east-1, us-west-2 | 30-80ms |" >> $GITHUB_STEP_SUMMARY
+#echo "| Europe | eu-west-1, eu-central-1 | 20-60ms |" >> $GITHUB_STEP_SUMMARY
+#echo "| Asia | ap-northeast-1, ap-southeast-1 | 50-100ms |" >> $GITHUB_STEP_SUMMARY
+#echo "| Australia | ap-southeast-2 | 30-70ms |" >> $GITHUB_STEP_SUMMARY
+#echo "| South America | sa-east-1 | 40-90ms |" >> $GITHUB_STEP_SUMMARY
+#echo "" >> $GITHUB_STEP_SUMMARY
+#echo "This test was run from **$REGION_INFO**" >> $GITHUB_STEP_SUMMARY
 
 # Determine test status based on metrics and response
 if [ "$METRICS_COUNT" -lt 3 ]; then
   echo "Test failed due to incomplete metrics" >> "${OUTPUT_DIR}/error.txt"
   exit 1
 else
-  echo "Tests completed with required metrics" 
+  echo "Tests completed with required metrics"
   exit 0
 fi

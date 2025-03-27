@@ -244,12 +244,6 @@ export default async function runIntegrationTest({ browser, context }) {
   }
 
   try {
-    fs.appendFileSync('/tmp/console-errors.txt', `[error] [${new Date().toISOString()}] TEST_CONSOLE_ERROR: This is a test console error to verify error logging\n`);
-  } catch (err) {
-    console.error('Failed to write test console error to file:', err);
-  }
-
-  try {
     console.log('Testing file system access...');
     fs.writeFileSync('/tmp/test-file.txt', 'Test file system access');
     const content = fs.readFileSync('/tmp/test-file.txt', 'utf8');
