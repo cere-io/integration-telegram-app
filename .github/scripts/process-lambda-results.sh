@@ -127,14 +127,14 @@ echo "$BODY" > "${OUTPUT_DIR}/full_response.txt"
 CLEANED_JSON=$(echo "$BODY" | tr -d '\000-\037')
 echo "$CLEANED_JSON" > "${OUTPUT_DIR}/cleaned_response.json"
 
-# Extract console messages for display in the GitHub summary using safer method
+# Extremely reliable console error extraction
 extract_console_messages() {
   local body="$1"
   local output_file="$2"
   
-  echo "Extracting console error messages..."
+  echo "Extracting console errors with ultra-reliable method..."
   
-  # Create collapsible section for console errors
+  # Create section for console errors
   echo "" >> "$output_file"
   echo "## 🛑 Console Errors" >> "$output_file"
   echo "The following errors were found in the test:" >> "$output_file"
@@ -142,76 +142,28 @@ extract_console_messages() {
   echo "" >> "$output_file"
   echo '```' >> "$output_file"
   
-  # Save raw console errors directly from the response
-  local raw_errors_file="${OUTPUT_DIR}/raw_console_errors.txt"
-  echo "$body" > "$raw_errors_file"
+  # Very basic approach - just dump all relevant parts of the response
+  echo "TEST_CONSOLE_ERROR entries:" >> "$output_file"
+  echo "$body" | grep -o "TEST_CONSOLE_ERROR[^\"]*" >> "$output_file"
+  echo "" >> "$output_file"
   
-  # Extract console errors directly with grep - most reliable method
-  if grep -q "consoleErrors" "$raw_errors_file"; then
-    # Extract and format type, time, and text entries
-    errors_found=false
-    
-    # Process 'error' type entries first - they usually contain the most important info
-    grep -o '"type":"error"[^}]*' "$raw_errors_file" | while read -r error_line; do
-      errors_found=true
-      
-      # Extract time and text from each error line
-      error_time=$(echo "$error_line" | grep -o '"time":"[^"]*"' | sed 's/"time":"//;s/"$//')
-      error_text=$(echo "$error_line" | grep -o '"text":"[^"]*"' | sed 's/"text":"//;s/"$//')
-      
-      # Print formatted error
-      echo "[error] [$error_time] $error_text" >> "$output_file"
-    done
-    
-    # Process 'pageerror' type entries next
-    grep -o '"type":"pageerror"[^}]*' "$raw_errors_file" | while read -r error_line; do
-      errors_found=true
-      
-      # Extract time and text from each error line
-      error_time=$(echo "$error_line" | grep -o '"time":"[^"]*"' | sed 's/"time":"//;s/"$//')
-      error_text=$(echo "$error_line" | grep -o '"text":"[^"]*"' | sed 's/"text":"//;s/"$//')
-      error_stack=$(echo "$error_line" | grep -o '"stack":"[^"]*"' | sed 's/"stack":"//;s/"$//' | sed 's/\\n/\n/g')
-      
-      # Print formatted error with stack trace
-      echo "[pageerror] [$error_time] $error_text" >> "$output_file"
-      if [ ! -z "$error_stack" ]; then
-        echo "Stack trace:" >> "$output_file"
-        echo "$error_stack" | sed 's/\\n/\n/g' >> "$output_file"
-        echo "" >> "$output_file"
-      fi
-    done
-    
-    # Process other types (unknown, warning, etc.)
-    grep -o '"type":"unknown"[^}]*' "$raw_errors_file" | while read -r error_line; do
-      errors_found=true
-      
-      # Extract time and text from each error line
-      error_time=$(echo "$error_line" | grep -o '"time":"[^"]*"' | sed 's/"time":"//;s/"$//')
-      error_text=$(echo "$error_line" | grep -o '"text":"[^"]*"' | sed 's/"text":"//;s/"$//')
-      
-      # Print formatted error
-      echo "[unknown] [$error_time] $error_text" >> "$output_file"
-    done
-    
-    # If no errors were processed using the structured approach, try direct extraction
-    if ! $errors_found; then
-      echo "Using direct error text extraction..." >> "$output_file"
-      
-      # Extract all error text fields
-      grep -o '"text":"[^"]*"' "$raw_errors_file" | sed 's/"text":"//;s/"$//' >> "$output_file"
-    fi
-  else
-    # Fallback to simple text extraction
-    echo "No structured console errors found. Extracting error-like messages:" >> "$output_file"
-    grep -o "TypeError:[^\"]*" "$raw_errors_file" | sort | uniq >> "$output_file"
-    grep -o "Cannot read properties[^\"]*" "$raw_errors_file" | sort | uniq >> "$output_file"
-  fi
+  echo "TypeError entries:" >> "$output_file"
+  echo "$body" | grep -o "TypeError[^\"]*" >> "$output_file"
+  echo "" >> "$output_file"
   
-  # If no errors were found at all, provide a message
-  if [ ! -s "$output_file" ]; then
-    echo "No console errors could be extracted. See raw response for details." >> "$output_file"
-  fi
+  echo "Cannot read properties entries:" >> "$output_file"
+  echo "$body" | grep -o "Cannot read properties[^\"]*" >> "$output_file"
   
+  echo '```' >> "$output_file"
+  echo '</details>' >> "$output_file"
+  
+  # Add raw console errors section
+  echo "" >> "$output_file"
+  echo "### Raw console errors" >> "$output_file"
+  echo '<details><summary>Click to view raw console errors JSON</summary>' >> "$output_file"
+  echo "" >> "$output_file"
+  echo '```json' >> "$output_file"
+  echo "$body" | sed -n '/"consoleErrors":/,/"region":/p' >> "$output_file"
   echo '```' >> "$output_file"
   echo '</details>' >> "$output_file"
 }
