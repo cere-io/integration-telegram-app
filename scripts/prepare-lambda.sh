@@ -345,15 +345,15 @@ const CHROMIUM_URL = 'https://github.com/Sparticuz/chromium/releases/download/v1
 const envConfigs = {
   dev: {
     baseURL: 'https://telegram-viewer-app.stage.cere.io',
-    campaignId: '117',
+    campaignId: '120',
   },
   stage: {
     baseURL: 'https://telegram-viewer-app.stage.cere.io',
-    campaignId: '117',
+    campaignId: '120',
   },
   prod: {
     baseURL: 'https://telegram-viewer-app.cere.io',
-    campaignId: '117',
+    campaignId: '40',
   },
 };
 
@@ -761,7 +761,7 @@ export const handler = async (event) => {
          error => [`${error.type}-${error.text}-${error.time}`, error]
        )).values()
      );
-     
+
      console.log(`Total console errors: ${uniqueConsoleErrors.length} (${testResult.consoleErrors ? testResult.consoleErrors.length : 0} from test result, ${consoleErrorsFromFile.length} from file, ${combinedConsoleErrors.length - uniqueConsoleErrors.length} duplicates removed)`);
 
      try {
