@@ -3,8 +3,29 @@ import * as fs from 'fs';
 
 const userName = process.env.TEST_USER_EMAIL || 'veronika.filipenko@cere.io';
 const otp = process.env.TEST_USER_OTP || '555555';
-const appUrl = process.env.TEST_APP_URL || 'https://telegram-viewer-app.stage.cere.io';
-const campaignId = process.env.TEST_CAMPAIGN_ID || '120';
+
+const env = process.env.TEST_ENV || 'dev';
+
+let configAppUrl;
+let configCampaignId;
+
+switch (env) {
+  case 'dev':
+    configAppUrl = process.env.DEV_APP_URL;
+    configCampaignId = process.env.DEV_CAMPAIGN_ID;
+    break;
+  case 'stage':
+    configAppUrl = process.env.STAGE_APP_URL;
+    configCampaignId = process.env.STAGE_CAMPAIGN_ID;
+    break;
+  case 'prod':
+    configAppUrl = process.env.PROD_APP_URL;
+    configCampaignId = process.env.PROD_CAMPAIGN_ID;
+    break;
+}
+
+const appUrl = process.env.TEST_APP_URL || configAppUrl || 'https://telegram-viewer-app.stage.cere.io';
+const campaignId = process.env.TEST_CAMPAIGN_ID || configCampaignId || '120';
 
 const logTime = (testName: string, time: number) => {
   const logMessage = `${testName} took ${time}ms\n`;
@@ -44,7 +65,6 @@ const login = async (page: Page, userName: string, otp: string) => {
 };
 
 test('Environment and Geolocation Check', async ({ page }) => {
-  const env = process.env.TEST_ENV || 'dev';
   const isLambda = process.env.AWS_LAMBDA_FUNCTION_NAME !== undefined;
   const region = process.env.REGION || 'local';
 

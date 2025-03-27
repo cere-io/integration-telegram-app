@@ -344,16 +344,16 @@ const CHROMIUM_URL = 'https://github.com/Sparticuz/chromium/releases/download/v1
 // Configuration for different environments
 const envConfigs = {
   dev: {
-    baseURL: 'https://telegram-viewer-app.stage.cere.io',
-    campaignId: '120',
+    baseURL: process.env.DEV_APP_URL || 'https://telegram-viewer-app.stage.cere.io',
+    campaignId: process.env.DEV_CAMPAIGN_ID || '120',
   },
   stage: {
-    baseURL: 'https://telegram-viewer-app.stage.cere.io',
-    campaignId: '120',
+    baseURL: process.env.STAGE_APP_URL || 'https://telegram-viewer-app.stage.cere.io',
+    campaignId: process.env.STAGE_CAMPAIGN_ID || '120',
   },
   prod: {
-    baseURL: 'https://telegram-viewer-app.cere.io',
-    campaignId: '40',
+    baseURL: process.env.PROD_APP_URL || 'https://telegram-viewer-app.cere.io',
+    campaignId: process.env.PROD_CAMPAIGN_ID || '40',
   },
 };
 
