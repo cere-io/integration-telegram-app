@@ -906,9 +906,6 @@ npm install
 echo "➡ Installing Playwright globally..."
 npm install -g playwright
 
-echo "➡ Installing TypeScript..."
-npm install -g typescript
-
 echo "➡ Cleaning up unnecessary files..."
 find node_modules -name "*.map" -delete 2>/dev/null || true
 find node_modules -name "*.d.ts" -delete 2>/dev/null || true
@@ -921,9 +918,6 @@ find node_modules -name "docs" -type d -exec rm -rf {} \; 2>/dev/null || true
 echo "➡ Removing pre-bundled browsers..."
 find node_modules -path "*/playwright*/browsers" -type d -exec rm -rf {} \; 2>/dev/null || true
 find node_modules -path "*/.cache/ms-playwright" -type d -exec rm -rf {} \; 2>/dev/null || true
-
-echo "➡ Compiling test files..."
-tsc "$PROJECT_ROOT/tests/integration.spec.js" --outDir "$PROJECT_ROOT/lambda-build/tests/"
 
 echo "➡ Creating ZIP archive..."
 cd "$PROJECT_ROOT/lambda-build" && zip -9 -r ../lambda-package.zip . && cd ..
