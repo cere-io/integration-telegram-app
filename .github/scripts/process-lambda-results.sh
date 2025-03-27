@@ -11,6 +11,96 @@ REGION="$7"
 GITHUB_RUN_ID="$8"
 GITHUB_REPOSITORY="$9"
 
+# Map AWS regions to human-readable locations and countries
+get_region_info() {
+  local region="$1"
+  case "$region" in
+    "us-east-1")
+      echo "N. Virginia (US East) - United States 🇺🇸"
+      ;;
+    "us-east-2")
+      echo "Ohio (US East) - United States 🇺🇸"
+      ;;
+    "us-west-1")
+      echo "N. California (US West) - United States 🇺🇸"
+      ;;
+    "us-west-2")
+      echo "Oregon (US West) - United States 🇺🇸"
+      ;;
+    "ca-central-1")
+      echo "Central - Canada 🇨🇦"
+      ;;
+    "eu-west-1")
+      echo "Ireland (EU West) - Ireland 🇮🇪"
+      ;;
+    "eu-west-2")
+      echo "London (EU West) - United Kingdom 🇬🇧"
+      ;;
+    "eu-west-3")
+      echo "Paris (EU West) - France 🇫🇷"
+      ;;
+    "eu-central-1")
+      echo "Frankfurt (EU Central) - Germany 🇩🇪"
+      ;;
+    "eu-north-1")
+      echo "Stockholm (EU North) - Sweden 🇸🇪"
+      ;;
+    "ap-northeast-1")
+      echo "Tokyo (Asia Pacific Northeast) - Japan 🇯🇵"
+      ;;
+    "ap-northeast-2")
+      echo "Seoul (Asia Pacific Northeast) - South Korea 🇰🇷"
+      ;;
+    "ap-southeast-1")
+      echo "Singapore (Asia Pacific Southeast) - Singapore 🇸🇬"
+      ;;
+    "ap-southeast-2")
+      echo "Sydney (Asia Pacific Southeast) - Australia 🇦🇺"
+      ;;
+    "ap-south-1")
+      echo "Mumbai (Asia Pacific South) - India 🇮🇳"
+      ;;
+    "sa-east-1")
+      echo "São Paulo (South America East) - Brazil 🇧🇷"
+      ;;
+    *)
+      echo "$region - Unknown region"
+      ;;
+  esac
+}
+
+# Function to get continent from region code
+get_continent() {
+  local region="$1"
+  case "$region" in
+    "us-"*|"ca-"*)
+      echo "North America"
+      ;;
+    "eu-"*)
+      echo "Europe"
+      ;;
+    "ap-"*)
+      echo "Asia-Pacific"
+      ;;
+    "sa-"*)
+      echo "South America"
+      ;;
+    "me-"*)
+      echo "Middle East"
+      ;;
+    "af-"*)
+      echo "Africa"
+      ;;
+    *)
+      echo "Other"
+      ;;
+  esac
+}
+
+# Get continent for current region
+CONTINENT=$(get_continent "$REGION")
+REGION_INFO=$(get_region_info "$REGION")
+
 # First, detect if BODY is a Lambda response with escaped JSON and fix it
 echo "Checking if Lambda response body needs unescaping..."
 if [[ "$BODY" == *"\"consoleErrors\":"* ]] || [[ "$BODY" == *"\\\"consoleErrors\\\":\["* ]]; then
@@ -169,8 +259,10 @@ METRICS=$(process_metrics "$BODY" "$OUTPUT_DIR" "$WORKSPACE_OUTPUT")
 METRICS_COUNT=$(echo "$METRICS" | grep -c "took" || echo "0")
 echo "Found $METRICS_COUNT metrics"
 
-# Generate performance report
-echo "# 📊 Performance Test Results" > $GITHUB_STEP_SUMMARY
+# Generate performance report with region information
+echo "# 📊 Performance Test Results - $CONTINENT Region" > $GITHUB_STEP_SUMMARY
+echo "Testing from: **$REGION_INFO**" >> $GITHUB_STEP_SUMMARY
+echo "" >> $GITHUB_STEP_SUMMARY
 
 if [ -z "$METRICS" ] || [ "$METRICS_COUNT" -lt 3 ]; then
   # Test is failing due to missing metrics
@@ -220,7 +312,7 @@ else
   echo "## Performance Chart" >> $GITHUB_STEP_SUMMARY
   echo '```mermaid' >> $GITHUB_STEP_SUMMARY
   echo 'gantt' >> $GITHUB_STEP_SUMMARY
-  echo '    title Test Duration (lower is better)' >> $GITHUB_STEP_SUMMARY
+  echo '    title Test Duration from '$REGION' ('$CONTINENT') - lower is better' >> $GITHUB_STEP_SUMMARY
   echo '    dateFormat  X' >> $GITHUB_STEP_SUMMARY
   echo '    axisFormat %s' >> $GITHUB_STEP_SUMMARY
   
@@ -263,16 +355,75 @@ if jq -e '.authError != null' "${OUTPUT_DIR}/cleaned_response.json" >/dev/null 2
   echo "- **Time:** ${AUTH_ERROR_TIME}" >> $GITHUB_STEP_SUMMARY
 fi
 
-# Add environment information
+# Add enhanced environment information with geographic details
 echo "" >> $GITHUB_STEP_SUMMARY
-echo "## Environment" >> $GITHUB_STEP_SUMMARY
+echo "## 🌎 Environment & Location" >> $GITHUB_STEP_SUMMARY
 echo "- **Environment:** ${ENVIRONMENT}" >> $GITHUB_STEP_SUMMARY
-echo "- **Region:** ${REGION}" >> $GITHUB_STEP_SUMMARY
+
+# Create a region badge based on continent
+case "$CONTINENT" in
+  "North America")
+    BADGE_COLOR="blue"
+    ;;
+  "Europe")
+    BADGE_COLOR="green"
+    ;;
+  "Asia-Pacific")
+    BADGE_COLOR="orange"
+    ;;
+  "South America")
+    BADGE_COLOR="yellow"
+    ;;
+  *)
+    BADGE_COLOR="lightgrey"
+    ;;
+esac
+
+# Add region information with badge
+echo "- **Region:** ![${REGION}](https://img.shields.io/badge/${REGION}-${BADGE_COLOR})" >> $GITHUB_STEP_SUMMARY
+echo "- **Location:** ${REGION_INFO}" >> $GITHUB_STEP_SUMMARY
 echo "- **Run ID:** [#${GITHUB_RUN_ID}](https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})" >> $GITHUB_STEP_SUMMARY
 
 # Get execution time safely
 EXEC_TIME=$(jq -r '.executionTime // "Unknown"' "${OUTPUT_DIR}/cleaned_response.json" 2>/dev/null || echo "Unknown")
 echo "- **Execution Time:** ${EXEC_TIME}" >> $GITHUB_STEP_SUMMARY
+
+# Add network latency information
+echo "" >> $GITHUB_STEP_SUMMARY
+echo "## 🌐 Region Information" >> $GITHUB_STEP_SUMMARY
+echo "This test was run from **$REGION_INFO**. AWS regions in the same continent generally have better connectivity to users in that region." >> $GITHUB_STEP_SUMMARY
+echo "" >> $GITHUB_STEP_SUMMARY
+
+# Show a world map with region highlighted
+echo "### AWS Region Map" >> $GITHUB_STEP_SUMMARY
+echo '```mermaid' >> $GITHUB_STEP_SUMMARY
+echo 'graph TD' >> $GITHUB_STEP_SUMMARY
+echo '    subgraph "Global AWS Regions"' >> $GITHUB_STEP_SUMMARY
+echo '        na[North America]' >> $GITHUB_STEP_SUMMARY
+echo '        eu[Europe]' >> $GITHUB_STEP_SUMMARY
+echo '        ap[Asia-Pacific]' >> $GITHUB_STEP_SUMMARY
+echo '        sa[South America]' >> $GITHUB_STEP_SUMMARY
+echo '    end' >> $GITHUB_STEP_SUMMARY
+
+# Highlight current region
+case "$CONTINENT" in
+  "North America")
+    echo '    na:::highlight --> current["'$REGION': '$REGION_INFO'"]:::current' >> $GITHUB_STEP_SUMMARY
+    ;;
+  "Europe")
+    echo '    eu:::highlight --> current["'$REGION': '$REGION_INFO'"]:::current' >> $GITHUB_STEP_SUMMARY
+    ;;
+  "Asia-Pacific")
+    echo '    ap:::highlight --> current["'$REGION': '$REGION_INFO'"]:::current' >> $GITHUB_STEP_SUMMARY
+    ;;
+  "South America")
+    echo '    sa:::highlight --> current["'$REGION': '$REGION_INFO'"]:::current' >> $GITHUB_STEP_SUMMARY
+    ;;
+esac
+
+echo '    classDef highlight fill:#f96,stroke:#333,stroke-width:2px;' >> $GITHUB_STEP_SUMMARY
+echo '    classDef current fill:#9f6,stroke:#333,stroke-width:4px;' >> $GITHUB_STEP_SUMMARY
+echo '```' >> $GITHUB_STEP_SUMMARY
 
 # Add detailed raw response with key issues highlighted
 echo "" >> $GITHUB_STEP_SUMMARY
