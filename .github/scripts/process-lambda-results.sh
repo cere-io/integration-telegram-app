@@ -10,7 +10,6 @@ ENVIRONMENT="$6"
 REGION="$7"
 GITHUB_RUN_ID="$8"
 GITHUB_REPOSITORY="$9"
-CAMPAIGN="${10:-Unknown}"
 
 # Map AWS regions to human-readable locations and countries
 get_region_info() {
@@ -102,22 +101,6 @@ get_continent() {
 CONTINENT=$(get_continent "$REGION")
 REGION_INFO=$(get_region_info "$REGION")
 
-IS_GITHUB_ACTIONS="${GITHUB_ACTIONS:-false}"
-if [ "$IS_GITHUB_ACTIONS" = "true" ]; then
-  echo "Running in GitHub Actions environment"
-else
-  echo "Running in local environment"
-fi
-
-# Try to extract campaign information directly from response
-if [ "$CAMPAIGN" = "Unknown" ]; then
-  DETECTED_CAMPAIGN=$(grep -o '"campaign":"[^"]*"' "${OUTPUT_DIR}/full_response.txt" 2>/dev/null | sed 's/"campaign":"//g; s/"$//g' || echo "")
-  if [ -n "$DETECTED_CAMPAIGN" ]; then
-    CAMPAIGN="$DETECTED_CAMPAIGN"
-    echo "Detected campaign: $CAMPAIGN"
-  fi
-fi
-
 # First, detect if BODY is a Lambda response with escaped JSON and fix it
 echo "Checking if Lambda response body needs unescaping..."
 if [[ "$BODY" == *"\"consoleErrors\":"* ]] || [[ "$BODY" == *"\\\"consoleErrors\\\":\["* ]]; then
@@ -146,17 +129,11 @@ CLEANED_JSON=$(echo "$BODY" | tr -d '\000-\037')
 echo "$CLEANED_JSON" > "${OUTPUT_DIR}/cleaned_response.json"
 echo "Saved cleaned JSON to ${OUTPUT_DIR}/cleaned_response.json"
 
-# Extract campaign if not provided
-if [ "$CAMPAIGN" = "Unknown" ]; then
-  CAMPAIGN=$(grep -o '"campaign":"[^"]*"' "${OUTPUT_DIR}/cleaned_response.json" 2>/dev/null | sed 's/"campaign":"//g; s/"$//g' || echo "Unknown")
-  echo "Detected campaign from response: $CAMPAIGN"
-fi
-
-# Ultra-reliable console error extraction - multiple approaches combined
+# Super simple console error extraction - just get text fields
 extract_console_messages() {
   local output_file="$1"
 
-  echo "Extracting console errors with multiple reliable methods..."
+  echo "Extracting console errors with simplest possible method..."
 
   # Create console errors section
   echo "" >> "$output_file"
@@ -166,40 +143,27 @@ extract_console_messages() {
   echo "" >> "$output_file"
   echo '```' >> "$output_file"
 
-  # Method 1: Extract error messages directly
-  echo "Error messages:" >> "$output_file"
-  grep -o '"text":"[^"]*"' "${OUTPUT_DIR}/cleaned_response.json" |
-    sed 's/"text":"//g; s/"$//g' |
-    grep -v "^at " |
-    grep -v "^    at " |
-    sort | uniq >> "$output_file" || echo "No error messages found"
-  echo "" >> "$output_file"
-
-  # Method 2: Extract specific error types
-  echo "TypeError errors:" >> "$output_file"
-  grep -o 'TypeError:[^"]*' "${OUTPUT_DIR}/cleaned_response.json" | sort | uniq >> "$output_file" || echo "No TypeError errors found"
+  echo "TypeErrors:" >> "$output_file"
+  cat "${OUTPUT_DIR}/full_response.txt" | grep -o 'TypeError:[^"]*' | sort | uniq >> "$output_file"
   echo "" >> "$output_file"
 
   echo "Cannot read properties errors:" >> "$output_file"
-  grep -o 'Cannot read properties[^"]*' "${OUTPUT_DIR}/cleaned_response.json" | sort | uniq >> "$output_file" || echo "No property access errors found"
+  cat "${OUTPUT_DIR}/full_response.txt" | grep -o 'Cannot read properties[^"]*' | sort | uniq >> "$output_file"
   echo "" >> "$output_file"
 
-  # Method 3: Extract stack traces
   echo "Stack traces:" >> "$output_file"
-  grep -o '"stack":"[^"]*"' "${OUTPUT_DIR}/cleaned_response.json" |
-    sed 's/"stack":"//g; s/"$//g' |
-    tr '\\n' '\n' >> "$output_file" || echo "No stack traces found"
+  cat "${OUTPUT_DIR}/full_response.txt" | grep -o 'at [^"]*\.js:[0-9]*:[0-9]*' | sort | uniq >> "$output_file"
 
   echo '```' >> "$output_file"
   echo '</details>' >> "$output_file"
 
-  # Raw error data
+  # Raw console errors section
   echo "" >> "$output_file"
   echo "### Raw Console Errors" >> "$output_file"
-  echo '<details><summary>Click to view raw error data</summary>' >> "$output_file"
+  echo '<details><summary>Raw error data from response</summary>' >> "$output_file"
   echo "" >> "$output_file"
   echo '```json' >> "$output_file"
-  sed -n '/"consoleErrors":/,/"region":/p' "${OUTPUT_DIR}/cleaned_response.json" >> "$output_file" || echo "No consoleErrors section found"
+  sed -n '/"consoleErrors":/,/"region":/p' "${OUTPUT_DIR}/full_response.txt" >> "$output_file"
   echo '```' >> "$output_file"
   echo '</details>' >> "$output_file"
 }
@@ -223,7 +187,7 @@ process_metrics() {
 
     # Extract metrics with simple grep approach
     local metrics_text=""
-    grep -o '"name":"[^"]*","duration":[0-9]*' "${output_dir}/cleaned_response.json" |
+    cat "${output_dir}/cleaned_response.json" | grep -o '"name":"[^"]*","duration":[0-9]*' |
     while read -r line; do
       local name=$(echo "$line" | grep -o '"name":"[^"]*' | sed 's/"name":"//g')
       local duration=$(echo "$line" | grep -o '"duration":[0-9]*' | sed 's/"duration"://g')
@@ -255,7 +219,7 @@ process_metrics() {
     echo "Attempting direct extraction of metrics..."
 
     # Normalize body and extract metrics patterns
-    local cleaned_body=$(cat "${output_dir}/cleaned_response.json" | tr -d '\r' | tr '\n' ' ')
+    local cleaned_body=$(cat "${output_dir}/full_response.txt" | tr -d '\r' | tr '\n' ' ')
     local grep_metrics=$(echo "$cleaned_body" | grep -o '[A-Za-z ]\+ took [0-9]\+ms' || echo "")
 
     if [ -n "$grep_metrics" ]; then
@@ -277,36 +241,10 @@ METRICS=$(process_metrics "$BODY" "$OUTPUT_DIR" "$WORKSPACE_OUTPUT")
 METRICS_COUNT=$(echo "$METRICS" | grep -c "took" || echo "0")
 echo "Found $METRICS_COUNT metrics"
 
-# Generate performance report with region and campaign information
-echo "# 📊 Performance Test Results: ${CAMPAIGN} Campaign" > $GITHUB_STEP_SUMMARY
+# Generate performance report with region information
+echo "# 📊 Performance Test Results - $CONTINENT Region" > $GITHUB_STEP_SUMMARY
 echo "Testing from: **$REGION_INFO**" >> $GITHUB_STEP_SUMMARY
 echo "" >> $GITHUB_STEP_SUMMARY
-
-# Extract runtime information if available
-if grep -q '"runtimeInfo":' "${OUTPUT_DIR}/cleaned_response.json"; then
-  echo "## 🧪 Test Environment" >> $GITHUB_STEP_SUMMARY
-  echo "<details><summary>Click to view environment details</summary>" >> $GITHUB_STEP_SUMMARY
-  echo "" >> $GITHUB_STEP_SUMMARY
-
-  # Browser version
-  BROWSER_VERSION=$(grep -o '"browser":[^,}]*' "${OUTPUT_DIR}/cleaned_response.json" | sed 's/"browser"://g; s/[" ]//g' || echo "Unknown")
-  echo "- **Browser:** ${BROWSER_VERSION}" >> $GITHUB_STEP_SUMMARY
-
-  # Node version
-  NODE_VERSION=$(grep -o '"nodeVersion":[^,}]*' "${OUTPUT_DIR}/cleaned_response.json" | sed 's/"nodeVersion"://g; s/[" ]//g' || echo "Unknown")
-  echo "- **Node.js:** ${NODE_VERSION}" >> $GITHUB_STEP_SUMMARY
-
-  # Platform
-  PLATFORM=$(grep -o '"platform":[^,}]*' "${OUTPUT_DIR}/cleaned_response.json" | sed 's/"platform"://g; s/[" ]//g' || echo "Unknown")
-  echo "- **Platform:** ${PLATFORM}" >> $GITHUB_STEP_SUMMARY
-
-  # Runtime (lambda vs local)
-  RUNTIME=$(grep -o '"runtime":[^,}]*' "${OUTPUT_DIR}/cleaned_response.json" | sed 's/"runtime"://g; s/[" ]//g' || echo "Unknown")
-  echo "- **Runtime:** ${RUNTIME}" >> $GITHUB_STEP_SUMMARY
-
-  echo "</details>" >> $GITHUB_STEP_SUMMARY
-  echo "" >> $GITHUB_STEP_SUMMARY
-fi
 
 if [ -z "$METRICS" ] || [ "$METRICS_COUNT" -lt 3 ]; then
   # Test is failing due to missing metrics
@@ -356,7 +294,7 @@ else
   echo "## Performance Chart" >> $GITHUB_STEP_SUMMARY
   echo '```mermaid' >> $GITHUB_STEP_SUMMARY
   echo 'gantt' >> $GITHUB_STEP_SUMMARY
-  echo '    title Test Duration for '$CAMPAIGN' from '$REGION' ('$CONTINENT') - lower is better' >> $GITHUB_STEP_SUMMARY
+  echo '    title Test Duration from '$REGION' ('$CONTINENT') - lower is better' >> $GITHUB_STEP_SUMMARY
   echo '    dateFormat  X' >> $GITHUB_STEP_SUMMARY
   echo '    axisFormat %s' >> $GITHUB_STEP_SUMMARY
 
@@ -380,7 +318,7 @@ else
   echo '```' >> $GITHUB_STEP_SUMMARY
 fi
 
-# Extract console errors - uses multiple reliable methods
+# Extract console errors - uses simplest possible method
 extract_console_messages "$GITHUB_STEP_SUMMARY"
 
 # Process auth error if present
@@ -405,8 +343,6 @@ fi
 echo "" >> $GITHUB_STEP_SUMMARY
 echo "## 🌎 Environment & Location" >> $GITHUB_STEP_SUMMARY
 echo "- **Environment:** ${ENVIRONMENT}" >> $GITHUB_STEP_SUMMARY
-echo "- **Campaign:** ${CAMPAIGN}" >> $GITHUB_STEP_SUMMARY
-echo "- **Run Mode:** ${IS_GITHUB_ACTIONS:+GitHub Actions}${IS_GITHUB_ACTIONS:-Local}" >> $GITHUB_STEP_SUMMARY
 
 # Create a region badge based on continent
 case "$CONTINENT" in
@@ -441,18 +377,6 @@ echo "" >> $GITHUB_STEP_SUMMARY
 echo "## 🌐 Region Information" >> $GITHUB_STEP_SUMMARY
 echo "This test was run from **$REGION_INFO**. AWS regions in the same continent generally have better connectivity to users in that region." >> $GITHUB_STEP_SUMMARY
 echo "" >> $GITHUB_STEP_SUMMARY
-
-# Add comparison between local and GitHub Actions runs
-echo "" >> $GITHUB_STEP_SUMMARY
-echo "## 🖥️ Local vs GitHub Actions" >> $GITHUB_STEP_SUMMARY
-echo "Test results can differ between local execution and GitHub Actions due to:" >> $GITHUB_STEP_SUMMARY
-echo "" >> $GITHUB_STEP_SUMMARY
-echo "- **Network conditions**: GitHub Actions runs in cloud data centers with different connectivity" >> $GITHUB_STEP_SUMMARY
-echo "- **System resources**: Different CPU/memory configurations" >> $GITHUB_STEP_SUMMARY
-echo "- **Browser versions**: Possibly different browser or Node.js versions" >> $GITHUB_STEP_SUMMARY
-echo "- **Environmental factors**: Different timezone, locale settings, etc." >> $GITHUB_STEP_SUMMARY
-echo "" >> $GITHUB_STEP_SUMMARY
-echo "This test was run in **${IS_GITHUB_ACTIONS:+GitHub Actions}${IS_GITHUB_ACTIONS:-local}** mode." >> $GITHUB_STEP_SUMMARY
 
 # Show a world map with region highlighted
 echo "### AWS Region Map" >> $GITHUB_STEP_SUMMARY
@@ -493,8 +417,8 @@ echo "" >> $GITHUB_STEP_SUMMARY
 
 # Extract basic info directly using grep for reliability
 STATUS_CODE=$(echo "$RESPONSE" | grep -o '"StatusCode":[^,}]*' | sed 's/"StatusCode"://g; s/ //g')
-SUCCESS=$(grep -o '"success":[^,}]*' "${OUTPUT_DIR}/cleaned_response.json" | head -1 | sed 's/"success"://g; s/ //g')
-ERROR_OUTPUT=$(grep -o '"errorOutput":"[^"]*"' "${OUTPUT_DIR}/cleaned_response.json" | sed 's/"errorOutput":"//g; s/"$//g')
+SUCCESS=$(grep -o '"success":[^,}]*' "${OUTPUT_DIR}/full_response.txt" | head -1 | sed 's/"success"://g; s/ //g')
+ERROR_OUTPUT=$(grep -o '"errorOutput":"[^"]*"' "${OUTPUT_DIR}/full_response.txt" | sed 's/"errorOutput":"//g; s/"$//g')
 
 echo "- **Status Code:** ${STATUS_CODE:-Unknown}" >> $GITHUB_STEP_SUMMARY
 echo "- **Success:** ${SUCCESS:-Unknown}" >> $GITHUB_STEP_SUMMARY
@@ -503,9 +427,79 @@ echo "" >> $GITHUB_STEP_SUMMARY
 
 echo "**Raw Response (first 40 lines):**" >> $GITHUB_STEP_SUMMARY
 echo '```json' >> $GITHUB_STEP_SUMMARY
-head -n 40 "${OUTPUT_DIR}/cleaned_response.json" >> $GITHUB_STEP_SUMMARY
+head -n 40 "${OUTPUT_DIR}/full_response.txt" >> $GITHUB_STEP_SUMMARY
 echo '```' >> $GITHUB_STEP_SUMMARY
 echo "</details>" >> $GITHUB_STEP_SUMMARY
+
+# Extra section to highlight detected errors
+echo "" >> $GITHUB_STEP_SUMMARY
+echo "## 🔍 Detected Issues" >> $GITHUB_STEP_SUMMARY
+echo "<details><summary>Click to view detected issues</summary>" >> $GITHUB_STEP_SUMMARY
+echo "" >> $GITHUB_STEP_SUMMARY
+
+# Find TypeErrors and similar issues
+echo "### TypeErrors and null references" >> $GITHUB_STEP_SUMMARY
+echo '```' >> $GITHUB_STEP_SUMMARY
+grep -o "TypeError:[^\"]*" "${OUTPUT_DIR}/full_response.txt" | sort | uniq >> $GITHUB_STEP_SUMMARY
+grep -o "Cannot read properties of[^\"]*" "${OUTPUT_DIR}/full_response.txt" | sort | uniq >> $GITHUB_STEP_SUMMARY
+echo '```' >> $GITHUB_STEP_SUMMARY
+
+echo "</details>" >> $GITHUB_STEP_SUMMARY
+
+# Add improved region visualization - world map with AWS regions
+echo "" >> $GITHUB_STEP_SUMMARY
+echo "## 🗺️ Global AWS Region Distribution" >> $GITHUB_STEP_SUMMARY
+echo '```mermaid' >> $GITHUB_STEP_SUMMARY
+echo 'flowchart TD' >> $GITHUB_STEP_SUMMARY
+echo '  World((🌍 World))' >> $GITHUB_STEP_SUMMARY
+echo '  World --> NA[North America]' >> $GITHUB_STEP_SUMMARY
+echo '  World --> EU[Europe]' >> $GITHUB_STEP_SUMMARY
+echo '  World --> APAC[Asia Pacific]' >> $GITHUB_STEP_SUMMARY
+echo '  World --> SA[South America]' >> $GITHUB_STEP_SUMMARY
+
+# North America regions
+echo '  NA --> us-east-1[us-east-1: N. Virginia 🇺🇸]' >> $GITHUB_STEP_SUMMARY
+echo '  NA --> us-east-2[us-east-2: Ohio 🇺🇸]' >> $GITHUB_STEP_SUMMARY
+echo '  NA --> us-west-1[us-west-1: N. California 🇺🇸]' >> $GITHUB_STEP_SUMMARY
+echo '  NA --> us-west-2[us-west-2: Oregon 🇺🇸]' >> $GITHUB_STEP_SUMMARY
+echo '  NA --> ca-central-1[ca-central-1: Central 🇨🇦]' >> $GITHUB_STEP_SUMMARY
+
+# Europe regions
+echo '  EU --> eu-west-1[eu-west-1: Ireland 🇮🇪]' >> $GITHUB_STEP_SUMMARY
+echo '  EU --> eu-west-2[eu-west-2: London 🇬🇧]' >> $GITHUB_STEP_SUMMARY
+echo '  EU --> eu-west-3[eu-west-3: Paris 🇫🇷]' >> $GITHUB_STEP_SUMMARY
+echo '  EU --> eu-central-1[eu-central-1: Frankfurt 🇩🇪]' >> $GITHUB_STEP_SUMMARY
+echo '  EU --> eu-north-1[eu-north-1: Stockholm 🇸🇪]' >> $GITHUB_STEP_SUMMARY
+
+# Asia Pacific regions
+echo '  APAC --> ap-northeast-1[ap-northeast-1: Tokyo 🇯🇵]' >> $GITHUB_STEP_SUMMARY
+echo '  APAC --> ap-northeast-2[ap-northeast-2: Seoul 🇰🇷]' >> $GITHUB_STEP_SUMMARY
+echo '  APAC --> ap-southeast-1[ap-southeast-1: Singapore 🇸🇬]' >> $GITHUB_STEP_SUMMARY
+echo '  APAC --> ap-southeast-2[ap-southeast-2: Sydney 🇦🇺]' >> $GITHUB_STEP_SUMMARY
+echo '  APAC --> ap-south-1[ap-south-1: Mumbai 🇮🇳]' >> $GITHUB_STEP_SUMMARY
+
+# South America regions
+echo '  SA --> sa-east-1[sa-east-1: São Paulo 🇧🇷]' >> $GITHUB_STEP_SUMMARY
+
+# Highlight current region
+echo "  $REGION:::current" >> $GITHUB_STEP_SUMMARY
+echo '  classDef current fill:#f96,stroke:#333,stroke-width:4px;' >> $GITHUB_STEP_SUMMARY
+echo '```' >> $GITHUB_STEP_SUMMARY
+
+# Add expected latency information
+echo "" >> $GITHUB_STEP_SUMMARY
+echo "## 📊 Expected Response Times by Region" >> $GITHUB_STEP_SUMMARY
+echo "Typical latency expectations when accessing services from different AWS regions:" >> $GITHUB_STEP_SUMMARY
+echo "" >> $GITHUB_STEP_SUMMARY
+echo "| User Location | Best Region | Expected Latency |" >> $GITHUB_STEP_SUMMARY
+echo "| ------------- | ----------- | ---------------- |" >> $GITHUB_STEP_SUMMARY
+echo "| North America | us-east-1, us-west-2 | 30-80ms |" >> $GITHUB_STEP_SUMMARY
+echo "| Europe | eu-west-1, eu-central-1 | 20-60ms |" >> $GITHUB_STEP_SUMMARY
+echo "| Asia | ap-northeast-1, ap-southeast-1 | 50-100ms |" >> $GITHUB_STEP_SUMMARY
+echo "| Australia | ap-southeast-2 | 30-70ms |" >> $GITHUB_STEP_SUMMARY
+echo "| South America | sa-east-1 | 40-90ms |" >> $GITHUB_STEP_SUMMARY
+echo "" >> $GITHUB_STEP_SUMMARY
+echo "This test was run from **$REGION_INFO**" >> $GITHUB_STEP_SUMMARY
 
 # Determine test status based on metrics and response
 if [ "$METRICS_COUNT" -lt 3 ]; then
