@@ -1,6 +1,8 @@
 import { test, expect, Page } from '@playwright/test';
 import * as fs from 'fs';
 
+console.log('Test script loaded!');
+
 const userName = process.env.TEST_USER_EMAIL || 'veronika.filipenko@cere.io';
 const otp = process.env.TEST_USER_OTP || '555555';
 
@@ -85,21 +87,44 @@ test('Environment and Geolocation Check', async ({ page }) => {
 });
 
 test('Active Quests Screen Performance', async ({ page }) => {
-  const start = Date.now();
-  await page.goto(`${appUrl}/?campaignId=${campaignId}`);
-  await page.waitForLoadState('networkidle');
+  try {
+    const start = Date.now();
+    await page.goto(`${appUrl}/?campaignId=${campaignId}`);
+    console.log('Page loaded, waiting for networkidle...');
+    await page.waitForLoadState('networkidle');
+    console.log('Network idle reached');
 
-  // await page.locator('.tgui-bca5056bf34297b0').click();
-  // await page.locator('.welcom-cta-text').click();
-  await page.locator('path').nth(1).click();
-  await page.getByRole('button', { name: 'Start Earning' }).click();
+    try {
+      await page.locator('path').nth(1).click();
+      console.log('Clicked on path[1]');
+    } catch (e) {
+      console.log('Failed to click on path[1], trying alternative selector');
+      try {
+        await page.locator('.tgui-bca5056bf34297b0').click();
+        console.log('Clicked on .tgui-bca5056bf34297b0');
+      } catch (e2) {
+        console.log('Failed to click on .tgui-bca5056bf34297b0, trying another selector');
+        await page.locator('.welcom-cta-text').click();
+        console.log('Clicked on .welcom-cta-text');
+      }
+    }
 
-  await login(page, userName, otp);
+    console.log('Waiting for "Start Earning" button...');
+    await page.getByRole('button', { name: 'Start Earning' }).click();
+    console.log('Clicked "Start Earning" button');
 
-  const timeTaken = Date.now() - start;
-  console.log(`Time to load active quests screen: ${timeTaken}ms`);
-  logTime('Active Quests Screen', timeTaken);
-  expect(timeTaken).toBeLessThan(60000);
+    console.log('Starting login process...');
+    await login(page, userName, otp);
+    console.log('Login completed');
+
+    const timeTaken = Date.now() - start;
+    console.log(`Time to load active quests screen: ${timeTaken}ms`);
+    logTime('Active Quests Screen', timeTaken);
+    expect(timeTaken).toBeLessThan(60000);
+  } catch (e) {
+    console.error('Test failed with error:', e);
+    throw e;
+  }
 });
 
 test('Leaderboard Screen Performance', async ({ page }) => {
@@ -110,7 +135,7 @@ test('Leaderboard Screen Performance', async ({ page }) => {
   // await page.locator('.tgui-bca5056bf34297b0').click();
   // await page.locator('.welcom-cta-text').click();
   await page.locator('path').nth(1).click();
-  await page.getByRole('button', { name: 'Start Earning' }).click();
+  await page.getByRole('button', { name: 'Start Earning' }).click({ timeout: 10000 });
 
   await login(page, userName, otp);
 
@@ -132,7 +157,7 @@ test('Library Screen Performance', async ({ page }) => {
   // await page.locator('.tgui-bca5056bf34297b0').click();
   // await page.locator('.welcom-cta-text').click();
   await page.locator('path').nth(1).click();
-  await page.getByRole('button', { name: 'Start Earning' }).click();
+  await page.getByRole('button', { name: 'Start Earning' }).click({ timeout: 10000 });
 
   await page.getByRole('button', { name: 'Library' }).click();
 
