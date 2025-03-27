@@ -19,7 +19,7 @@ const envConfigs = {
   },
   stage: {
     baseURL: 'https://telegram-viewer-app.stage.cere.io',
-    campaignId: '117',
+    campaignId: '120',
   },
   prod: {
     baseURL: 'https://telegram-viewer-app.cere.io',
