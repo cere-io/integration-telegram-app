@@ -23,8 +23,8 @@ const currentConfig = envConfigs[environment] || envConfigs.stage;
 
 const userName = process.env.TEST_USER_EMAIL || 'veronika.filipenko@cere.io';
 const otp = process.env.TEST_USER_OTP || '555555';
-const appUrl = currentConfig.baseURL || process.env.TEST_APP_URL;
-const campaignId = currentConfig.campaignId || process.env.TEST_CAMPAIGN_ID;
+const appUrl = process.env.TEST_APP_URL || currentConfig.baseURL;
+const campaignId = process.env.TEST_CAMPAIGN_ID || currentConfig.campaignId ;
 
 const metrics = [];
 let authError = null;

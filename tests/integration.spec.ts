@@ -4,7 +4,7 @@ import * as fs from 'fs';
 const userName = process.env.TEST_USER_EMAIL || 'veronika.filipenko@cere.io';
 const otp = process.env.TEST_USER_OTP || '555555';
 const appUrl = process.env.TEST_APP_URL || 'https://telegram-viewer-app.stage.cere.io';
-const campaignId = process.env.TEST_CAMPAIGN_ID || '117';
+const campaignId = process.env.TEST_CAMPAIGN_ID || '120';
 
 const logTime = (testName: string, time: number) => {
   const logMessage = `${testName} took ${time}ms\n`;
