@@ -142,42 +142,74 @@ extract_console_messages() {
   echo "" >> "$output_file"
   echo '```' >> "$output_file"
   
-  # Write console errors to a temp file for reliable processing
-  local error_temp_file="${OUTPUT_DIR}/console_errors_temp.txt"
+  # Save raw console errors directly from the response
+  local raw_errors_file="${OUTPUT_DIR}/raw_console_errors.txt"
+  echo "$body" > "$raw_errors_file"
   
-  # Try multiple methods to extract console errors
-  if grep -q '"consoleErrors":' "${OUTPUT_DIR}/cleaned_response.json"; then
-    # Method 1: Using jq on cleaned JSON
-    echo "Extracting console errors using jq..."
-    cat "${OUTPUT_DIR}/cleaned_response.json" | jq -r '.consoleErrors[] | "[\(.type)] [\(.time)] \(.text)"' 2>/dev/null > "$error_temp_file"
+  # Extract console errors directly with grep - most reliable method
+  if grep -q "consoleErrors" "$raw_errors_file"; then
+    # Extract and format type, time, and text entries
+    errors_found=false
     
-    # Check if we got any output
-    if [ ! -s "$error_temp_file" ]; then
-      echo "jq extraction failed, trying grep method..."
-      # Method 2: Extract with grep
-      grep -o '"type":"[^"]*","time":"[^"]*","text":"[^"]*"' "${OUTPUT_DIR}/cleaned_response.json" | \
-      sed 's/"type":"\([^"]*\)","time":"\([^"]*\)","text":"\([^"]*\)"/[\1] [\2] \3/g' > "$error_temp_file"
+    # Process 'error' type entries first - they usually contain the most important info
+    grep -o '"type":"error"[^}]*' "$raw_errors_file" | while read -r error_line; do
+      errors_found=true
+      
+      # Extract time and text from each error line
+      error_time=$(echo "$error_line" | grep -o '"time":"[^"]*"' | sed 's/"time":"//;s/"$//')
+      error_text=$(echo "$error_line" | grep -o '"text":"[^"]*"' | sed 's/"text":"//;s/"$//')
+      
+      # Print formatted error
+      echo "[error] [$error_time] $error_text" >> "$output_file"
+    done
+    
+    # Process 'pageerror' type entries next
+    grep -o '"type":"pageerror"[^}]*' "$raw_errors_file" | while read -r error_line; do
+      errors_found=true
+      
+      # Extract time and text from each error line
+      error_time=$(echo "$error_line" | grep -o '"time":"[^"]*"' | sed 's/"time":"//;s/"$//')
+      error_text=$(echo "$error_line" | grep -o '"text":"[^"]*"' | sed 's/"text":"//;s/"$//')
+      error_stack=$(echo "$error_line" | grep -o '"stack":"[^"]*"' | sed 's/"stack":"//;s/"$//' | sed 's/\\n/\n/g')
+      
+      # Print formatted error with stack trace
+      echo "[pageerror] [$error_time] $error_text" >> "$output_file"
+      if [ ! -z "$error_stack" ]; then
+        echo "Stack trace:" >> "$output_file"
+        echo "$error_stack" | sed 's/\\n/\n/g' >> "$output_file"
+        echo "" >> "$output_file"
+      fi
+    done
+    
+    # Process other types (unknown, warning, etc.)
+    grep -o '"type":"unknown"[^}]*' "$raw_errors_file" | while read -r error_line; do
+      errors_found=true
+      
+      # Extract time and text from each error line
+      error_time=$(echo "$error_line" | grep -o '"time":"[^"]*"' | sed 's/"time":"//;s/"$//')
+      error_text=$(echo "$error_line" | grep -o '"text":"[^"]*"' | sed 's/"text":"//;s/"$//')
+      
+      # Print formatted error
+      echo "[unknown] [$error_time] $error_text" >> "$output_file"
+    done
+    
+    # If no errors were processed using the structured approach, try direct extraction
+    if ! $errors_found; then
+      echo "Using direct error text extraction..." >> "$output_file"
+      
+      # Extract all error text fields
+      grep -o '"text":"[^"]*"' "$raw_errors_file" | sed 's/"text":"//;s/"$//' >> "$output_file"
     fi
   else
-    echo "No consoleErrors field found, trying direct pattern matching..."
-    # Method 3: Basic pattern matching
-    grep -o '"text":"[^"]*"' "${OUTPUT_DIR}/cleaned_response.json" | \
-    sed 's/"text":"//g; s/"$//g' > "$error_temp_file"
+    # Fallback to simple text extraction
+    echo "No structured console errors found. Extracting error-like messages:" >> "$output_file"
+    grep -o "TypeError:[^\"]*" "$raw_errors_file" | sort | uniq >> "$output_file"
+    grep -o "Cannot read properties[^\"]*" "$raw_errors_file" | sort | uniq >> "$output_file"
   fi
   
-  # If we still don't have errors, try a more aggressive approach
-  if [ ! -s "$error_temp_file" ]; then
-    echo "All extraction methods failed, trying raw extraction..."
-    # Method 4: Raw extraction of error-like text
-    grep -o 'TypeError:[^"]*' "${OUTPUT_DIR}/full_response.txt" > "$error_temp_file"
-  fi
-  
-  # Output the errors
-  if [ -s "$error_temp_file" ]; then
-    cat "$error_temp_file" >> "$output_file"
-  else
-    echo "No console errors could be extracted using automatic methods." >> "$output_file"
-    echo "See Raw Response in Debug Information section for full details." >> "$output_file"
+  # If no errors were found at all, provide a message
+  if [ ! -s "$output_file" ]; then
+    echo "No console errors could be extracted. See raw response for details." >> "$output_file"
   fi
   
   echo '```' >> "$output_file"
@@ -466,6 +498,61 @@ grep -o "Cannot read properties of[^\"]*" "${OUTPUT_DIR}/full_response.txt" | so
 echo '```' >> $GITHUB_STEP_SUMMARY
 
 echo "</details>" >> $GITHUB_STEP_SUMMARY
+
+# Add improved region visualization - world map with AWS regions
+echo "" >> $GITHUB_STEP_SUMMARY
+echo "## 🗺️ Global AWS Region Distribution" >> $GITHUB_STEP_SUMMARY
+echo '```mermaid' >> $GITHUB_STEP_SUMMARY
+echo 'flowchart TD' >> $GITHUB_STEP_SUMMARY
+echo '  World((🌍 World))' >> $GITHUB_STEP_SUMMARY
+echo '  World --> NA[North America]' >> $GITHUB_STEP_SUMMARY
+echo '  World --> EU[Europe]' >> $GITHUB_STEP_SUMMARY
+echo '  World --> APAC[Asia Pacific]' >> $GITHUB_STEP_SUMMARY
+echo '  World --> SA[South America]' >> $GITHUB_STEP_SUMMARY
+
+# North America regions
+echo '  NA --> us-east-1[us-east-1: N. Virginia 🇺🇸]' >> $GITHUB_STEP_SUMMARY
+echo '  NA --> us-east-2[us-east-2: Ohio 🇺🇸]' >> $GITHUB_STEP_SUMMARY
+echo '  NA --> us-west-1[us-west-1: N. California 🇺🇸]' >> $GITHUB_STEP_SUMMARY
+echo '  NA --> us-west-2[us-west-2: Oregon 🇺🇸]' >> $GITHUB_STEP_SUMMARY
+echo '  NA --> ca-central-1[ca-central-1: Central 🇨🇦]' >> $GITHUB_STEP_SUMMARY
+
+# Europe regions
+echo '  EU --> eu-west-1[eu-west-1: Ireland 🇮🇪]' >> $GITHUB_STEP_SUMMARY
+echo '  EU --> eu-west-2[eu-west-2: London 🇬🇧]' >> $GITHUB_STEP_SUMMARY
+echo '  EU --> eu-west-3[eu-west-3: Paris 🇫🇷]' >> $GITHUB_STEP_SUMMARY
+echo '  EU --> eu-central-1[eu-central-1: Frankfurt 🇩🇪]' >> $GITHUB_STEP_SUMMARY
+echo '  EU --> eu-north-1[eu-north-1: Stockholm 🇸🇪]' >> $GITHUB_STEP_SUMMARY
+
+# Asia Pacific regions
+echo '  APAC --> ap-northeast-1[ap-northeast-1: Tokyo 🇯🇵]' >> $GITHUB_STEP_SUMMARY
+echo '  APAC --> ap-northeast-2[ap-northeast-2: Seoul 🇰🇷]' >> $GITHUB_STEP_SUMMARY
+echo '  APAC --> ap-southeast-1[ap-southeast-1: Singapore 🇸🇬]' >> $GITHUB_STEP_SUMMARY
+echo '  APAC --> ap-southeast-2[ap-southeast-2: Sydney 🇦🇺]' >> $GITHUB_STEP_SUMMARY
+echo '  APAC --> ap-south-1[ap-south-1: Mumbai 🇮🇳]' >> $GITHUB_STEP_SUMMARY
+
+# South America regions
+echo '  SA --> sa-east-1[sa-east-1: São Paulo 🇧🇷]' >> $GITHUB_STEP_SUMMARY
+
+# Highlight current region
+echo "  $REGION:::current" >> $GITHUB_STEP_SUMMARY
+echo '  classDef current fill:#f96,stroke:#333,stroke-width:4px;' >> $GITHUB_STEP_SUMMARY
+echo '```' >> $GITHUB_STEP_SUMMARY
+
+# Add expected latency information
+echo "" >> $GITHUB_STEP_SUMMARY
+echo "## 📊 Expected Response Times by Region" >> $GITHUB_STEP_SUMMARY
+echo "Typical latency expectations when accessing services from different AWS regions:" >> $GITHUB_STEP_SUMMARY
+echo "" >> $GITHUB_STEP_SUMMARY
+echo "| User Location | Best Region | Expected Latency |" >> $GITHUB_STEP_SUMMARY
+echo "| ------------- | ----------- | ---------------- |" >> $GITHUB_STEP_SUMMARY
+echo "| North America | us-east-1, us-west-2 | 30-80ms |" >> $GITHUB_STEP_SUMMARY
+echo "| Europe | eu-west-1, eu-central-1 | 20-60ms |" >> $GITHUB_STEP_SUMMARY
+echo "| Asia | ap-northeast-1, ap-southeast-1 | 50-100ms |" >> $GITHUB_STEP_SUMMARY
+echo "| Australia | ap-southeast-2 | 30-70ms |" >> $GITHUB_STEP_SUMMARY
+echo "| South America | sa-east-1 | 40-90ms |" >> $GITHUB_STEP_SUMMARY
+echo "" >> $GITHUB_STEP_SUMMARY
+echo "This test was run from **$REGION_INFO**" >> $GITHUB_STEP_SUMMARY
 
 # Determine test status based on metrics and response
 if [ "$METRICS_COUNT" -lt 3 ]; then
