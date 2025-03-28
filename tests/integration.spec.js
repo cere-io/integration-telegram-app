@@ -532,9 +532,9 @@ async function testLeaderboardScreen({ page }) {
     console.log('Waiting for Leaderboard iframe to load...');
     const leaderboardFrame = await page.frameLocator('iframe[title="Leaderboard"]', { timeout: 60000 });
 
-    console.log('Waiting for an element inside the Leaderboard iframe to be visible...');
-    await leaderboardFrame.locator('img').first().waitFor({ state: 'visible', timeout: 60000 });
-    console.log('Element inside Leaderboard iframe is now visible.');
+    console.log('Waiting for the div with id="leaderboard" inside the Leaderboard iframe to be visible...');
+    await leaderboardFrame.locator('div#leaderboard').waitFor({ state: 'visible', timeout: 60000 });
+    console.log('Div with id="leaderboard" inside Leaderboard iframe is now visible.');
 
     let timeTaken = Date.now() - start;
     logTime('Leaderboard Screen', timeTaken);
