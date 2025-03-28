@@ -124,9 +124,10 @@ fi
 echo "$BODY" > "${OUTPUT_DIR}/full_response.txt"
 echo "Saved response to ${OUTPUT_DIR}/full_response.txt"
 
-# Display the content of the response for debugging
-echo "Response content:"
-cat "${OUTPUT_DIR}/full_response.txt" | head -50
+# Print out the full response content for debugging
+echo "========== FULL RESPONSE CONTENT =========="
+cat "${OUTPUT_DIR}/full_response.txt"
+echo "==========================================="
 
 # Clean JSON for better parsing - handle control characters
 CLEANED_JSON=$(echo "$BODY" | tr -d '\000-\037')
@@ -248,44 +249,80 @@ echo "Found $METRICS_COUNT metrics"
 # Generate performance report with region information
 echo "# 📊 Performance Test Results - $CONTINENT Region" > $GITHUB_STEP_SUMMARY
 
-extract_json_value() {
-  local file="$1"
-  local key="$2"
+# Extract values using multiple methods
+echo "========== EXTRACTING APP URL AND CAMPAIGN ID =========="
 
-  local value=$(grep -o "\"$key\":\"[^\"]*\"" "$file" | head -1 | sed "s/\"$key\":\"//g" | sed 's/"$//g')
+# JSON structure exploration
+echo "Exploring JSON structure..."
+# Attempt 1: Extract properties from testConfig object
+echo "Attempt 1: Looking for testConfig..."
+TEST_CONFIG=$(grep -o '"testConfig":{[^}]*}' "${OUTPUT_DIR}/cleaned_response.json" || echo "Not found")
+echo "testConfig: $TEST_CONFIG"
 
-  if [ -z "$value" ]; then
-    value=$(grep -o "\"testConfig\":{[^}]*\"$key\":\"[^\"]*\"" "$file" | grep -o "\"$key\":\"[^\"]*\"" | head -1 | sed "s/\"$key\":\"//g" | sed 's/"$//g')
-  fi
-
-  echo "$value"
-}
-
-APP_URL=$(extract_json_value "${OUTPUT_DIR}/cleaned_response.json" "appUrl")
-CAMPAIGN_ID=$(extract_json_value "${OUTPUT_DIR}/cleaned_response.json" "campaignId")
-
-echo "Extracted URL with new method: ${APP_URL:-Unknown}"
-echo "Extracted Campaign ID with new method: ${CAMPAIGN_ID:-Unknown}"
-
-if [ -z "$APP_URL" ]; then
-  echo "Trying alternative extraction method for URL..."
-  APP_URL=$(cat "${OUTPUT_DIR}/cleaned_response.json" | grep -o '"testConfig".*"appUrl":"[^"]*"' | grep -o '"appUrl":"[^"]*"' | sed 's/"appUrl":"//g' | sed 's/"//g')
-  echo "Alternative method result: ${APP_URL:-Still unknown}"
+# Attempt 2: Use jq if available (rarely available in CI but worth trying)
+if command -v jq &> /dev/null; then
+    echo "Attempt 2: Using jq..."
+    APP_URL=$(jq -r '.testConfig.appUrl // "Not found with jq"' "${OUTPUT_DIR}/cleaned_response.json" 2>/dev/null || echo "jq failed")
+    CAMPAIGN_ID=$(jq -r '.testConfig.campaignId // "Not found with jq"' "${OUTPUT_DIR}/cleaned_response.json" 2>/dev/null || echo "jq failed")
+    echo "jq found APP_URL: $APP_URL"
+    echo "jq found CAMPAIGN_ID: $CAMPAIGN_ID"
+else
+    echo "jq not available, skipping attempt 2"
 fi
 
-if [ -z "$CAMPAIGN_ID" ]; then
-  echo "Trying alternative extraction method for Campaign ID..."
-  CAMPAIGN_ID=$(cat "${OUTPUT_DIR}/cleaned_response.json" | grep -o '"testConfig".*"campaignId":"[^"]*"' | grep -o '"campaignId":"[^"]*"' | sed 's/"campaignId":"//g' | sed 's/"//g')
-  echo "Alternative method result: ${CAMPAIGN_ID:-Still unknown}"
+# Attempt 3: Use grep with explicit testConfig pattern
+echo "Attempt 3: Using grep with explicit patterns..."
+APP_URL=$(grep -o '"testConfig":{[^}]*"appUrl":"[^"]*"' "${OUTPUT_DIR}/cleaned_response.json" | grep -o '"appUrl":"[^"]*"' | head -1 | sed 's/"appUrl":"//g' | sed 's/"//g' || echo "Not found")
+CAMPAIGN_ID=$(grep -o '"testConfig":{[^}]*"campaignId":"[^"]*"' "${OUTPUT_DIR}/cleaned_response.json" | grep -o '"campaignId":"[^"]*"' | head -1 | sed 's/"campaignId":"//g' | sed 's/"//g' || echo "Not found")
+echo "grep found APP_URL: $APP_URL"
+echo "grep found CAMPAIGN_ID: $CAMPAIGN_ID"
+
+# Attempt 4: Direct search without testConfig
+if [ "$APP_URL" = "Not found" ]; then
+    echo "Attempt 4: Direct search without testConfig..."
+    APP_URL=$(grep -o '"appUrl":"[^"]*"' "${OUTPUT_DIR}/cleaned_response.json" | head -1 | sed 's/"appUrl":"//g' | sed 's/"//g' || echo "Still not found")
+    echo "Direct search found APP_URL: $APP_URL"
 fi
 
-echo "Found APP_URL: ${APP_URL:-Unknown}" >> "${OUTPUT_DIR}/extraction_debug.log"
-echo "Found CAMPAIGN_ID: ${CAMPAIGN_ID:-Unknown}" >> "${OUTPUT_DIR}/extraction_debug.log"
+if [ "$CAMPAIGN_ID" = "Not found" ]; then
+    CAMPAIGN_ID=$(grep -o '"campaignId":"[^"]*"' "${OUTPUT_DIR}/cleaned_response.json" | head -1 | sed 's/"campaignId":"//g' | sed 's/"//g' || echo "Still not found")
+    echo "Direct search found CAMPAIGN_ID: $CAMPAIGN_ID"
+fi
 
+# Attempt 5: Search in full response with broader pattern
+if [ "$APP_URL" = "Still not found" ]; then
+    echo "Attempt 5: Broader pattern search in full response..."
+    APP_URL=$(grep -o 'appUrl.*[^,}]*' "${OUTPUT_DIR}/full_response.txt" | head -1 || echo "Not found in full response")
+    echo "Broader search found APP_URL: $APP_URL"
+fi
+
+if [ "$CAMPAIGN_ID" = "Still not found" ]; then
+    CAMPAIGN_ID=$(grep -o 'campaignId.*[^,}]*' "${OUTPUT_DIR}/full_response.txt" | head -1 || echo "Not found in full response")
+    echo "Broader search found CAMPAIGN_ID: $CAMPAIGN_ID"
+fi
+
+# Check if we were successful
+if [[ "$APP_URL" =~ "Not found" ]] || [[ "$APP_URL" == "" ]]; then
+    # Use default for stage environment
+    APP_URL="https://telegram-viewer-app.stage.cere.io (default)"
+    echo "Using default APP_URL: $APP_URL"
+fi
+
+if [[ "$CAMPAIGN_ID" =~ "Not found" ]] || [[ "$CAMPAIGN_ID" == "" ]]; then
+    # Use default for stage environment
+    CAMPAIGN_ID="120 (default)"
+    echo "Using default CAMPAIGN_ID: $CAMPAIGN_ID"
+fi
+
+echo "Final values:"
+echo "APP_URL: $APP_URL"
+echo "CAMPAIGN_ID: $CAMPAIGN_ID"
+
+# Add test configuration to report
 echo "" >> $GITHUB_STEP_SUMMARY
 echo "## Test Configuration" >> $GITHUB_STEP_SUMMARY
-echo "- **App URL:** ${APP_URL:-Unknown}" >> $GITHUB_STEP_SUMMARY
-echo "- **Campaign ID:** ${CAMPAIGN_ID:-Unknown}" >> $GITHUB_STEP_SUMMARY
+echo "- **App URL:** ${APP_URL}" >> $GITHUB_STEP_SUMMARY
+echo "- **Campaign ID:** ${CAMPAIGN_ID}" >> $GITHUB_STEP_SUMMARY
 echo "- **Region:** ${REGION} (${REGION_INFO})" >> $GITHUB_STEP_SUMMARY
 echo "- **Environment:** ${ENVIRONMENT}" >> $GITHUB_STEP_SUMMARY
 echo "" >> $GITHUB_STEP_SUMMARY
@@ -389,8 +426,8 @@ echo "## 🌎 Environment & Location" >> $GITHUB_STEP_SUMMARY
 echo "- **Environment:** ${ENVIRONMENT}" >> $GITHUB_STEP_SUMMARY
 
 # Add target information
-echo "- **Target URL:** ${APP_URL:-Unknown}" >> $GITHUB_STEP_SUMMARY
-echo "- **Campaign ID:** ${CAMPAIGN_ID:-Unknown}" >> $GITHUB_STEP_SUMMARY
+echo "- **Target URL:** ${APP_URL}" >> $GITHUB_STEP_SUMMARY
+echo "- **Campaign ID:** ${CAMPAIGN_ID}" >> $GITHUB_STEP_SUMMARY
 
 # Create a region badge based on continent
 case "$CONTINENT" in
