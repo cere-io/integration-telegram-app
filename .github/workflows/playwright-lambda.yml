@@ -169,6 +169,7 @@ jobs:
               --role "arn:aws:iam::${{ needs.get-env.outputs.account_id }}:role/lambda-playwright-test" \
               --timeout 900 \
               --cli-read-timeout 900 \
+              --cli-connect-timeout 900 \ 
               --memory-size 2048 \
               --zip-file fileb://lambda-package.zip \
               --region ${{ matrix.region }}
