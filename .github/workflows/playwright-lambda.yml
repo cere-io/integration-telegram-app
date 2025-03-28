@@ -168,8 +168,6 @@ jobs:
               --handler index.handler \
               --role "arn:aws:iam::${{ needs.get-env.outputs.account_id }}:role/lambda-playwright-test" \
               --timeout 900 \
-              --cli-read-timeout 900 \
-              --cli-connect-timeout 900 \ 
               --memory-size 2048 \
               --zip-file fileb://lambda-package.zip \
               --region ${{ matrix.region }}
@@ -216,6 +214,8 @@ jobs:
             --payload '{"region": "${{ matrix.region }}", "environment": "${{ needs.get-env.outputs.env }}"}' \
             --cli-binary-format raw-in-base64-out \
             --output json \
+            --cli-read-timeout 900 
+            --cli-connect-timeout 900
             /dev/stdout) || {
               echo "::error::Lambda invocation timed out or failed to execute"
               exit 1
