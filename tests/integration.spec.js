@@ -523,11 +523,11 @@ async function testLeaderboardScreen({ page }) {
   let start = Date.now();
 
   try {
-    // Click on leaderboard tab
-    await page.locator('button:nth-child(2)').click();
-
+    await page.locator('button:has-text("Leaderboard")').click();
+    console.log('Clicked on Leaderboard button');
     // Very brief wait
-    await page.waitForTimeout(500);
+    const leaderboardFrame = await page.frameLocator('iframe[title="Leaderboard"]');
+    await leaderboardFrame.locator('.l1aglqh0').waitFor({ state: 'visible', timeout: ELEMENT_TIMEOUT });
 
     let timeTaken = Date.now() - start;
     logTime('Leaderboard Screen', timeTaken);
