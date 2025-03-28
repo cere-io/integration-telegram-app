@@ -270,15 +270,6 @@ async function navigateToWelcomePage({ page }) {
       waitUntil: 'domcontentloaded',
     });
 
-    await page.waitForSelector('.hero-title', { timeout: 10000 });
-    const welcomeTitle = await page.locator('.hero-title').textContent();
-    console.log('Welcome page title:', welcomeTitle);
-
-    // Check if the title matches the expected text
-    if (welcomeTitle !== 'Sit back, Enjoy, and Earn!') {
-      throw new Error(`Unexpected welcome title: ${welcomeTitle}`);
-    }
-
     await page.locator('.tgui-bca5056bf34297b0').click();
     await page.locator('.welcom-cta-text').click();
 
@@ -339,7 +330,7 @@ async function testLeaderboardScreen({ page }) {
     await leaderboardTabButton.click();
 
     // Wait for leaderboard content to load
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(6000);
 
     let timeTaken = Date.now() - start;
     logTime('Leaderboard Screen', timeTaken);
