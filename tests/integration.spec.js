@@ -526,8 +526,19 @@ async function testLeaderboardScreen({ page }) {
     await page.locator('button:has-text("Leaderboard")').scrollIntoViewIfNeeded();
     await page.locator('button:has-text("Leaderboard")').click({ force: true });
     console.log('Clicked on Leaderboard button');
-    // Very brief wait
-    const leaderboardFrame = await page.frameLocator('iframe[title="Leaderboard"]');
+
+    await page.waitForSelector('iframe[title="Leaderboard"]', { timeout: NAVIGATION_TIMEOUT });
+
+    const leaderboardFrameHandle = await page.$('iframe[title="Leaderboard"]');
+    if (!leaderboardFrameHandle) {
+      throw new Error('Leaderboard iframe not found');
+    }
+
+    const leaderboardFrame = await leaderboardFrameHandle.contentFrame();
+    if (!leaderboardFrame) {
+      throw new Error('Could not access Leaderboard iframe content');
+    }
+
     await leaderboardFrame.locator('.l1aglqh0').waitFor({ state: 'visible', timeout: ELEMENT_TIMEOUT });
 
     let timeTaken = Date.now() - start;
