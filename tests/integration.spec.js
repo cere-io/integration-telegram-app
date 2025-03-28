@@ -527,13 +527,9 @@ async function testLeaderboardScreen({ page }) {
     await page.locator('button:has-text("Leaderboard")').click({ force: true });
     console.log('Clicked on Leaderboard button');
 
-    await page.locator('button:has-text("Leaderboard")').scrollIntoViewIfNeeded();
-    await page.locator('button:has-text("Leaderboard")').click({ force: true });
-    console.log('Clicked on Leaderboard button');
-
     const leaderboardFrame = await page.frameLocator('iframe[title="Leaderboard"]', { timeout: 60000 });
 
-    await leaderboardFrame.waitForLoadState('domcontentloaded');
+    await leaderboardFrame.locator('img').first().waitFor({ state: 'visible', timeout: 60000 });
 
     await leaderboardFrame.locator('img').first().click();
 
