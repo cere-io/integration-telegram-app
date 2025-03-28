@@ -527,7 +527,13 @@ async function testLeaderboardScreen({ page }) {
     await page.locator('button:has-text("Leaderboard")').click({ force: true });
     console.log('Clicked on Leaderboard button');
 
-    await page.waitForSelector('iframe[title="Leaderboard"]', { timeout: NAVIGATION_TIMEOUT });
+    await page.waitForFunction(
+      () => {
+        const iframe = document.querySelector('iframe[title="Leaderboard"]');
+        return iframe && iframe.offsetHeight > 0; // Проверяем, что iframe существует и видим
+      },
+      { timeout: NAVIGATION_TIMEOUT },
+    );
 
     const leaderboardFrameHandle = await page.$('iframe[title="Leaderboard"]');
     if (!leaderboardFrameHandle) {
