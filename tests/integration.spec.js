@@ -1,4 +1,3 @@
-import { chromium } from 'playwright';
 import fs from 'fs';
 
 const envConfigs = {
