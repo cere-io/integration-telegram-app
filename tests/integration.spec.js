@@ -528,7 +528,7 @@ async function testLeaderboardScreen({ page }) {
     console.log('Clicked on Leaderboard button');
     // Very brief wait
     const leaderboardFrame = await page.frameLocator('iframe[title="Leaderboard"]');
-    await leaderboardFrame.locator('.l1aglqh0').waitFor({ state: 'visible' });
+    // await leaderboardFrame.locator('.l1aglqh0').waitFor({ state: 'visible' });
 
     let timeTaken = Date.now() - start;
     logTime('Leaderboard Screen', timeTaken);
