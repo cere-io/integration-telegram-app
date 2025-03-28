@@ -341,21 +341,38 @@ import { brotliDecompressSync } from 'zlib';
 
 const CHROMIUM_URL = 'https://github.com/Sparticuz/chromium/releases/download/v133.0.0/chromium-v133.0.0-pack.tar';
 
-// Configuration for different environments
-const envConfigs = {
-  dev: {
-    baseURL: process.env.DEV_APP_URL || 'https://telegram-viewer-app.stage.cere.io',
-    campaignId: process.env.DEV_CAMPAIGN_ID || '120',
-  },
-  stage: {
-    baseURL: process.env.STAGE_APP_URL || 'https://telegram-viewer-app.stage.cere.io',
-    campaignId: process.env.STAGE_CAMPAIGN_ID || '120',
-  },
-  prod: {
-    baseURL: process.env.PROD_APP_URL || 'https://telegram-viewer-app.cere.io',
-    campaignId: process.env.PROD_CAMPAIGN_ID || '40',
-  },
-};
+// More flexible configuration handling
+function getEnvConfig(environment) {
+  // Extract config from environment variables with dynamic keys
+  const config = {
+    baseURL: process.env[`${environment.toUpperCase()}_APP_URL`] || null,
+    campaignId: process.env[`${environment.toUpperCase()}_CAMPAIGN_ID`] || null
+  };
+  
+  // Check for event-provided config
+  if (process.env.EVENT_APP_URL && process.env.EVENT_APP_URL !== 'undefined') {
+    config.baseURL = process.env.EVENT_APP_URL;
+    console.log('Using app URL from event:', config.baseURL);
+  }
+  
+  if (process.env.EVENT_CAMPAIGN_ID && process.env.EVENT_CAMPAIGN_ID !== 'undefined') {
+    config.campaignId = process.env.EVENT_CAMPAIGN_ID;
+    console.log('Using campaign ID from event:', config.campaignId);
+  }
+  
+  // Apply fallback defaults if needed
+  if (!config.baseURL) {
+    config.baseURL = environment === 'prod' 
+      ? 'https://telegram-viewer-app.cere.io'
+      : 'https://telegram-viewer-app.stage.cere.io';
+  }
+  
+  if (!config.campaignId) {
+    config.campaignId = environment === 'prod' ? '40' : '120';
+  }
+  
+  return config;
+}
 
 async function downloadFile(url, destination) {
   console.log('Starting download from:', url);
@@ -548,13 +565,22 @@ export const handler = async (event) => {
     // Get environment and region from event
     const region = event.region || process.env.AWS_REGION || 'unknown';
     const environment = event.environment || 'stage';
+    
+    // Store event config if provided
+    if (event.appUrl) {
+      process.env.EVENT_APP_URL = event.appUrl;
+    }
+    
+    if (event.campaignId) {
+      process.env.EVENT_CAMPAIGN_ID = event.campaignId;
+    }
 
     // Set environment variables for tests
     process.env.AWS_REGION = region;
     process.env.TEST_ENV = environment;
 
     // Get environment config
-    const config = envConfigs[environment] || envConfigs.stage;
+    const config = getEnvConfig(environment);
 
     // Set test specific environment variables
     process.env.TEST_APP_URL = config.baseURL;
@@ -784,6 +810,12 @@ export const handler = async (event) => {
          errorOutput: testResult.errorOutput || '',
          performanceMetrics: performanceMetrics,
          metrics: metrics,
+         testConfig: {
+           appUrl: config.baseURL,
+           campaignId: config.campaignId,
+           environment: environment,
+           region: region
+         },
          authError: testResult.authError || null,
          consoleErrors: uniqueConsoleErrors.length > 0 ? uniqueConsoleErrors : [],
          region: region,
@@ -837,6 +869,16 @@ export const handler = async (event) => {
        console.error('Error reading console errors in catch block:', fileError);
      }
 
+     // Get environment config even in case of error
+     const environment = event.environment || 'unknown';
+     let config = { baseURL: 'unknown', campaignId: 'unknown' };
+     
+     try {
+       config = getEnvConfig(environment);
+     } catch (configError) {
+       console.error('Failed to get config:', configError);
+     }
+     
      return {
        statusCode: 500,
        body: JSON.stringify({
@@ -846,20 +888,43 @@ export const handler = async (event) => {
          authError: testResult && testResult.authError ? testResult.authError : null,
          consoleErrors: (testResult && testResult.consoleErrors && testResult.consoleErrors.length > 0) ?
                          testResult.consoleErrors : consoleErrorsFromFile,
-         region: region,
-         environment: environment,
+         testConfig: {
+           appUrl: config.baseURL,
+           campaignId: config.campaignId,
+           environment: environment,
+           region: event.region || process.env.AWS_REGION || 'unknown'
+         },
+         region: event.region || process.env.AWS_REGION || 'unknown',
+         environment: event.environment || 'unknown',
          executionTime: new Date().toISOString()
        }, null, 2)
      };
    }
   } catch (error) {
     console.error('Error:', error);
+    
+    // Get environment config even in case of error
+    const environment = event.environment || 'unknown';
+    let config = { baseURL: 'unknown', campaignId: 'unknown' };
+    
+    try {
+      config = getEnvConfig(environment);
+    } catch (configError) {
+      console.error('Failed to get config:', configError);
+    }
+    
     return {
       statusCode: 500,
       body: JSON.stringify({
         error: error.message,
         stack: error.stack,
         authError: null,
+        testConfig: {
+          appUrl: config.baseURL,
+          campaignId: config.campaignId,
+          environment: environment,
+          region: event.region || process.env.AWS_REGION || 'unknown'
+        },
         region: event.region || process.env.AWS_REGION || 'unknown',
         environment: event.environment || 'unknown'
       })

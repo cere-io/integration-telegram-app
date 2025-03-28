@@ -243,7 +243,21 @@ echo "Found $METRICS_COUNT metrics"
 
 # Generate performance report with region information
 echo "# 📊 Performance Test Results - $CONTINENT Region" > $GITHUB_STEP_SUMMARY
-echo "Testing from: **$REGION_INFO**" >> $GITHUB_STEP_SUMMARY
+
+# Extract URL and Campaign ID from response
+APP_URL=$(grep -o '"appUrl":"[^"]*"' "${OUTPUT_DIR}/cleaned_response.json" | sed 's/"appUrl":"//g; s/"$//g')
+CAMPAIGN_ID=$(grep -o '"campaignId":"[^"]*"' "${OUTPUT_DIR}/cleaned_response.json" | sed 's/"campaignId":"//g; s/"$//g')
+
+# If not found in top level, check in testConfig object
+if [ -z "$APP_URL" ]; then
+  APP_URL=$(grep -o '"testConfig":{[^}]*"appUrl":"[^"]*"' "${OUTPUT_DIR}/cleaned_response.json" | grep -o '"appUrl":"[^"]*"' | sed 's/"appUrl":"//g; s/"$//g')
+fi
+if [ -z "$CAMPAIGN_ID" ]; then
+  CAMPAIGN_ID=$(grep -o '"testConfig":{[^}]*"campaignId":"[^"]*"' "${OUTPUT_DIR}/cleaned_response.json" | grep -o '"campaignId":"[^"]*"' | sed 's/"campaignId":"//g; s/"$//g')
+fi
+
+echo "Testing: **${APP_URL:-Unknown}** (Campaign ID: **${CAMPAIGN_ID:-Unknown}**)" >> $GITHUB_STEP_SUMMARY
+echo "From region: **$REGION_INFO**" >> $GITHUB_STEP_SUMMARY
 echo "" >> $GITHUB_STEP_SUMMARY
 
 if [ -z "$METRICS" ] || [ "$METRICS_COUNT" -lt 3 ]; then
@@ -344,6 +358,10 @@ echo "" >> $GITHUB_STEP_SUMMARY
 echo "## 🌎 Environment & Location" >> $GITHUB_STEP_SUMMARY
 echo "- **Environment:** ${ENVIRONMENT}" >> $GITHUB_STEP_SUMMARY
 
+# Add target information
+echo "- **Target URL:** ${APP_URL:-Unknown}" >> $GITHUB_STEP_SUMMARY
+echo "- **Campaign ID:** ${CAMPAIGN_ID:-Unknown}" >> $GITHUB_STEP_SUMMARY
+
 # Create a region badge based on continent
 case "$CONTINENT" in
   "North America")
@@ -385,7 +403,7 @@ echo 'graph TD' >> $GITHUB_STEP_SUMMARY
 echo '    subgraph "Global AWS Regions"' >> $GITHUB_STEP_SUMMARY
 echo '        na[North America]' >> $GITHUB_STEP_SUMMARY
 echo '        eu[Europe]' >> $GITHUB_STEP_SUMMARY
-echo '        ap[Asia-Pacific]' >> $GITHUB_STEP_SUMMARY
+echo '        ap[Asia Pacific]' >> $GITHUB_STEP_SUMMARY
 echo '        sa[South America]' >> $GITHUB_STEP_SUMMARY
 echo '    end' >> $GITHUB_STEP_SUMMARY
 
