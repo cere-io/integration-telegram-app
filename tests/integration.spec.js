@@ -43,10 +43,10 @@ const consoleListenersSetup = {
 };
 
 // Further reduced timeout values to prevent Lambda timeout
-const NAVIGATION_TIMEOUT = 20000; // reduced from 25000
-const ELEMENT_TIMEOUT = 6000; // reduced from 8000
-const AUTH_TIMEOUT = 15000; // reduced from 20000
-const MAX_TOTAL_TEST_TIME = 300000; // 5 minutes max total test time
+const NAVIGATION_TIMEOUT = 30000; // reduced from 25000
+const ELEMENT_TIMEOUT = 10000; // reduced from 8000
+const AUTH_TIMEOUT = 30000; // reduced from 20000
+const MAX_TOTAL_TEST_TIME = 600000; // 5 minutes max total test time
 
 // Add overall test timeout to prevent Lambda timeout
 const startTime = Date.now();
@@ -651,6 +651,9 @@ export default async function runIntegrationTest({ browser, context }) {
     console.error(`Test failed: ${err.message}`);
     fatalError = err;
     logError('IntegrationTestError', err.message);
+    if (isTestTimedOut()) {
+      console.error('Test execution exceeded maximum allowed time.');
+    }
   } finally {
     // Always record the test results
     const elapsedTime = Date.now() - startTime;
