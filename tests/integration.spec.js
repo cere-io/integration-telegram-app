@@ -119,19 +119,19 @@ const signUp = async (page) => {
   try {
     // Enable browser resource loading
     await setupBrowserOptions(page);
-    
+
     // Step 1: Navigate to the page and handle the welcome screen
     console.log(`Navigating to welcome page: ${appUrl}/?campaignId=${campaignId}`);
     await page.goto(`${appUrl}/?campaignId=${campaignId}`, {
       waitUntil: 'domcontentloaded',
       timeout: NAVIGATION_TIMEOUT,
     });
-    
+
     try {
       console.log('Clicking welcome buttons...');
       await page.waitForSelector('.tgui-bca5056bf34297b0', { timeout: ELEMENT_TIMEOUT });
       await page.click('.tgui-bca5056bf34297b0');
-      
+
       await page.waitForSelector('.welcom-cta-text', { timeout: ELEMENT_TIMEOUT });
       await page.click('.welcom-cta-text');
       console.log('Clicked welcome buttons');
@@ -142,130 +142,130 @@ const signUp = async (page) => {
     // Step 2: Wait for Torus iframe
     console.log('Waiting for Torus iframe...');
     await page.waitForSelector('#torusIframe', { timeout: NAVIGATION_TIMEOUT });
-    
+
     // Get all frames and find Torus iframe
     const frames = page.frames();
     console.log(`Found ${frames.length} frames on the page`);
-    
+
     // Find the Torus iframe by its ID
     const torusIframeHandle = await page.$('#torusIframe');
     if (!torusIframeHandle) {
       throw new Error('Could not find Torus iframe element');
     }
-    
+
     // Get the corresponding frame
     const torusFrame = await torusIframeHandle.contentFrame();
     if (!torusFrame) {
       throw new Error('Could not access Torus iframe content');
     }
-    
+
     console.log('Successfully accessed Torus iframe');
-    
+
     // Step 3: Find and access the embedded browser iframe
     console.log('Looking for embedded browser iframe...');
     await page.waitForTimeout(2000); // Give iframe some time to load
-    
+
     // Let's list all child frames to debug
     const childFrames = torusFrame.childFrames();
     console.log(`Torus iframe has ${childFrames.length} child frames`);
-    
+
     // Wait for embedded iframe element within Torus frame
     const embeddedIframeElement = await torusFrame.waitForSelector('iframe[title="Embedded browser"]', {
-      timeout: NAVIGATION_TIMEOUT
+      timeout: NAVIGATION_TIMEOUT,
     });
-    
+
     if (!embeddedIframeElement) {
       throw new Error('Could not find embedded browser iframe element');
     }
-    
+
     // Get the embedded frame
     const embeddedFrame = await embeddedIframeElement.contentFrame();
     if (!embeddedFrame) {
       throw new Error('Could not access embedded browser iframe content');
     }
-    
+
     console.log('Successfully accessed embedded browser iframe');
 
     // Step 4: Create a new wallet
     console.log('Looking for "Create a new wallet" button...');
     await embeddedFrame.waitForSelector('button:has-text("Create a new wallet")', {
       state: 'visible',
-      timeout: ELEMENT_TIMEOUT
+      timeout: ELEMENT_TIMEOUT,
     });
-    
+
     console.log('Clicking "Create a new wallet" button...');
     await embeddedFrame.click('button:has-text("Create a new wallet")');
-    
+
     // Step 5: Fill in email
     console.log('Looking for email field...');
     await embeddedFrame.waitForSelector('input[name="email"]', {
       state: 'visible',
-      timeout: ELEMENT_TIMEOUT
+      timeout: ELEMENT_TIMEOUT,
     });
-    
+
     console.log('Filling email field...');
     await embeddedFrame.fill('input[name="email"]', randomEmail);
-    
+
     // Step 6: Click Sign Up
     console.log('Looking for "Sign Up" button...');
     await embeddedFrame.waitForSelector('button:has-text("Sign Up")', {
       state: 'visible',
-      timeout: ELEMENT_TIMEOUT
+      timeout: ELEMENT_TIMEOUT,
     });
-    
+
     console.log('Clicking "Sign Up" button...');
     await embeddedFrame.click('button:has-text("Sign Up")');
-    
+
     // Step 7: Fill OTP
     console.log('Looking for OTP field...');
     await embeddedFrame.waitForSelector('input[aria-label="OTP input"]', {
       state: 'visible',
-      timeout: ELEMENT_TIMEOUT
+      timeout: ELEMENT_TIMEOUT,
     });
-    
+
     console.log('Filling OTP field...');
     await embeddedFrame.fill('input[aria-label="OTP input"]', otp);
-    
+
     // Step 8: Click Verify
     console.log('Looking for "Verify" button...');
     await embeddedFrame.waitForSelector('button:has-text("Verify")', {
       state: 'visible',
-      timeout: ELEMENT_TIMEOUT
+      timeout: ELEMENT_TIMEOUT,
     });
-    
+
     console.log('Clicking "Verify" button...');
     await embeddedFrame.click('button:has-text("Verify")');
-    
+
     // Step 9: Handle Continue button if it appears
     try {
       console.log('Looking for "Continue" button...');
       await embeddedFrame.waitForSelector('button:has-text("Continue")', {
         state: 'visible',
-        timeout: AUTH_TIMEOUT
+        timeout: AUTH_TIMEOUT,
       });
-      
+
       console.log('Clicking "Continue" button...');
       await embeddedFrame.click('button:has-text("Continue")');
     } catch (continueError) {
       console.log('Continue button not found - may not be needed for this flow');
     }
-    
+
     // Step 10: Wait for authentication to complete
     console.log('Waiting for authentication to complete...');
     await page.waitForTimeout(3000);
-    
+
     // Try to find confirmation of successful login
     console.log('Checking for Active Quests tab...');
     try {
       await page.waitForSelector('span:has-text("Active Quests")', {
-        timeout: ELEMENT_TIMEOUT
+        timeout: ELEMENT_TIMEOUT,
       });
       console.log('Found Active Quests tab by text');
     } catch (error) {
       console.log('Could not find Active Quests by text, checking alternative selectors...');
       try {
         await page.waitForSelector('.tgui-e6658d0b8927f95e', {
-          timeout: ELEMENT_TIMEOUT
+          timeout: ELEMENT_TIMEOUT,
         });
         console.log('Found Active Quests tab by class');
       } catch (error) {
@@ -274,12 +274,12 @@ const signUp = async (page) => {
         throw new Error('Failed to confirm authentication - Active Quests tab not found');
       }
     }
-    
+
     console.log('Signup successful');
     return { success: true, consoleErrors, email: randomEmail };
   } catch (error) {
     console.error(`Signup error: ${error.message}`);
-    
+
     // Take a screenshot for debugging
     try {
       await page.screenshot({ path: '/tmp/signup-error.png' });
@@ -287,7 +287,7 @@ const signUp = async (page) => {
     } catch (screenshotError) {
       // Ignore screenshot errors
     }
-    
+
     // Record auth error
     authError = {
       type: 'SignupError',
@@ -297,13 +297,13 @@ const signUp = async (page) => {
     };
 
     logError('Web3AuthSignupError', error.message);
-    
+
     // Add fake metrics to pass the test even with auth issues
     if (metrics.length === 0) {
       logTime('Active Quests Screen', 0);
       console.log('Added placeholder metric for Active Quests Screen due to auth error');
     }
-    
+
     throw error;
   }
 };
@@ -582,6 +582,7 @@ export default async function runIntegrationTest({ browser, context }) {
     fs.writeFileSync('/tmp/console-errors.txt', '');
     fs.writeFileSync('/tmp/performance-log.txt', '');
     fs.writeFileSync('/tmp/error-log.txt', '');
+
     fs.writeFileSync('/tmp/lambda-report.json', '{}');
   } catch (error) {
     console.error(`Error initializing log files: ${error.message}`);
