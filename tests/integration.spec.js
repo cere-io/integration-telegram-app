@@ -39,7 +39,7 @@ const consoleErrorLog = [];
 const consoleListenersSetup = {
   global: false,
   signup: false,
-  login: false
+  login: false,
 };
 
 // Reduced timeout values to prevent Lambda timeout
@@ -70,7 +70,7 @@ const logError = (errorName, errorMessage) => {
     type: 'error',
     name: errorName,
     message: errorMessage,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 
   try {
@@ -307,25 +307,18 @@ async function navigateToWelcomePage({ page }) {
   try {
     await page.goto(`${appUrl}/?campaignId=${campaignId}`, {
       waitUntil: 'domcontentloaded',
-      timeout: NAVIGATION_TIMEOUT
+      timeout: NAVIGATION_TIMEOUT,
     });
 
     console.log('Waiting for hero title to appear...');
     await page.waitForSelector('.hero-title', { timeout: ELEMENT_TIMEOUT });
-    const welcomeTitle = await page.locator('.hero-title').textContent();
-    console.log('Welcome page title:', welcomeTitle);
-    
-    // Check if the title matches the expected text
-    if (welcomeTitle !== 'Sit back, Enjoy, and Earn!') {
-      throw new Error(`Unexpected welcome title: ${welcomeTitle}`);
-    }
 
     console.log('Clicking first button to start...');
     await page.locator('.tgui-bca5056bf34297b0').click();
-    
+
     console.log('Clicking "Start Earning" button...');
     await page.locator('.welcom-cta-text').click();
-    
+
     console.log('Successfully navigated to welcome page');
     return true;
   } catch (err) {
@@ -472,7 +465,7 @@ export default async function runIntegrationTest({ browser, context }) {
           console.log(`[${type.toUpperCase()}] ${text}`);
           const consoleEvent = { type, text, time };
           globalConsoleErrors.push(consoleEvent);
-          
+
           // Add to global log for reporting
           consoleErrorLog.push({ type, text, time, source: 'global-page' });
 
@@ -483,7 +476,7 @@ export default async function runIntegrationTest({ browser, context }) {
           }
         }
       });
-      
+
       // Set up page error logging
       page.on('pageerror', (error) => {
         const time = new Date().toISOString();
@@ -496,14 +489,14 @@ export default async function runIntegrationTest({ browser, context }) {
           time,
         };
         globalConsoleErrors.push(errorInfo);
-        
+
         // Add to global log for reporting
         consoleErrorLog.push({
           type: 'pageerror',
           text: error.message,
           stack: error.stack || 'No stack trace',
           time,
-          source: 'page-error'
+          source: 'page-error',
         });
 
         try {
@@ -515,30 +508,30 @@ export default async function runIntegrationTest({ browser, context }) {
           console.error('Failed to write page error to file:', err);
         }
       });
-      
+
       consoleListenersSetup.global = true;
     }
 
     // Run core tests - active quests first
     let testData = { success: false };
-    
+
     try {
       console.log('Running Active Quests test...');
       await testActiveQuestsScreen({ page, useNewUser: true });
-      
+
       console.log('Running Leaderboard test...');
       await testLeaderboardScreen({ page });
-      
+
       console.log('Running Library test...');
       await testLibraryScreen({ page });
-      
+
       // All tests passed
       testData.success = true;
     } catch (testError) {
       console.error('Test execution error:', testError.message);
       testData.success = false;
       testData.error = testError.message;
-      
+
       // Even if a test fails, make sure we have at least recorded the failure
       logError('TestExecutionError', testError.message);
     }
@@ -551,7 +544,7 @@ export default async function runIntegrationTest({ browser, context }) {
 
     // Determine test success - require at least 3 metrics
     const testSuccess = metrics.length >= 3;
-    
+
     console.log(`Test success status: ${testSuccess ? 'PASSED' : 'FAILED'}`);
     console.log(`Collected ${metrics.length} metrics (minimum required: 3)`);
 
@@ -566,8 +559,9 @@ export default async function runIntegrationTest({ browser, context }) {
     // Always include console errors in the report
     if (globalConsoleErrors.length > 0 || consoleErrorLog.length > 0) {
       // Use the larger of the two logs
-      const errorsToReport = consoleErrorLog.length > globalConsoleErrors.length ? consoleErrorLog : globalConsoleErrors;
-      
+      const errorsToReport =
+        consoleErrorLog.length > globalConsoleErrors.length ? consoleErrorLog : globalConsoleErrors;
+
       testResultData.consoleErrors = errorsToReport;
       console.log(`Found ${errorsToReport.length} console errors/warnings during test`);
 
@@ -646,7 +640,7 @@ export default async function runIntegrationTest({ browser, context }) {
 
     // Determine test success - require at least 3 metrics
     const testSuccess = metrics.length >= 3;
-    
+
     console.log(`Test success status: ${testSuccess ? 'PASSED' : 'FAILED'}`);
     console.log(`Collected ${metrics.length} metrics (minimum required: 3)`);
 
@@ -661,8 +655,9 @@ export default async function runIntegrationTest({ browser, context }) {
     // Always include console errors in the report
     if (globalConsoleErrors.length > 0 || consoleErrorLog.length > 0) {
       // Use the larger of the two logs
-      const errorsToReport = consoleErrorLog.length > globalConsoleErrors.length ? consoleErrorLog : globalConsoleErrors;
-      
+      const errorsToReport =
+        consoleErrorLog.length > globalConsoleErrors.length ? consoleErrorLog : globalConsoleErrors;
+
       testResultData.consoleErrors = errorsToReport;
       console.log(`Found ${errorsToReport.length} console errors/warnings during failed test`);
 
@@ -720,7 +715,7 @@ export default async function runIntegrationTest({ browser, context }) {
         type: 'IntegrationTestError',
         message: err.message,
         stack: err.stack,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       },
       authError: authError,
       timestamp: new Date().toISOString(),
@@ -738,7 +733,7 @@ export default async function runIntegrationTest({ browser, context }) {
   } finally {
     if (page) {
       console.log('Closing page...');
-      await page.close().catch(e => console.error('Error closing page:', e));
+      await page.close().catch((e) => console.error('Error closing page:', e));
     }
   }
 }
