@@ -310,9 +310,6 @@ async function navigateToWelcomePage({ page }) {
       timeout: NAVIGATION_TIMEOUT,
     });
 
-    console.log('Waiting for hero title to appear...');
-    await page.waitForSelector('.hero-title', { timeout: ELEMENT_TIMEOUT });
-
     console.log('Clicking first button to start...');
     await page.locator('.tgui-bca5056bf34297b0').click();
 
