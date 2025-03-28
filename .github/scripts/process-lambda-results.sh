@@ -248,31 +248,25 @@ echo "Found $METRICS_COUNT metrics"
 # Generate performance report with region information
 echo "# 📊 Performance Test Results - $CONTINENT Region" > $GITHUB_STEP_SUMMARY
 
-# Функция для улучшенного извлечения данных из JSON
 extract_json_value() {
   local file="$1"
   local key="$2"
-  
-  # Метод 1: Попытка найти ключ напрямую
+
   local value=$(grep -o "\"$key\":\"[^\"]*\"" "$file" | head -1 | sed "s/\"$key\":\"//g" | sed 's/"$//g')
-  
-  # Метод 2: Если не найдено, ищем в testConfig
+
   if [ -z "$value" ]; then
     value=$(grep -o "\"testConfig\":{[^}]*\"$key\":\"[^\"]*\"" "$file" | grep -o "\"$key\":\"[^\"]*\"" | head -1 | sed "s/\"$key\":\"//g" | sed 's/"$//g')
   fi
-  
+
   echo "$value"
 }
 
-# Поиск URL и Campaign ID
 APP_URL=$(extract_json_value "${OUTPUT_DIR}/cleaned_response.json" "appUrl")
 CAMPAIGN_ID=$(extract_json_value "${OUTPUT_DIR}/cleaned_response.json" "campaignId")
 
-# Логирование для отладки
 echo "Extracted URL with new method: ${APP_URL:-Unknown}"
 echo "Extracted Campaign ID with new method: ${CAMPAIGN_ID:-Unknown}"
 
-# Пробуем еще один метод, если предыдущий не сработал
 if [ -z "$APP_URL" ]; then
   echo "Trying alternative extraction method for URL..."
   APP_URL=$(cat "${OUTPUT_DIR}/cleaned_response.json" | grep -o '"testConfig".*"appUrl":"[^"]*"' | grep -o '"appUrl":"[^"]*"' | sed 's/"appUrl":"//g' | sed 's/"//g')
@@ -285,11 +279,9 @@ if [ -z "$CAMPAIGN_ID" ]; then
   echo "Alternative method result: ${CAMPAIGN_ID:-Still unknown}"
 fi
 
-# Запишем в отчет что нашли и добавим в summary
 echo "Found APP_URL: ${APP_URL:-Unknown}" >> "${OUTPUT_DIR}/extraction_debug.log"
 echo "Found CAMPAIGN_ID: ${CAMPAIGN_ID:-Unknown}" >> "${OUTPUT_DIR}/extraction_debug.log"
 
-# Добавляем информацию в самое начало отчета, сразу после заголовка
 echo "" >> $GITHUB_STEP_SUMMARY
 echo "## Test Configuration" >> $GITHUB_STEP_SUMMARY
 echo "- **App URL:** ${APP_URL:-Unknown}" >> $GITHUB_STEP_SUMMARY
