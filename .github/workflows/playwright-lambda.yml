@@ -210,16 +210,16 @@ jobs:
 
           echo "Running tests in Lambda..."
           RESPONSE=$(timeout 900 aws lambda invoke \
-            --function-name "playwright-test-${{ needs.get-env.outputs.env }}" \
-            --payload '{"region": "${{ matrix.region }}", "environment": "${{ needs.get-env.outputs.env }}"}' \
-            --cli-binary-format raw-in-base64-out \
-            --output json \
-            --cli-read-timeout 900 
-            --cli-connect-timeout 900
-            /dev/stdout) || {
-              echo "::error::Lambda invocation timed out or failed to execute"
-              exit 1
-            }
+          --function-name "playwright-test-${{ needs.get-env.outputs.env }}" \
+          --payload '{"region": "${{ matrix.region }}", "environment": "${{ needs.get-env.outputs.env }}"}' \
+                --cli-binary-format raw-in-base64-out \
+                --output json \
+                --cli-read-timeout 900 \
+                --cli-connect-timeout 900 \
+                /tmp/lambda-output.json) || {
+                  echo "::error::Lambda invocation timed out or failed to execute"
+                  exit 1
+                }
 
           echo "$RESPONSE" > "${OUTPUT_DIR}/raw-response.json"
           echo "$RESPONSE" > "${WORKSPACE_OUTPUT}/raw-response.json"
