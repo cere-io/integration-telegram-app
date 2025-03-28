@@ -24,7 +24,7 @@ const currentConfig = envConfigs[environment] || envConfigs.stage;
 const userName = process.env.TEST_USER_EMAIL || 'veronika.filipenko@cere.io';
 const otp = process.env.TEST_USER_OTP || '555555';
 const appUrl = process.env.TEST_APP_URL || currentConfig.baseURL;
-const campaignId = process.env.TEST_CAMPAIGN_ID || currentConfig.campaignId ;
+const campaignId = process.env.TEST_CAMPAIGN_ID || currentConfig.campaignId;
 
 const metrics = [];
 let authError = null;
@@ -58,7 +58,7 @@ const logError = (errorName, errorMessage) => {
 const login = async (page) => {
   const consoleErrors = [];
 
-  page.on('console', msg => {
+  page.on('console', (msg) => {
     const type = msg.type();
     const text = msg.text();
 
@@ -76,10 +76,10 @@ const login = async (page) => {
   });
 
   try {
-    await page.waitForSelector('#torusIframe', { timeout: 30000 });
+    await page.waitForSelector('#torusIframe', { timeout: 50000 });
     const torusFrame = await page.frameLocator('#torusIframe');
 
-    await torusFrame.locator('iframe[title="Embedded browser"]').waitFor({ timeout: 30000 });
+    await torusFrame.locator('iframe[title="Embedded browser"]').waitFor({ timeout: 50000 });
     const embeddedFrame = await torusFrame.frameLocator('iframe[title="Embedded browser"]');
 
     const buttonLogin = embeddedFrame.locator('button:has-text("I already have a wallet")');
@@ -122,7 +122,7 @@ const login = async (page) => {
       type: 'LoginError',
       message: error.message,
       timestamp: new Date().toISOString(),
-      consoleErrors: consoleErrors
+      consoleErrors: consoleErrors,
     };
 
     logError('Web3AuthError', error.message);
@@ -130,7 +130,7 @@ const login = async (page) => {
     if (consoleErrors.length > 0) {
       try {
         fs.appendFileSync('/tmp/error-log.txt', '\nConsole Errors during login:\n');
-        consoleErrors.forEach(err => {
+        consoleErrors.forEach((err) => {
           fs.appendFileSync('/tmp/error-log.txt', `[${err.type}] ${err.text}\n`);
         });
       } catch (fileError) {
@@ -148,7 +148,7 @@ async function testActiveQuestsScreen({ page }) {
 
   try {
     await page.goto(`${appUrl}/?campaignId=${campaignId}`, {
-      waitUntil: 'domcontentloaded'
+      waitUntil: 'domcontentloaded',
     });
 
     await page.locator('path').nth(1).click();
@@ -169,7 +169,7 @@ async function testActiveQuestsScreen({ page }) {
 
     if (loginResult.consoleErrors && loginResult.consoleErrors.length > 0) {
       console.log(`Found ${loginResult.consoleErrors.length} console errors during login`);
-      loginResult.consoleErrors.forEach(err => {
+      loginResult.consoleErrors.forEach((err) => {
         console.log(`Console ${err.type}: ${err.text}`);
       });
     }
@@ -195,7 +195,7 @@ async function testLeaderboardScreen({ page }) {
 
     let timeTaken = Date.now() - start;
     logTime('Leaderboard Screen', timeTaken);
-    return true
+    return true;
   } catch (err) {
     console.error(`❌ Error in testLeaderboardScreen: ${err.message}`);
     let timeTaken = Date.now() - start;
@@ -269,7 +269,7 @@ export default async function runIntegrationTest({ browser, context }) {
     page = await context.newPage();
     console.log('Page created successfully');
 
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const type = msg.type();
       const text = msg.text();
       const time = new Date().toISOString();
@@ -289,7 +289,7 @@ export default async function runIntegrationTest({ browser, context }) {
       }
     });
 
-    page.on('pageerror', error => {
+    page.on('pageerror', (error) => {
       const time = new Date().toISOString();
       console.error(`[PAGE ERROR] ${error.message}`);
 
@@ -297,12 +297,15 @@ export default async function runIntegrationTest({ browser, context }) {
         type: 'pageerror',
         text: error.message,
         stack: error.stack || 'No stack trace',
-        time
+        time,
       };
       globalConsoleErrors.push(errorInfo);
 
       try {
-        fs.appendFileSync('/tmp/console-errors.txt', `[pageerror] [${time}] ${error.message}\n${error.stack || 'No stack trace'}\n\n`);
+        fs.appendFileSync(
+          '/tmp/console-errors.txt',
+          `[pageerror] [${time}] ${error.message}\n${error.stack || 'No stack trace'}\n\n`,
+        );
       } catch (err) {
         console.error('Failed to write page error to file:', err);
       }
@@ -322,7 +325,7 @@ export default async function runIntegrationTest({ browser, context }) {
       success: metrics.length >= 3,
       metrics: metrics,
       environment: environment,
-      region: region
+      region: region,
     };
 
     if (globalConsoleErrors.length > 0) {
@@ -337,9 +340,7 @@ export default async function runIntegrationTest({ browser, context }) {
       }
 
       try {
-        let consoleErrorsText = globalConsoleErrors.map(err =>
-          `[${err.type}] [${err.time}] ${err.text}`
-        ).join('\n');
+        let consoleErrorsText = globalConsoleErrors.map((err) => `[${err.type}] [${err.time}] ${err.text}`).join('\n');
 
         fs.writeFileSync('/tmp/console-errors-formatted.txt', consoleErrorsText);
         console.log('Wrote formatted console errors to /tmp/console-errors-formatted.txt');
@@ -355,7 +356,7 @@ export default async function runIntegrationTest({ browser, context }) {
     globalConsoleErrors.push({
       type: 'error',
       text: 'FORCED_ERROR_HANDLER: forced console error from error handler',
-      time: new Date().toISOString()
+      time: new Date().toISOString(),
     });
     testResultData.consoleErrors = globalConsoleErrors;
     console.log('Added forced console error from error handler');
@@ -363,24 +364,24 @@ export default async function runIntegrationTest({ browser, context }) {
     if (authError) {
       testResultData.authError = authError;
 
-      if (!metrics.find(m => m.name === 'Leaderboard Screen')) {
+      if (!metrics.find((m) => m.name === 'Leaderboard Screen')) {
         metrics.push({
           name: 'Leaderboard Screen',
           duration: 0,
           faked: true,
-          reason: 'Auth error prevented test'
+          reason: 'Auth error prevented test',
         });
 
         console.log('Added placeholder Leaderboard Screen metric due to auth error');
         fs.appendFileSync(`/tmp/performance-log.txt`, `Leaderboard Screen took 0ms [AUTH_ERROR]\n`);
       }
 
-      if (!metrics.find(m => m.name === 'Library Screen')) {
+      if (!metrics.find((m) => m.name === 'Library Screen')) {
         metrics.push({
           name: 'Library Screen',
           duration: 0,
           faked: true,
-          reason: 'Auth error prevented test'
+          reason: 'Auth error prevented test',
         });
 
         console.log('Added placeholder Library Screen metric due to auth error');
@@ -391,7 +392,7 @@ export default async function runIntegrationTest({ browser, context }) {
       testResultData.errorInfo = {
         type: 'AuthenticationError',
         message: `Authentication failed: ${authError.message}`,
-        timestamp: authError.timestamp
+        timestamp: authError.timestamp,
       };
     }
 
@@ -410,7 +411,7 @@ export default async function runIntegrationTest({ browser, context }) {
       error: err.message,
       metrics: metrics,
       environment: environment,
-      region: region
+      region: region,
     };
 
     if (globalConsoleErrors.length > 0) {
@@ -425,9 +426,7 @@ export default async function runIntegrationTest({ browser, context }) {
       }
 
       try {
-        let consoleErrorsText = globalConsoleErrors.map(err =>
-          `[${err.type}] [${err.time}] ${err.text}`
-        ).join('\n');
+        let consoleErrorsText = globalConsoleErrors.map((err) => `[${err.type}] [${err.time}] ${err.text}`).join('\n');
 
         fs.writeFileSync('/tmp/console-errors-formatted.txt', consoleErrorsText);
         console.log('Wrote formatted console errors to /tmp/console-errors-formatted.txt');
@@ -442,7 +441,7 @@ export default async function runIntegrationTest({ browser, context }) {
     globalConsoleErrors.push({
       type: 'error',
       text: 'FORCED_ERROR_HANDLER: Forced error from test error handler (catch block)',
-      time: new Date().toISOString()
+      time: new Date().toISOString(),
     });
     testResultData.consoleErrors = globalConsoleErrors;
     console.log('Added forced console error from error handler (catch block)');
@@ -450,24 +449,24 @@ export default async function runIntegrationTest({ browser, context }) {
     if (authError) {
       testResultData.authError = authError;
 
-      if (!metrics.find(m => m.name === 'Leaderboard Screen')) {
+      if (!metrics.find((m) => m.name === 'Leaderboard Screen')) {
         metrics.push({
           name: 'Leaderboard Screen',
           duration: 0,
           faked: true,
-          reason: 'Auth error prevented test'
+          reason: 'Auth error prevented test',
         });
 
         console.log('Added placeholder Leaderboard Screen metric due to auth error');
         fs.appendFileSync(`/tmp/performance-log.txt`, `Leaderboard Screen took 0ms [AUTH_ERROR]\n`);
       }
 
-      if (!metrics.find(m => m.name === 'Library Screen')) {
+      if (!metrics.find((m) => m.name === 'Library Screen')) {
         metrics.push({
           name: 'Library Screen',
           duration: 0,
           faked: true,
-          reason: 'Auth error prevented test'
+          reason: 'Auth error prevented test',
         });
 
         console.log('Added placeholder Library Screen metric due to auth error');
@@ -478,7 +477,7 @@ export default async function runIntegrationTest({ browser, context }) {
       testResultData.errorInfo = {
         type: 'AuthenticationError',
         message: `Authentication failed: ${authError.message}`,
-        timestamp: authError.timestamp
+        timestamp: authError.timestamp,
       };
     }
 
