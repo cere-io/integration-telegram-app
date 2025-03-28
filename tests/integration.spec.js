@@ -533,6 +533,10 @@ async function testLeaderboardScreen({ page }) {
     const leaderboardFrame = await page.frameLocator('iframe[title="Leaderboard"]');
     console.log('Leaderboard iframe loaded successfully.');
 
+    const frameContent = await leaderboardFrame.locator('body').evaluate((body) => body.innerHTML);
+    console.log('Content of the Leaderboard iframe:');
+    console.log(frameContent);
+
     console.log('Waiting for the div with id="leaderboard" inside the Leaderboard iframe to be visible...');
     await leaderboardFrame.locator('div#leaderboard').waitFor({ state: 'visible', timeout: 60000 });
     console.log('Div with id="leaderboard" inside Leaderboard iframe is now visible.');
