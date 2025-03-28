@@ -523,7 +523,8 @@ async function testLeaderboardScreen({ page }) {
   let start = Date.now();
 
   try {
-    await page.locator('button:has-text("Leaderboard")').click();
+    await page.locator('button:has-text("Leaderboard")').scrollIntoViewIfNeeded();
+    await page.locator('button:has-text("Leaderboard")').click({ force: true });
     console.log('Clicked on Leaderboard button');
     // Very brief wait
     const leaderboardFrame = await page.frameLocator('iframe[title="Leaderboard"]');
