@@ -55,6 +55,10 @@ async function runTests() {
         '--disable-features=site-per-process',
         '--disable-features=IsolateOrigins',
         '--disable-site-isolation-trials',
+        '--allow-insecure-localhost',
+        '--disable-extensions',
+        '--disable-popup-blocking',
+        '--ignore-certificate-errors',
       ],
       timeout: 120000,
       env: {

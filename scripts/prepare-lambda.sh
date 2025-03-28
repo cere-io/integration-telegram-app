@@ -46,16 +46,20 @@ export default defineConfig({
     launchOptions: {
       executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
       args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--no-zygote',
-        '--single-process',
-        '--disable-web-security',
-        '--disable-features=site-per-process',
-        '--disable-features=IsolateOrigins',
-        '--disable-site-isolation-trials'
+       '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--no-zygote',
+                '--single-process',
+                '--disable-web-security',
+                '--disable-features=site-per-process',
+                '--disable-features=IsolateOrigins',
+                '--disable-site-isolation-trials',
+                '--allow-insecure-localhost',
+                '--disable-extensions',
+                '--disable-popup-blocking',
+                '--ignore-certificate-errors'
       ],
       timeout: 120000,
       env: {
@@ -139,16 +143,20 @@ async function runTests() {
       headless: true,
       executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
       args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--no-zygote',
-        '--single-process',
-        '--disable-web-security',
-        '--disable-features=site-per-process',
-        '--disable-features=IsolateOrigins',
-        '--disable-site-isolation-trials'
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--no-zygote',
+          '--single-process',
+          '--disable-web-security',
+          '--disable-features=site-per-process',
+          '--disable-features=IsolateOrigins',
+          '--disable-site-isolation-trials',
+          '--allow-insecure-localhost',
+          '--disable-extensions',
+          '--disable-popup-blocking',
+          '--ignore-certificate-errors'
       ],
       timeout: 120000,
       env: {
@@ -348,29 +356,29 @@ function getEnvConfig(environment) {
     baseURL: process.env[`${environment.toUpperCase()}_APP_URL`] || null,
     campaignId: process.env[`${environment.toUpperCase()}_CAMPAIGN_ID`] || null
   };
-  
+
   // Check for event-provided config
   if (process.env.EVENT_APP_URL && process.env.EVENT_APP_URL !== 'undefined') {
     config.baseURL = process.env.EVENT_APP_URL;
     console.log('Using app URL from event:', config.baseURL);
   }
-  
+
   if (process.env.EVENT_CAMPAIGN_ID && process.env.EVENT_CAMPAIGN_ID !== 'undefined') {
     config.campaignId = process.env.EVENT_CAMPAIGN_ID;
     console.log('Using campaign ID from event:', config.campaignId);
   }
-  
+
   // Apply fallback defaults if needed
   if (!config.baseURL) {
-    config.baseURL = environment === 'prod' 
+    config.baseURL = environment === 'prod'
       ? 'https://telegram-viewer-app.cere.io'
       : 'https://telegram-viewer-app.stage.cere.io';
   }
-  
+
   if (!config.campaignId) {
     config.campaignId = environment === 'prod' ? '40' : '120';
   }
-  
+
   return config;
 }
 
@@ -565,12 +573,12 @@ export const handler = async (event) => {
     // Get environment and region from event
     const region = event.region || process.env.AWS_REGION || 'unknown';
     const environment = event.environment || 'stage';
-    
+
     // Store event config if provided
     if (event.appUrl) {
       process.env.EVENT_APP_URL = event.appUrl;
     }
-    
+
     if (event.campaignId) {
       process.env.EVENT_CAMPAIGN_ID = event.campaignId;
     }
@@ -872,13 +880,13 @@ export const handler = async (event) => {
      // Get environment config even in case of error
      const environment = event.environment || 'unknown';
      let config = { baseURL: 'unknown', campaignId: 'unknown' };
-     
+
      try {
        config = getEnvConfig(environment);
      } catch (configError) {
        console.error('Failed to get config:', configError);
      }
-     
+
      return {
        statusCode: 500,
        body: JSON.stringify({
@@ -902,17 +910,17 @@ export const handler = async (event) => {
    }
   } catch (error) {
     console.error('Error:', error);
-    
+
     // Get environment config even in case of error
     const environment = event.environment || 'unknown';
     let config = { baseURL: 'unknown', campaignId: 'unknown' };
-    
+
     try {
       config = getEnvConfig(environment);
     } catch (configError) {
       console.error('Failed to get config:', configError);
     }
-    
+
     return {
       statusCode: 500,
       body: JSON.stringify({
