@@ -42,7 +42,7 @@ async function runTests() {
     }
 
     const launchOptions = {
-      headless: true,
+      headless: false,
       executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
       args: [
         '--no-sandbox',
