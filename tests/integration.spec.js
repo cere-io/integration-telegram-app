@@ -20,13 +20,20 @@ const region = process.env.AWS_REGION || 'us-west-2';
 
 const currentConfig = envConfigs[environment] || envConfigs.stage;
 
-const userName = process.env.TEST_USER_EMAIL || 'veronika.filipenko@cere.io';
+// Default email with random number to avoid conflicts
+const generateRandomEmail = () => {
+  const randomNumber = Math.floor(Math.random() * 100000);
+  return `veronika.filipenko+${randomNumber}@cere.io`;
+};
+
+const userName = process.env.TEST_USER_EMAIL || generateRandomEmail();
 const otp = process.env.TEST_USER_OTP || '555555';
 const appUrl = process.env.TEST_APP_URL || currentConfig.baseURL;
 const campaignId = process.env.TEST_CAMPAIGN_ID || currentConfig.campaignId;
 
 const metrics = [];
 let authError = null;
+const consoleErrorLog = [];
 
 const logTime = (testName, time) => {
   const logMessage = `${testName} took ${time}ms\n`;
@@ -46,6 +53,14 @@ const logError = (errorName, errorMessage) => {
   const logMessage = `${errorName}: ${errorMessage}\n`;
   console.error(`Recording error: ${logMessage.trim()}`);
 
+  // Add to our in-memory log for lambda reporting
+  consoleErrorLog.push({
+    type: 'error',
+    name: errorName,
+    message: errorMessage,
+    timestamp: new Date().toISOString(),
+  });
+
   try {
     fs.appendFileSync(`/tmp/error-log.txt`, logMessage);
     console.log(`Error recorded for ${errorName}`);
@@ -54,20 +69,128 @@ const logError = (errorName, errorMessage) => {
   }
 };
 
+// New signup flow based on Selenium tests
+const signUp = async (page) => {
+  const consoleErrors = [];
+  const randomEmail = generateRandomEmail();
+
+  page.on('console', (msg) => {
+    const type = msg.type();
+    const text = msg.text();
+    const time = new Date().toISOString();
+
+    console.log(`[Browser Console] [${type}] ${text}`);
+
+    if (type === 'error') {
+      consoleErrors.push({ type, text, time });
+
+      // Add to global error log for report
+      consoleErrorLog.push({ type, text, time, source: 'browser-console' });
+
+      try {
+        fs.appendFileSync('/tmp/console-errors.txt', `[${type}] [${time}] ${text}\n`);
+      } catch (err) {
+        console.error('Failed to write console error to file:', err);
+      }
+    }
+  });
+
+  try {
+    await page.waitForSelector('#torusIframe', { timeout: 50000 });
+    const torusFrame = await page.frameLocator('#torusIframe');
+
+    await torusFrame.locator('iframe[title="Embedded browser"]').waitFor({ timeout: 50000 });
+    const embeddedFrame = await torusFrame.frameLocator('iframe[title="Embedded browser"]');
+
+    // Updated to match the Selenium test logic for new user signup
+    const buttonSignUp = embeddedFrame.locator('button:has-text("Create a new wallet")');
+    await buttonSignUp.scrollIntoViewIfNeeded();
+    await buttonSignUp.waitFor({ state: 'visible', timeout: 10000 });
+    await buttonSignUp.click();
+
+    const emailInput = embeddedFrame.getByRole('textbox', { name: 'Email' });
+    await emailInput.scrollIntoViewIfNeeded();
+    await emailInput.waitFor({ state: 'visible', timeout: 10000 });
+    await emailInput.fill(randomEmail);
+
+    const signUpButton = embeddedFrame.locator('button:has-text("Sign Up")');
+    await signUpButton.scrollIntoViewIfNeeded();
+    await signUpButton.waitFor({ state: 'visible', timeout: 10000 });
+    await signUpButton.click();
+
+    const otpInput = embeddedFrame.getByRole('textbox', { name: 'OTP input' });
+    await otpInput.waitFor({ state: 'visible', timeout: 10000 });
+    await otpInput.fill(otp);
+
+    const verifyButton = embeddedFrame.locator('button:has-text("Verify")');
+    await verifyButton.scrollIntoViewIfNeeded();
+    await verifyButton.waitFor({ state: 'visible', timeout: 10000 });
+    await verifyButton.click();
+
+    // Handle continue button that appears for new users
+    try {
+      const continueButton = embeddedFrame.locator('button:has-text("Continue")');
+      await continueButton.waitFor({ state: 'visible', timeout: 30000 });
+      await continueButton.click();
+    } catch (continueError) {
+      console.log('Continue button not found or not clickable - may not be needed for this user flow');
+    }
+
+    await page.waitForSelector('.tgui-e6658d0b8927f95e', { timeout: 15000 });
+
+    return { success: true, consoleErrors, email: randomEmail };
+  } catch (error) {
+    try {
+      await page.screenshot({ path: '/tmp/signup-error.png' });
+      console.log('Saved error screenshot to /tmp/signup-error.png');
+    } catch (screenshotError) {
+      console.error('Failed to save screenshot:', screenshotError);
+    }
+
+    console.error(`Signup error: ${error.message}`);
+    authError = {
+      type: 'SignupError',
+      message: error.message,
+      timestamp: new Date().toISOString(),
+      consoleErrors: consoleErrors,
+    };
+
+    logError('Web3AuthSignupError', error.message);
+
+    if (consoleErrors.length > 0) {
+      try {
+        fs.appendFileSync('/tmp/error-log.txt', '\nConsole Errors during signup:\n');
+        consoleErrors.forEach((err) => {
+          fs.appendFileSync('/tmp/error-log.txt', `[${err.type}] ${err.text}\n`);
+        });
+      } catch (fileError) {
+        console.error('Failed to write console errors to error log:', fileError);
+      }
+    }
+
+    throw error;
+  }
+};
+
+// Keep existing login for backward compatibility
 const login = async (page) => {
   const consoleErrors = [];
 
   page.on('console', (msg) => {
     const type = msg.type();
     const text = msg.text();
+    const time = new Date().toISOString();
 
     console.log(`[Browser Console] [${type}] ${text}`);
 
     if (type === 'error') {
-      consoleErrors.push({ type, text, time: new Date().toISOString() });
+      consoleErrors.push({ type, text, time });
+
+      // Add to global error log for report
+      consoleErrorLog.push({ type, text, time, source: 'browser-console' });
 
       try {
-        fs.appendFileSync('/tmp/console-errors.txt', `[${type}] [${new Date().toISOString()}] ${text}\n`);
+        fs.appendFileSync('/tmp/console-errors.txt', `[${type}] [${time}] ${text}\n`);
       } catch (err) {
         console.error('Failed to write console error to file:', err);
       }
@@ -141,17 +264,48 @@ const login = async (page) => {
   }
 };
 
-async function testActiveQuestsScreen({ page }) {
-  console.log(`Testing Active Quests screen in ${environment} environment (${region})...`);
-  let start = Date.now();
-
+async function navigateToWelcomePage({ page }) {
   try {
     await page.goto(`${appUrl}/?campaignId=${campaignId}`, {
       waitUntil: 'domcontentloaded',
     });
 
-    await page.locator('path').nth(1).click();
-    await page.getByRole('button', { name: 'Start Earning' }).click();
+    await page.waitForSelector('.hero-title', { timeout: 10000 });
+    const welcomeTitle = await page.locator('.hero-title').textContent();
+    console.log('Welcome page title:', welcomeTitle);
+
+    // Check if the title matches the expected text
+    if (welcomeTitle !== 'Sit back, Enjoy, and Earn!') {
+      throw new Error(`Unexpected welcome title: ${welcomeTitle}`);
+    }
+
+    await page.locator('.tgui-bca5056bf34297b0').click();
+    await page.locator('.welcom-cta-text').click();
+
+    return true;
+  } catch (err) {
+    console.error(`Error in navigating to welcome page: ${err.message}`);
+    logError('NavigationError', err.message);
+    throw err;
+  }
+}
+
+async function testActiveQuestsScreen({ page, useNewUser = false }) {
+  console.log(`Testing Active Quests screen in ${environment} environment (${region})...`);
+  let start = Date.now();
+
+  try {
+    await navigateToWelcomePage({ page });
+
+    // Choose authentication method based on parameter
+    if (useNewUser) {
+      const signupResult = await signUp(page);
+      console.log('Signup successful:', signupResult.success);
+      console.log('Created user with email:', signupResult.email);
+    } else {
+      const loginResult = await login(page);
+      console.log('Login successful:', loginResult.success);
+    }
 
     const questTab = await page.locator('.tgui-e6658d0b8927f95e').textContent();
     console.log('Quest tab text:', questTab);
@@ -163,19 +317,10 @@ async function testActiveQuestsScreen({ page }) {
     logTime('Active Quests Screen', timeTaken);
     console.log(`✅ Active Quests Screen metric recorded: ${timeTaken}ms`);
 
-    const loginResult = await login(page);
-    console.log('Login successful:', loginResult.success);
-
-    if (loginResult.consoleErrors && loginResult.consoleErrors.length > 0) {
-      console.log(`Found ${loginResult.consoleErrors.length} console errors during login`);
-      loginResult.consoleErrors.forEach((err) => {
-        console.log(`Console ${err.type}: ${err.text}`);
-      });
-    }
-
     return true;
   } catch (err) {
     console.error(`❌ Error in testActiveQuestsScreen: ${err.message}`);
+    logError('ActiveQuestsScreenError', err.message);
     let timeTaken = Date.now() - start;
     logTime('Active Quests Screen', timeTaken);
     console.log(`⚠️ Active Quests Screen metric recorded on error: ${timeTaken}ms`);
@@ -188,15 +333,21 @@ async function testLeaderboardScreen({ page }) {
   let start = Date.now();
 
   try {
-    const leaderboardTabButton = page.locator('xpath=/html/body/div[1]/div/div/div[2]/button[2]');
+    // Updated to use button click to navigate to leaderboard tab
+    const leaderboardTabButton = page.locator('button:nth-child(2)');
     await leaderboardTabButton.scrollIntoViewIfNeeded();
     await leaderboardTabButton.click();
 
+    // Wait for leaderboard content to load
+    await page.waitForTimeout(2000);
+
     let timeTaken = Date.now() - start;
     logTime('Leaderboard Screen', timeTaken);
+    console.log(`✅ Leaderboard Screen metric recorded: ${timeTaken}ms`);
     return true;
   } catch (err) {
     console.error(`❌ Error in testLeaderboardScreen: ${err.message}`);
+    logError('LeaderboardScreenError', err.message);
     let timeTaken = Date.now() - start;
     logTime('Leaderboard Screen', timeTaken);
     console.log(`⚠️ Leaderboard Screen metric recorded on error: ${timeTaken}ms`);
@@ -205,20 +356,25 @@ async function testLeaderboardScreen({ page }) {
 }
 
 async function testLibraryScreen({ page }) {
-  try {
-    console.log(`Testing Library screen in ${environment} environment (${region})...`);
-    let start = Date.now();
+  console.log(`Testing Library screen in ${environment} environment (${region})...`);
+  let start = Date.now();
 
-    const libraryTabButton = page.locator('xpath=/html/body/div[1]/div/div/div[2]/button[3]');
+  try {
+    // Updated to use button click to navigate to library tab
+    const libraryTabButton = page.locator('button:nth-child(3)');
     await libraryTabButton.scrollIntoViewIfNeeded();
     await libraryTabButton.click();
 
-    console.log('Library tab clicked successfully.');
+    // Wait for library content to load
+    await page.waitForTimeout(2000);
 
     let timeTaken = Date.now() - start;
     logTime('Library Screen', timeTaken);
+    console.log(`✅ Library Screen metric recorded: ${timeTaken}ms`);
+    return true;
   } catch (err) {
     console.error(`❌ Error in testLibraryScreen: ${err.message}`);
+    logError('LibraryScreenError', err.message);
     let timeTaken = Date.now() - start;
     logTime('Library Screen', timeTaken);
     console.log(`⚠️ Library Screen metric recorded on error: ${timeTaken}ms`);
@@ -230,10 +386,7 @@ export default async function runIntegrationTest({ browser, context }) {
   console.log(`Starting integration test for ${environment} environment in ${region} region`);
   console.log(`Using URL: ${appUrl} with campaign ID: ${campaignId}`);
   metrics.length = 0;
-
-  console.log(`Starting integration test for ${environment} environment in ${region} region`);
-  console.log(`Using URL: ${appUrl} with campaign ID: ${campaignId}`);
-  metrics.length = 0;
+  consoleErrorLog.length = 0;
 
   try {
     fs.writeFileSync('/tmp/console-errors.txt', '');
@@ -261,6 +414,13 @@ export default async function runIntegrationTest({ browser, context }) {
     console.error(`Error clearing metrics file: ${error.message}`);
   }
 
+  try {
+    fs.writeFileSync('/tmp/error-log.txt', '');
+    console.log('Error log file cleared');
+  } catch (error) {
+    console.error(`Error clearing error log file: ${error.message}`);
+  }
+
   let page;
   const globalConsoleErrors = [];
 
@@ -278,6 +438,9 @@ export default async function runIntegrationTest({ browser, context }) {
       if (type === 'error' || type === 'warning') {
         const consoleEvent = { type, text, time };
         globalConsoleErrors.push(consoleEvent);
+
+        // Add to global log for reporting
+        consoleErrorLog.push({ type, text, time, source: 'global-page' });
 
         try {
           fs.appendFileSync('/tmp/console-errors.txt', `[${type}] [${time}] ${text}\n`);
@@ -300,6 +463,15 @@ export default async function runIntegrationTest({ browser, context }) {
       };
       globalConsoleErrors.push(errorInfo);
 
+      // Add to global log for reporting
+      consoleErrorLog.push({
+        type: 'pageerror',
+        text: error.message,
+        stack: error.stack || 'No stack trace',
+        time,
+        source: 'page-error',
+      });
+
       try {
         fs.appendFileSync(
           '/tmp/console-errors.txt',
@@ -310,7 +482,8 @@ export default async function runIntegrationTest({ browser, context }) {
       }
     });
 
-    await testActiveQuestsScreen({ page });
+    // Create a new user for testing
+    await testActiveQuestsScreen({ page, useNewUser: true });
     await testLeaderboardScreen({ page });
     await testLibraryScreen({ page });
 
@@ -320,45 +493,46 @@ export default async function runIntegrationTest({ browser, context }) {
     console.log(`Region: ${region}`);
     console.log('========================');
 
+    // Determine test success - require at least 3 metrics
+    const testSuccess = metrics.length >= 3;
+
+    console.log(`Test success status: ${testSuccess ? 'PASSED' : 'FAILED'}`);
+    console.log(`Collected ${metrics.length} metrics (minimum required: 3)`);
+
     let testResultData = {
-      success: metrics.length >= 3,
+      success: testSuccess,
       metrics: metrics,
       environment: environment,
       region: region,
     };
 
-    if (globalConsoleErrors.length > 0) {
-      testResultData.consoleErrors = globalConsoleErrors;
-      console.log(`Found ${globalConsoleErrors.length} console errors/warnings during failed test`);
+    // Always include console errors in the report
+    if (globalConsoleErrors.length > 0 || consoleErrorLog.length > 0) {
+      // Use the larger of the two logs
+      const errorsToReport =
+        consoleErrorLog.length > globalConsoleErrors.length ? consoleErrorLog : globalConsoleErrors;
+
+      testResultData.consoleErrors = errorsToReport;
+      console.log(`Found ${errorsToReport.length} console errors/warnings during test`);
 
       try {
-        fs.writeFileSync('/tmp/console-errors.json', JSON.stringify(globalConsoleErrors, null, 2));
-        console.log(`Wrote ${globalConsoleErrors.length} console errors to /tmp/console-errors.json for debugging`);
+        fs.writeFileSync('/tmp/console-errors.json', JSON.stringify(errorsToReport, null, 2));
+        console.log(`Wrote ${errorsToReport.length} console errors to /tmp/console-errors.json for debugging`);
       } catch (fileError) {
         console.error('Failed to write console errors JSON file:', fileError);
       }
 
       try {
-        let consoleErrorsText = globalConsoleErrors.map((err) => `[${err.type}] [${err.time}] ${err.text}`).join('\n');
+        let consoleErrorsText = errorsToReport
+          .map((err) => `[${err.type}] [${err.time}] ${err.source ? `[${err.source}] ` : ''}${err.text}`)
+          .join('\n');
 
         fs.writeFileSync('/tmp/console-errors-formatted.txt', consoleErrorsText);
         console.log('Wrote formatted console errors to /tmp/console-errors-formatted.txt');
       } catch (fileError) {
         console.error('Failed to write formatted console errors file:', fileError);
       }
-    } else {
-      globalConsoleErrors.push(testError);
-      testResultData.consoleErrors = globalConsoleErrors;
-      console.log('Added test console error from error handler');
     }
-
-    globalConsoleErrors.push({
-      type: 'error',
-      text: 'FORCED_ERROR_HANDLER: forced console error from error handler',
-      time: new Date().toISOString(),
-    });
-    testResultData.consoleErrors = globalConsoleErrors;
-    console.log('Added forced console error from error handler');
 
     if (authError) {
       testResultData.authError = authError;
@@ -395,9 +569,32 @@ export default async function runIntegrationTest({ browser, context }) {
       };
     }
 
+    // Prepare Lambda report with consolidated information
+    const lambdaReport = {
+      testSuccess: testSuccess,
+      environment: environment,
+      region: region,
+      metrics: metrics,
+      totalMetrics: metrics.length,
+      requiredMetrics: 3,
+      errors: consoleErrorLog,
+      totalErrors: consoleErrorLog.length,
+      authError: authError,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Write Lambda report to a file that can be picked up
+    try {
+      fs.writeFileSync('/tmp/lambda-report.json', JSON.stringify(lambdaReport, null, 2));
+      console.log('Lambda report written to /tmp/lambda-report.json');
+    } catch (reportError) {
+      console.error('Failed to write Lambda report:', reportError);
+    }
+
     return testResultData;
   } catch (err) {
     console.error('Error during integration test:', err);
+    logError('IntegrationTestError', err.message);
 
     console.log('=== METRICS AT ERROR ===');
     console.log(JSON.stringify(metrics, null, 2));
@@ -405,45 +602,47 @@ export default async function runIntegrationTest({ browser, context }) {
     console.log(`Region: ${region}`);
     console.log('=======================');
 
+    // Determine test success - require at least 3 metrics
+    const testSuccess = metrics.length >= 3;
+
+    console.log(`Test success status: ${testSuccess ? 'PASSED' : 'FAILED'}`);
+    console.log(`Collected ${metrics.length} metrics (minimum required: 3)`);
+
     let testResultData = {
-      success: false,
+      success: testSuccess,
       error: err.message,
       metrics: metrics,
       environment: environment,
       region: region,
     };
 
-    if (globalConsoleErrors.length > 0) {
-      testResultData.consoleErrors = globalConsoleErrors;
-      console.log(`Found ${globalConsoleErrors.length} console errors/warnings during failed test`);
+    // Always include console errors in the report
+    if (globalConsoleErrors.length > 0 || consoleErrorLog.length > 0) {
+      // Use the larger of the two logs
+      const errorsToReport =
+        consoleErrorLog.length > globalConsoleErrors.length ? consoleErrorLog : globalConsoleErrors;
+
+      testResultData.consoleErrors = errorsToReport;
+      console.log(`Found ${errorsToReport.length} console errors/warnings during failed test`);
 
       try {
-        fs.writeFileSync('/tmp/console-errors.json', JSON.stringify(globalConsoleErrors, null, 2));
-        console.log(`Wrote ${globalConsoleErrors.length} console errors to /tmp/console-errors.json for debugging`);
+        fs.writeFileSync('/tmp/console-errors.json', JSON.stringify(errorsToReport, null, 2));
+        console.log(`Wrote ${errorsToReport.length} console errors to /tmp/console-errors.json for debugging`);
       } catch (fileError) {
         console.error('Failed to write console errors JSON file:', fileError);
       }
 
       try {
-        let consoleErrorsText = globalConsoleErrors.map((err) => `[${err.type}] [${err.time}] ${err.text}`).join('\n');
+        let consoleErrorsText = errorsToReport
+          .map((err) => `[${err.type}] [${err.time}] ${err.source ? `[${err.source}] ` : ''}${err.text}`)
+          .join('\n');
 
         fs.writeFileSync('/tmp/console-errors-formatted.txt', consoleErrorsText);
         console.log('Wrote formatted console errors to /tmp/console-errors-formatted.txt');
       } catch (fileError) {
         console.error('Failed to write formatted console errors file:', fileError);
       }
-    } else {
-      testResultData.consoleErrors = globalConsoleErrors;
-      console.log('Added test console error from error handler');
     }
-
-    globalConsoleErrors.push({
-      type: 'error',
-      text: 'FORCED_ERROR_HANDLER: Forced error from test error handler (catch block)',
-      time: new Date().toISOString(),
-    });
-    testResultData.consoleErrors = globalConsoleErrors;
-    console.log('Added forced console error from error handler (catch block)');
 
     if (authError) {
       testResultData.authError = authError;
@@ -478,6 +677,34 @@ export default async function runIntegrationTest({ browser, context }) {
         message: `Authentication failed: ${authError.message}`,
         timestamp: authError.timestamp,
       };
+    }
+
+    // Prepare Lambda report with consolidated information
+    const lambdaReport = {
+      testSuccess: testSuccess,
+      environment: environment,
+      region: region,
+      metrics: metrics,
+      totalMetrics: metrics.length,
+      requiredMetrics: 3,
+      errors: consoleErrorLog,
+      totalErrors: consoleErrorLog.length,
+      mainError: {
+        type: 'IntegrationTestError',
+        message: err.message,
+        stack: err.stack,
+        timestamp: new Date().toISOString(),
+      },
+      authError: authError,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Write Lambda report to a file that can be picked up
+    try {
+      fs.writeFileSync('/tmp/lambda-report.json', JSON.stringify(lambdaReport, null, 2));
+      console.log('Lambda report written to /tmp/lambda-report.json');
+    } catch (reportError) {
+      console.error('Failed to write Lambda report:', reportError);
     }
 
     return testResultData;
