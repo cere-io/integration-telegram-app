@@ -256,6 +256,10 @@ if [ -z "$CAMPAIGN_ID" ]; then
   CAMPAIGN_ID=$(grep -o '"testConfig":{[^}]*"campaignId":"[^"]*"' "${OUTPUT_DIR}/cleaned_response.json" | grep -o '"campaignId":"[^"]*"' | sed 's/"campaignId":"//g; s/"$//g')
 fi
 
+# Логирование для отладки
+echo "Extracted URL: ${APP_URL:-Unknown}" >> $GITHUB_STEP_SUMMARY
+echo "Extracted Campaign ID: ${CAMPAIGN_ID:-Unknown}" >> $GITHUB_STEP_SUMMARY
+
 echo "Testing: **${APP_URL:-Unknown}** (Campaign ID: **${CAMPAIGN_ID:-Unknown}**)" >> $GITHUB_STEP_SUMMARY
 echo "From region: **$REGION_INFO**" >> $GITHUB_STEP_SUMMARY
 echo "" >> $GITHUB_STEP_SUMMARY
@@ -406,74 +410,6 @@ echo '        eu[Europe]' >> $GITHUB_STEP_SUMMARY
 echo '        ap[Asia Pacific]' >> $GITHUB_STEP_SUMMARY
 echo '        sa[South America]' >> $GITHUB_STEP_SUMMARY
 echo '    end' >> $GITHUB_STEP_SUMMARY
-
-# Highlight current region
-case "$CONTINENT" in
-  "North America")
-    echo '    na:::highlight --> current["'$REGION': '$REGION_INFO'"]:::current' >> $GITHUB_STEP_SUMMARY
-    ;;
-  "Europe")
-    echo '    eu:::highlight --> current["'$REGION': '$REGION_INFO'"]:::current' >> $GITHUB_STEP_SUMMARY
-    ;;
-  "Asia-Pacific")
-    echo '    ap:::highlight --> current["'$REGION': '$REGION_INFO'"]:::current' >> $GITHUB_STEP_SUMMARY
-    ;;
-  "South America")
-    echo '    sa:::highlight --> current["'$REGION': '$REGION_INFO'"]:::current' >> $GITHUB_STEP_SUMMARY
-    ;;
-esac
-
-echo '    classDef highlight fill:#f96,stroke:#333,stroke-width:2px;' >> $GITHUB_STEP_SUMMARY
-echo '    classDef current fill:#9f6,stroke:#333,stroke-width:4px;' >> $GITHUB_STEP_SUMMARY
-echo '```' >> $GITHUB_STEP_SUMMARY
-
-# Add detailed raw response with key issues highlighted
-echo "" >> $GITHUB_STEP_SUMMARY
-echo "## Debug Information" >> $GITHUB_STEP_SUMMARY
-echo "<details><summary>Click to view response details</summary>" >> $GITHUB_STEP_SUMMARY
-echo "" >> $GITHUB_STEP_SUMMARY
-
-# Extract basic info directly using grep for reliability
-STATUS_CODE=$(echo "$RESPONSE" | grep -o '"StatusCode":[^,}]*' | sed 's/"StatusCode"://g; s/ //g')
-SUCCESS=$(grep -o '"success":[^,}]*' "${OUTPUT_DIR}/full_response.txt" | head -1 | sed 's/"success"://g; s/ //g')
-ERROR_OUTPUT=$(grep -o '"errorOutput":"[^"]*"' "${OUTPUT_DIR}/full_response.txt" | sed 's/"errorOutput":"//g; s/"$//g')
-
-echo "- **Status Code:** ${STATUS_CODE:-Unknown}" >> $GITHUB_STEP_SUMMARY
-echo "- **Success:** ${SUCCESS:-Unknown}" >> $GITHUB_STEP_SUMMARY
-echo "- **Error Output:** ${ERROR_OUTPUT:-None}" >> $GITHUB_STEP_SUMMARY
-echo "" >> $GITHUB_STEP_SUMMARY
-
-echo "**Raw Response (first 40 lines):**" >> $GITHUB_STEP_SUMMARY
-echo '```json' >> $GITHUB_STEP_SUMMARY
-head -n 40 "${OUTPUT_DIR}/full_response.txt" >> $GITHUB_STEP_SUMMARY
-echo '```' >> $GITHUB_STEP_SUMMARY
-echo "</details>" >> $GITHUB_STEP_SUMMARY
-
-# Extra section to highlight detected errors
-echo "" >> $GITHUB_STEP_SUMMARY
-echo "## 🔍 Detected Issues" >> $GITHUB_STEP_SUMMARY
-echo "<details><summary>Click to view detected issues</summary>" >> $GITHUB_STEP_SUMMARY
-echo "" >> $GITHUB_STEP_SUMMARY
-
-# Find TypeErrors and similar issues
-echo "### TypeErrors and null references" >> $GITHUB_STEP_SUMMARY
-echo '```' >> $GITHUB_STEP_SUMMARY
-grep -o "TypeError:[^\"]*" "${OUTPUT_DIR}/full_response.txt" | sort | uniq >> $GITHUB_STEP_SUMMARY
-grep -o "Cannot read properties of[^\"]*" "${OUTPUT_DIR}/full_response.txt" | sort | uniq >> $GITHUB_STEP_SUMMARY
-echo '```' >> $GITHUB_STEP_SUMMARY
-
-echo "</details>" >> $GITHUB_STEP_SUMMARY
-
-# Add improved region visualization - world map with AWS regions
-echo "" >> $GITHUB_STEP_SUMMARY
-echo "## 🗺️ Global AWS Region Distribution" >> $GITHUB_STEP_SUMMARY
-echo '```mermaid' >> $GITHUB_STEP_SUMMARY
-echo 'flowchart TD' >> $GITHUB_STEP_SUMMARY
-echo '  World((🌍 World))' >> $GITHUB_STEP_SUMMARY
-echo '  World --> NA[North America]' >> $GITHUB_STEP_SUMMARY
-echo '  World --> EU[Europe]' >> $GITHUB_STEP_SUMMARY
-echo '  World --> APAC[Asia Pacific]' >> $GITHUB_STEP_SUMMARY
-echo '  World --> SA[South America]' >> $GITHUB_STEP_SUMMARY
 
 # North America regions
 echo '  NA --> us-east-1[us-east-1: N. Virginia 🇺🇸]' >> $GITHUB_STEP_SUMMARY
