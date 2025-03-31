@@ -134,17 +134,23 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
         <Loader size="m" style={{ marginTop: '50%' }} />
       ) : (
         <MediaList>
-          {sortedVideos.map((video, index) => (
-            <MediaListItem
-              key={index}
-              completed={video?.completed || false}
-              name={video.title}
-              description={video.description}
-              thumbnailUrl={video.thumbnailUrl}
-              onClick={() => setCurrentVideo(video)}
-              rewardPoints={video.points}
-            />
-          ))}
+          {sortedVideos.length > 0 ? (
+            sortedVideos.map((video, index) => (
+              <MediaListItem
+                key={index}
+                completed={video?.completed || false}
+                name={video.title}
+                description={video.description}
+                thumbnailUrl={video.thumbnailUrl}
+                onClick={() => setCurrentVideo(video)}
+                rewardPoints={video.points}
+              />
+            ))
+          ) : (
+            <div style={{ margin: '16px 16px 0px' }}>
+              <Text>No videos available</Text>
+            </div>
+          )}
         </MediaList>
       )}
 
