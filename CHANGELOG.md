@@ -2,7 +2,7 @@
 
 ### vNext
 
--
+- Fix media tab
 
 ### v0.2.0
 
