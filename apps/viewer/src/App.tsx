@@ -62,6 +62,7 @@ export const App = () => {
       Analytics.setUser({ id: user.id.toString(), username: user.username });
     }
     Analytics.setTags({ campaign_id: campaignId });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   useEffect(() => {
