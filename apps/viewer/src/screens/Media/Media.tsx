@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { MediaList, MediaListItem, Title, Text, Loader } from '@tg-app/ui';
-import Reporting from '@tg-app/reporting';
+import Analytics from '@tg-app/analytics';
 import { useEngagementData, useEvents, useStartParam } from '../../hooks';
 import { VideoPlayer } from '../../components';
 import { EngagementEventData, Video } from '../../types';
@@ -41,15 +41,7 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
       const renderTime = performance.now() - mountTimeRef.current;
       console.log(`Media Tab Loaded: ${renderTime.toFixed(2)}ms`);
 
-      Reporting.message(`Media Tab Loaded: ${renderTime.toFixed(2)}`, {
-        level: 'info',
-        contexts: {
-          renderTime: {
-            duration: renderTime,
-            unit: 'ms',
-          },
-        },
-      });
+      Analytics.transaction('TAB_LOADED', renderTime, { tab: { name: 'MEDIA' } });
 
       setIsRendered(true);
     }
@@ -75,17 +67,10 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
     };
 
     engagementTimeout = setTimeout(() => {
-      const timeoutDuration = ENGAGEMENT_TIMEOUT_DURATION;
-      console.error(`Media Engagement Timeout after ${timeoutDuration}ms`);
-
-      Reporting.message('Media Engagement Failed', {
-        level: 'error',
-        contexts: {
-          timeout: {
-            duration: timeoutDuration,
-            unit: 'ms',
-          },
-        },
+      console.error(`Media Engagement Timeout after ${ENGAGEMENT_TIMEOUT_DURATION}ms`);
+      Analytics.exception('ENGAGEMENT_TIMEOUT', {
+        event: { type: 'GET_QUESTS' },
+        timeout: ENGAGEMENT_TIMEOUT_DURATION,
       });
     }, ENGAGEMENT_TIMEOUT_DURATION);
 

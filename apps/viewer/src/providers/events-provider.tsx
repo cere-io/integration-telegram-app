@@ -2,9 +2,9 @@ import { useCereWallet } from '../cere-wallet';
 import { createContext, FC, ReactNode, useEffect, useState } from 'react';
 import { CereWalletSigner, EventSource } from '@cere-activity-sdk/events';
 import {
-  APP_PUBLIC_KEY,
-  DATA_SERVICE_PUBLIC_KEY,
-  EVENT_APP_ID,
+  MINI_APP_APP_PUBLIC_KEY,
+  MINI_APP_DATA_SERVICE_PUBLIC_KEY,
+  MINI_APP_APP_ID,
   EVENT_DISPATCH_URL,
   EVENT_LISTEN_URL,
 } from '../constants';
@@ -31,23 +31,27 @@ export const EventsProvider: FC<EventsProviderProps> = ({ children }) => {
       const authorization = await signer.sign('authorization');
       const userPubKey = signer.publicKey;
 
-      const edekKey = `edek:${userPubKey}:${DATA_SERVICE_PUBLIC_KEY}`;
+      const edekKey = `edek:${userPubKey}:${MINI_APP_DATA_SERVICE_PUBLIC_KEY}`;
       const edekShared = localStorage.getItem(edekKey) === 'true';
       if (edekShared) {
         console.log('Data service EDEK has already been shared');
         return;
       }
 
-      const dataServiceEdek = await agentServiceRegistry.getEdek(userPubKey, DATA_SERVICE_PUBLIC_KEY, authorization);
+      const dataServiceEdek = await agentServiceRegistry.getEdek(
+        userPubKey,
+        MINI_APP_DATA_SERVICE_PUBLIC_KEY,
+        authorization,
+      );
       if (!dataServiceEdek) {
         console.log('Data service EDEK not found');
         await cereWallet.isConnected;
-        const edek = await cereWallet.naclBoxEdek(DATA_SERVICE_PUBLIC_KEY);
+        const edek = await cereWallet.naclBoxEdek(MINI_APP_DATA_SERVICE_PUBLIC_KEY);
         const savedEdek = await agentServiceRegistry.saveEdek(
           {
             edek,
             userPubKey,
-            dataServicePubKey: DATA_SERVICE_PUBLIC_KEY,
+            dataServicePubKey: MINI_APP_DATA_SERVICE_PUBLIC_KEY,
           },
           authorization,
         );
@@ -76,11 +80,11 @@ export const EventsProvider: FC<EventsProviderProps> = ({ children }) => {
         await shareEdek(signer);
 
         client = new EventSource(signer, cipher, {
-          appId: EVENT_APP_ID,
+          appId: MINI_APP_APP_ID,
           dispatchUrl: EVENT_DISPATCH_URL,
           listenUrl: EVENT_LISTEN_URL,
-          dataServicePubKey: DATA_SERVICE_PUBLIC_KEY,
-          appPubKey: APP_PUBLIC_KEY,
+          dataServicePubKey: MINI_APP_DATA_SERVICE_PUBLIC_KEY,
+          appPubKey: MINI_APP_APP_PUBLIC_KEY,
         });
 
         await client.connect();
