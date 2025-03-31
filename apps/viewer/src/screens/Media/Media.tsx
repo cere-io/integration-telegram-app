@@ -6,6 +6,7 @@ import { VideoPlayer } from '../../components';
 import { EngagementEventData, Video } from '../../types';
 import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
 import { useData } from '~/providers';
+import { useThemeParams } from '@vkruglikov/react-telegram-web-app';
 
 export type MediaTypeProps = {
   videoUrl?: string;
@@ -13,6 +14,7 @@ export type MediaTypeProps = {
 
 export const Media = ({ videoUrl }: MediaTypeProps) => {
   const { questData, updateData, updateQuestStatus } = useData();
+  const [theme] = useThemeParams();
   const [videos, setVideos] = useState<Video[]>(questData?.[0].quests.videoTasks || []);
   const [currentVideo, setCurrentVideo] = useState<Video>();
   const [pendingUpdates, setPendingUpdates] = useState<Partial<Video>[]>([]);
@@ -133,7 +135,7 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
             ))
           ) : (
             <div style={{ margin: '16px 16px 0px' }}>
-              <Text>No videos available</Text>
+              <Text style={{ color: theme === 'dark' ? '#ffffff' : '#333' }}>No videos available</Text>
             </div>
           )}
         </MediaList>
