@@ -1,6 +1,6 @@
 import './index.css';
 import { useEffect, useState } from 'react';
-import { AppRoot, Tabbar, MediaIcon, LeaderboardIcon, QuestsIcon, Text } from '@tg-app/ui';
+import { AppRoot, Tabbar, MediaIcon, LeaderboardIcon, QuestsIcon, Text, Button } from '@tg-app/ui';
 import Reporting from '@tg-app/reporting';
 import { useInitData, useThemeParams } from '@vkruglikov/react-telegram-web-app';
 
@@ -39,7 +39,7 @@ export type ActiveTab = {
 
 export const App = () => {
   const [initDataUnsafe] = useInitData() || {};
-  const { campaignExpired, campaignPaused } = useData();
+  const { campaignExpired, campaignPaused, debugMode } = useData();
   const [theme] = useThemeParams();
   const { campaignId, referrerId } = useStartParam();
 
@@ -175,6 +175,19 @@ export const App = () => {
           <WelcomeScreen onStart={() => setWelcomeScreenVisible(false)} />
         ) : (
           <>
+            {debugMode && (
+              <Button
+                style={{ position: 'absolute', right: '5px', top: '5px' }}
+                onClick={() => {
+                  localStorage.clear();
+                  sessionStorage.clear();
+                  indexedDB.databases().then((dbs) => dbs.forEach((db) => indexedDB.deleteDatabase(db?.name || '')));
+                }}
+              >
+                Clear cache
+              </Button>
+            )}
+
             <Screen setActiveTab={setActiveTab} {...activeTab.props} />
 
             <Tabbar
