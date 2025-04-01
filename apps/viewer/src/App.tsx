@@ -182,6 +182,7 @@ export const App = () => {
                   localStorage.clear();
                   sessionStorage.clear();
                   indexedDB.databases().then((dbs) => dbs.forEach((db) => indexedDB.deleteDatabase(db?.name || '')));
+                  window.location.reload();
                 }}
               >
                 Clear cache
