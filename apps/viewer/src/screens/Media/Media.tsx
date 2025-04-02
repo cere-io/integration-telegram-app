@@ -107,7 +107,7 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
 
   return (
     <div style={{ paddingBottom: 65 }}>
-      <Title weight="2" style={{ marginLeft: 16, marginTop: 16, color: '#333' }}>
+      <Title weight="2" style={{ marginLeft: 16, marginTop: 16 }}>
         Library
       </Title>
       <Text Component="div" style={{ margin: '16px 16px 0 16px', color: 'rgb(113, 118, 132)' }}>
