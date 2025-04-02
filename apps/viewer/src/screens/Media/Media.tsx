@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { MediaList, MediaListItem, Title, Text, Loader } from '@tg-app/ui';
+import { useThemeParams } from '@vkruglikov/react-telegram-web-app';
 import Analytics from '@tg-app/analytics';
 import { useEngagementData, useEvents, useStartParam } from '../../hooks';
 import { VideoPlayer } from '../../components';
@@ -17,6 +18,7 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
   const [currentVideo, setCurrentVideo] = useState<Video>();
   const [pendingUpdates, setPendingUpdates] = useState<Partial<Video>[]>([]);
   const eventSource = useEvents();
+  const [theme] = useThemeParams();
   const { campaignId } = useStartParam();
 
   const mountTimeRef = useRef<number>(performance.now());
@@ -106,7 +108,7 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
   }, [videoUrl, videos]);
 
   return (
-    <div style={{ paddingBottom: 65 }}>
+    <div style={{ paddingBottom: 65, ...(theme === 'dark' && { backgroundColor: '#130e26' }) }}>
       <Title weight="2" style={{ marginLeft: 16, marginTop: 16 }}>
         Library
       </Title>
