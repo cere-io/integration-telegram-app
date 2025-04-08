@@ -27,50 +27,17 @@ function normalizeTemplateData(html: string): any {
 }
 
 function deepEqualIgnoringSeconds(obj1: any, obj2: any): boolean {
-  if (obj1 === obj2) return true;
-
-  if (obj1 == null || obj2 == null) return false;
-
-  if (typeof obj1 !== 'object' || typeof obj2 !== 'object') {
+  if (typeof obj1 !== 'object' || typeof obj2 !== 'object' || obj1 === null || obj2 === null) {
     return obj1 === obj2;
   }
 
-  const getFilteredKeys = (obj: any) => {
-    return Object.keys(obj).filter((key) => {
-      if (key === 'remainingTime' && obj[key] && typeof obj[key] === 'object') {
-        return true;
-      }
-      return true;
-    });
-  };
+  const keys1 = Object.keys(obj1).filter((key) => !(key === 'seconds' && obj1 === obj1.remainingTime));
+  const keys2 = Object.keys(obj2).filter((key) => !(key === 'seconds' && obj2 === obj2.remainingTime));
 
-  const keys1 = getFilteredKeys(obj1);
-  const keys2 = getFilteredKeys(obj2);
-
-  if (keys1.length !== keys2.length) {
-    return false;
-  }
+  if (keys1.length !== keys2.length) return false;
 
   for (const key of keys1) {
-    if (
-      key === 'remainingTime' &&
-      obj1[key] &&
-      obj2[key] &&
-      typeof obj1[key] === 'object' &&
-      typeof obj2[key] === 'object'
-    ) {
-      const rt1 = { ...obj1[key] };
-      const rt2 = { ...obj2[key] };
-
-      delete rt1.seconds;
-      delete rt2.seconds;
-
-      if (!deepEqualIgnoringSeconds(rt1, rt2)) {
-        return false;
-      }
-    } else if (!Object.prototype.hasOwnProperty.call(obj2, key) || !deepEqualIgnoringSeconds(obj1[key], obj2[key])) {
-      return false;
-    }
+    if (!deepEqualIgnoringSeconds(obj1[key], obj2[key])) return false;
   }
 
   return true;
