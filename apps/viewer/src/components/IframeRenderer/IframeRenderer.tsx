@@ -1,34 +1,76 @@
 import React, { memo, MutableRefObject, useEffect } from 'react';
+import JSON5 from 'json5';
 
 function normalizeTemplateData(html: string): any {
   try {
-    const match = html.match(/TEMPLATE_DATA\s*=\s*(\{.*?\});/s);
+    const match = html.match(/TEMPLATE_DATA\s*=\s*JSON\.stringify\((\{.*?\})\);/s);
     if (!match) return null;
 
-    const data = JSON.parse(match[1]);
+    try {
+      const data = JSON5.parse(match[1]);
 
-    if (data.remainingTime) {
-      delete data.remainingTime.seconds;
+      if (data && typeof data === 'object' && data.remainingTime && 'seconds' in data.remainingTime) {
+        const dataCopy = JSON.parse(JSON.stringify(data));
+        delete dataCopy.remainingTime.seconds;
+        return dataCopy;
+      }
+
+      return data;
+    } catch (jsonError) {
+      console.error('Error parsing JSON data:', jsonError);
+      return null;
     }
-
-    return data;
-  } catch {
+  } catch (error) {
+    console.error('Error in normalizeTemplateData:', error);
     return null;
   }
 }
 
 function deepEqualIgnoringSeconds(obj1: any, obj2: any): boolean {
-  if (typeof obj1 !== 'object' || typeof obj2 !== 'object' || obj1 === null || obj2 === null) {
+  if (obj1 === obj2) return true;
+
+  if (obj1 == null || obj2 == null) return false;
+
+  if (typeof obj1 !== 'object' || typeof obj2 !== 'object') {
     return obj1 === obj2;
   }
 
-  const keys1 = Object.keys(obj1).filter((key) => !(key === 'seconds' && obj1 === obj1.remainingTime));
-  const keys2 = Object.keys(obj2).filter((key) => !(key === 'seconds' && obj2 === obj2.remainingTime));
+  const getFilteredKeys = (obj: any) => {
+    return Object.keys(obj).filter((key) => {
+      if (key === 'remainingTime' && obj[key] && typeof obj[key] === 'object') {
+        return true;
+      }
+      return true;
+    });
+  };
 
-  if (keys1.length !== keys2.length) return false;
+  const keys1 = getFilteredKeys(obj1);
+  const keys2 = getFilteredKeys(obj2);
+
+  if (keys1.length !== keys2.length) {
+    return false;
+  }
 
   for (const key of keys1) {
-    if (!deepEqualIgnoringSeconds(obj1[key], obj2[key])) return false;
+    if (
+      key === 'remainingTime' &&
+      obj1[key] &&
+      obj2[key] &&
+      typeof obj1[key] === 'object' &&
+      typeof obj2[key] === 'object'
+    ) {
+      const rt1 = { ...obj1[key] };
+      const rt2 = { ...obj2[key] };
+
+      delete rt1.seconds;
+      delete rt2.seconds;
+
+      if (!deepEqualIgnoringSeconds(rt1, rt2)) {
+        return false;
+      }
+    } else if (!Object.prototype.hasOwnProperty.call(obj2, key) || !deepEqualIgnoringSeconds(obj1[key], obj2[key])) {
+      return false;
+    }
   }
 
   return true;

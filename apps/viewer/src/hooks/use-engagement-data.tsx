@@ -108,15 +108,10 @@ export const useEngagementData = ({
               }),
             },
           };
-
-          setTimeout(() => {
-            if (iframeRef.current && iframeRef.current.contentWindow) {
-              iframeRef.current.contentWindow.postMessage(eventData, '*');
-            }
-          }, 50);
+          iframeRef.current.contentWindow?.postMessage(eventData, '*');
         }
 
-        setTimeout(() => setLoading(false), 50);
+        setTimeout(() => setLoading(false), 0);
       }
     };
 
