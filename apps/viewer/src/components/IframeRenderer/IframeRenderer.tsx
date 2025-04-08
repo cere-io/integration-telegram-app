@@ -89,14 +89,14 @@ export const IframeRenderer: React.FC<IframeRendererProps> = memo(
     );
   },
   (prevProps, nextProps) => {
-    // if (prevProps.html === nextProps.html) return true;
+    if (prevProps.html === nextProps.html) return true;
 
-    // if (!prevProps.html || !nextProps.html) return false;
+    if (!prevProps.html || !nextProps.html) return false;
 
     const prevData = normalizeTemplateData(prevProps.html);
     const nextData = normalizeTemplateData(nextProps.html);
 
-    // if (!prevData || !nextData) return false;
+    if (!prevData || !nextData) return false;
 
     return deepEqualIgnoringSeconds(prevData, nextData);
   },

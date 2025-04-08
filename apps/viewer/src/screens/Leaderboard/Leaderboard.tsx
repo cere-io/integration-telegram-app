@@ -34,7 +34,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
-  const { isLoading, lastUpdate } = useEngagementData({
+  const { isLoading } = useEngagementData({
     eventSource,
     eventType: 'GET_LEADERBOARD',
     campaignId,
@@ -51,13 +51,6 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
       forceUpdate();
     }
   }, [leaderboardHtml, forceUpdate]);
-
-  useEffect(() => {
-    if (lastUpdate > 0) {
-      console.log('Received leaderboard update, forcing refresh...');
-      forceUpdate();
-    }
-  }, [lastUpdate, forceUpdate]);
 
   useEffect(() => {
     const handleIframeClick = async (event: MessageEvent) => {
@@ -124,7 +117,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         <Loader size="m" />
       ) : (
         <IframeRenderer
-          key={`leaderboard-iframe-${forceUpdateCounter}-update-${lastUpdate}`}
+          key={`leaderboard-iframe-${forceUpdateCounter}`}
           iframeRef={iframeRef}
           allow="clipboard-read; clipboard-write"
           html={memoizedLeaderboardHtml}

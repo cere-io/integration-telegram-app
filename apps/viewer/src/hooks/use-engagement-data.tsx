@@ -33,8 +33,6 @@ export const useEngagementData = ({
   const [isLoading, setLoading] = useState(eventType === 'GET_QUESTS' ? !questsHtml : !leaderboardHtml);
   const activityStartTime = useRef<number | null>(null);
   const isFetching = useRef(false);
-  const updateCounter = useRef(0);
-  const [lastReceivedUpdate, setLastReceivedUpdate] = useState(0);
 
   useEffect(() => {
     if (!eventSource || isFetching.current) return;
@@ -84,25 +82,12 @@ export const useEngagementData = ({
         const { engagement, integrationScriptResults }: EngagementEventData = event.payload;
         const compiledHTML = compileHtml(engagement.widget_template.params || '', integrationScriptResults);
 
-        updateCounter.current += 1;
-
-        // updateData(
-        //   integrationScriptResults,
-        //   engagement.widget_template.params,
-        //   decodeHtml(compiledHTML),
-        //   eventType === 'GET_QUESTS' ? 'quests' : 'leaderboard',
-        // );
-
-        Promise.resolve().then(() => {
-          updateData(
-            integrationScriptResults,
-            engagement.widget_template.params,
-            decodeHtml(compiledHTML),
-            eventType === 'GET_QUESTS' ? 'quests' : 'leaderboard',
-          );
-
-          setLastReceivedUpdate(updateCounter.current);
-        });
+        updateData(
+          integrationScriptResults,
+          engagement.widget_template.params,
+          decodeHtml(compiledHTML),
+          eventType === 'GET_QUESTS' ? 'quests' : 'leaderboard',
+        );
 
         if (iframeRef?.current) {
           const eventData = {
@@ -151,5 +136,5 @@ export const useEngagementData = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventSource]);
 
-  return { isLoading, lastUpdate: lastReceivedUpdate };
+  return { isLoading };
 };
