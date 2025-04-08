@@ -44,8 +44,9 @@ type IframeRendererProps = {
 };
 
 export const IframeRenderer: React.FC<IframeRendererProps> = memo(
-  ({ iframeRef, html, title, onLoad, style }) => {
+  ({ iframeRef, html, title, onLoad, style, allow }) => {
     useEffect(() => {
+      if (!html) return;
       if (iframeRef.current) {
         const iframe = iframeRef.current;
         const iframeDoc = iframe.contentDocument;
@@ -79,6 +80,7 @@ export const IframeRenderer: React.FC<IframeRendererProps> = memo(
       <iframe
         ref={iframeRef}
         title={title}
+        allow={allow}
         style={{
           transition: 'opacity 0.2s ease-in-out',
           ...style,
@@ -87,8 +89,14 @@ export const IframeRenderer: React.FC<IframeRendererProps> = memo(
     );
   },
   (prevProps, nextProps) => {
+    // if (prevProps.html === nextProps.html) return true;
+
+    // if (!prevProps.html || !nextProps.html) return false;
+
     const prevData = normalizeTemplateData(prevProps.html);
     const nextData = normalizeTemplateData(nextProps.html);
+
+    // if (!prevData || !nextData) return false;
 
     return deepEqualIgnoringSeconds(prevData, nextData);
   },

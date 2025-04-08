@@ -1,6 +1,6 @@
 import './Leaderboard.css';
 import { Snackbar, Loader, truncateText } from '@tg-app/ui';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useStartParam, useEvents, useEngagementData } from '../../hooks';
 import { ActiveTab } from '~/App.tsx';
 import { ClipboardCheck } from 'lucide-react';
@@ -16,16 +16,14 @@ type LeaderboardProps = {
 export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   const { leaderboardHtml, updateData } = useData();
 
+  const [forceUpdateCounter, setForceUpdateCounter] = useState(0);
+  const forceUpdate = useCallback(() => {
+    setForceUpdateCounter((prev) => prev + 1);
+  }, []);
+
   const lastHtml = useRef(leaderboardHtml);
   const [memoizedLeaderboardHtml, setMemoizedLeaderboardHtml] = useState(leaderboardHtml);
   const mountTimeRef = useRef<number>(performance.now());
-
-  useEffect(() => {
-    if (lastHtml.current !== leaderboardHtml) {
-      lastHtml.current = leaderboardHtml;
-      setMemoizedLeaderboardHtml(leaderboardHtml);
-    }
-  }, [leaderboardHtml]);
 
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
 
@@ -36,7 +34,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
-  const { isLoading } = useEngagementData({
+  const { isLoading, lastUpdate } = useEngagementData({
     eventSource,
     eventType: 'GET_LEADERBOARD',
     campaignId,
@@ -44,6 +42,22 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
     updateData,
     iframeRef,
   });
+
+  useEffect(() => {
+    if (lastHtml.current !== leaderboardHtml) {
+      console.log('Leaderboard HTML changed, updating...');
+      lastHtml.current = leaderboardHtml;
+      setMemoizedLeaderboardHtml(leaderboardHtml);
+      forceUpdate();
+    }
+  }, [leaderboardHtml, forceUpdate]);
+
+  useEffect(() => {
+    if (lastUpdate > 0) {
+      console.log('Received leaderboard update, forcing refresh...');
+      forceUpdate();
+    }
+  }, [lastUpdate, forceUpdate]);
 
   useEffect(() => {
     const handleIframeClick = async (event: MessageEvent) => {
@@ -110,6 +124,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         <Loader size="m" />
       ) : (
         <IframeRenderer
+          key={`leaderboard-iframe-${forceUpdateCounter}-update-${lastUpdate}`}
           iframeRef={iframeRef}
           allow="clipboard-read; clipboard-write"
           html={memoizedLeaderboardHtml}

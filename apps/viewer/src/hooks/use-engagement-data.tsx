@@ -33,6 +33,8 @@ export const useEngagementData = ({
   const [isLoading, setLoading] = useState(eventType === 'GET_QUESTS' ? !questsHtml : !leaderboardHtml);
   const activityStartTime = useRef<number | null>(null);
   const isFetching = useRef(false);
+  const updateCounter = useRef(0);
+  const [lastReceivedUpdate, setLastReceivedUpdate] = useState(0);
 
   useEffect(() => {
     if (!eventSource || isFetching.current) return;
@@ -81,12 +83,26 @@ export const useEngagementData = ({
 
         const { engagement, integrationScriptResults }: EngagementEventData = event.payload;
         const compiledHTML = compileHtml(engagement.widget_template.params || '', integrationScriptResults);
-        updateData(
-          integrationScriptResults,
-          engagement.widget_template.params,
-          decodeHtml(compiledHTML),
-          eventType === 'GET_QUESTS' ? 'quests' : 'leaderboard',
-        );
+
+        updateCounter.current += 1;
+
+        // updateData(
+        //   integrationScriptResults,
+        //   engagement.widget_template.params,
+        //   decodeHtml(compiledHTML),
+        //   eventType === 'GET_QUESTS' ? 'quests' : 'leaderboard',
+        // );
+
+        Promise.resolve().then(() => {
+          updateData(
+            integrationScriptResults,
+            engagement.widget_template.params,
+            decodeHtml(compiledHTML),
+            eventType === 'GET_QUESTS' ? 'quests' : 'leaderboard',
+          );
+
+          setLastReceivedUpdate(updateCounter.current);
+        });
 
         if (iframeRef?.current) {
           const eventData = {
@@ -107,10 +123,15 @@ export const useEngagementData = ({
               }),
             },
           };
-          iframeRef.current.contentWindow?.postMessage(eventData, '*');
+
+          setTimeout(() => {
+            if (iframeRef.current && iframeRef.current.contentWindow) {
+              iframeRef.current.contentWindow.postMessage(eventData, '*');
+            }
+          }, 50);
         }
 
-        setTimeout(() => setLoading(false), 0);
+        setTimeout(() => setLoading(false), 50);
       }
     };
 
@@ -130,5 +151,5 @@ export const useEngagementData = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventSource]);
 
-  return { isLoading };
+  return { isLoading, lastUpdate: lastReceivedUpdate };
 };
