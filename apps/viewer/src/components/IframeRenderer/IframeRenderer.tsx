@@ -100,9 +100,10 @@ export const IframeRenderer: React.FC<IframeRendererProps> = memo(
     );
   },
   (prevProps, nextProps) => {
-    const prevData = normalizeTemplateData(prevProps.html, prevProps.html.includes('<div id="leaderboard"></div>'));
+    const prevData = prevProps.html
+      ? normalizeTemplateData(prevProps.html, prevProps.html.includes('<div id="leaderboard"></div>'))
+      : normalizeTemplateData(prevProps.html);
     const nextData = normalizeTemplateData(nextProps.html, nextProps.html.includes('<div id="leaderboard"></div>'));
-    debugger;
 
     return deepEqualIgnoringSeconds(prevData, nextData);
   },
