@@ -81,7 +81,6 @@ export const useEngagementData = ({
 
         const { engagement, integrationScriptResults }: EngagementEventData = event.payload;
         const compiledHTML = compileHtml(engagement.widget_template.params || '', integrationScriptResults);
-
         updateData(
           integrationScriptResults,
           engagement.widget_template.params,
