@@ -110,6 +110,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         <Loader size="m" />
       ) : (
         <IframeRenderer
+          key="leaderboard-iframe"
           iframeRef={iframeRef}
           allow="clipboard-read; clipboard-write"
           html={memoizedLeaderboardHtml}
