@@ -1,0 +1,17 @@
+{
+  "name": "playwright-lambda-layer",
+  "version": "1.0.0",
+  "description": "Lambda layer with Playwright and its dependencies",
+  "main": "index.js",
+  "scripts": {
+    "install-deps": "npm install && npx playwright install chromium"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@playwright/test": "^1.50.1",
+    "playwright": "^1.50.1"
+  }
+}

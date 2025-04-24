@@ -9,7 +9,7 @@ import { ClipboardCheck } from 'lucide-react';
 import { useCereWallet } from '../../cere-wallet';
 import { useData } from '../../providers';
 import { IframeRenderer } from '../../components/IframeRenderer';
-import Reporting from '@tg-app/reporting';
+import Analytics from '@tg-app/analytics';
 
 // eslint-disable-next-line @typescript-eslint/ban-types
 function useDebouncedCallback(callback: Function, delay: number) {
@@ -121,6 +121,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
           timestamp: new Date().toISOString(),
           data: JSON.stringify({
             campaign_id: campaignId,
+            campaignId: campaignId,
             quizId: event.data.quizId,
             questionId: event.data.questionId,
             answerId: event.data.answerId,
@@ -133,7 +134,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
           timestamp,
         });
 
-        void eventSource.dispatchEvent(activityEvent);
+        setTimeout(() => void eventSource.dispatchEvent(activityEvent), 1000);
         return;
       }
 
@@ -173,15 +174,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
   const handleIframeLoad = () => {
     const renderTime = performance.now() - mountTimeRef.current;
     console.log(`Active Quests Tab Loaded: ${renderTime.toFixed(2)}ms`);
-    Reporting.message(`Active Quests Tab Loaded: ${renderTime.toFixed(2)}`, {
-      level: 'info',
-      contexts: {
-        tabLoadingTime: {
-          duration: renderTime,
-          unit: 'ms',
-        },
-      },
-    });
+    Analytics.transaction('TAB_LOADED', renderTime, { tab: { name: 'ACTIVE_QUESTS' } });
   };
 
   return (

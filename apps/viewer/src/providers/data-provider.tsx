@@ -11,9 +11,11 @@ type DataContextType = {
   campaignConfig: Campaign | null;
   campaignConfigLoaded: boolean;
   campaignExpired: boolean;
+  campaignPaused: boolean;
   updateData: (newData: any, originalHtml: string, newHtml: string, key: 'quests' | 'leaderboard') => void;
   loadCache: () => void;
   updateQuestStatus: (questId: string, taskType: string, newStatus: boolean, points: number) => void;
+  debugMode: boolean;
 };
 
 const DataContext = createContext<DataContextType | null>(null);
@@ -37,6 +39,8 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [leaderboardHtml, setLeaderboardHtml] = useState<string>('');
   const [leaderboardOriginalHtml, setLeaderboardOriginalHtml] = useState<string>('');
   const [isCampaignExpired, setIsCampaignExpired] = useState(false);
+  const [isCampaignPaused, setIsCampaignPaused] = useState(false);
+  const [isDebugMode, setDebugMode] = useState(false);
 
   const initialQuestsHtmlRef = useRef<string | null>(null);
   const initialLeaderboardHtmlRef = useRef<any | null>(null);
@@ -72,7 +76,13 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    if (!campaignConfig || questData || questsHtml) return;
+    if (!campaignConfig) return;
+    const campaignStatus = JSON.parse(campaignConfig?.formData as unknown as string)?.campaign?.status;
+    const debugMode = JSON.parse(campaignConfig?.formData as unknown as string)?.campaign?.debug || false;
+    setDebugMode(debugMode);
+    if (campaignStatus !== 'paused') {
+      if (questData || questsHtml) return;
+    }
     prepareDataFromConfig();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaignConfig, questData, questsHtml]);
@@ -120,6 +130,10 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
       const remainingTime = calculateRemainingTime(formDataCampaign.endDate);
       if (!remainingTime) return null;
+
+      if (formDataCampaign.status === 'paused') {
+        setIsCampaignPaused(true);
+      }
 
       return {
         quests,
@@ -319,9 +333,11 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         campaignConfig,
         campaignConfigLoaded: isConfigLoaded,
         campaignExpired: isCampaignExpired,
+        campaignPaused: isCampaignPaused,
         updateData,
         loadCache,
         updateQuestStatus,
+        debugMode: isDebugMode,
       }}
     >
       {children}

@@ -10,7 +10,7 @@ export type AnalyticsOptions = TagManagerArgs & {
   enabled?: boolean;
 };
 
-export class Analytics {
+export class GtmAnalytics {
   constructor(private options: AnalyticsOptions) {}
 
   init() {

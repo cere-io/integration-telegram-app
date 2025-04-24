@@ -7,7 +7,7 @@ import { ClipboardCheck } from 'lucide-react';
 import { useThemeParams } from '@vkruglikov/react-telegram-web-app';
 import { useData } from '../../providers';
 import { IframeRenderer } from '../../components/IframeRenderer';
-import Reporting from '@tg-app/reporting';
+import Analytics from '@tg-app/analytics';
 
 type LeaderboardProps = {
   setActiveTab: (tab: ActiveTab) => void;
@@ -101,15 +101,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   const handleIframeLoad = () => {
     const renderTime = performance.now() - mountTimeRef.current;
     console.log(`Leaderboard Tab Loaded: ${renderTime.toFixed(2)}ms`);
-    Reporting.message(`Leaderboard Tab Loaded: ${renderTime.toFixed(2)}`, {
-      level: 'info',
-      contexts: {
-        tabLoadingTime: {
-          duration: renderTime,
-          unit: 'ms',
-        },
-      },
-    });
+    Analytics.transaction('TAB_LOADED', renderTime, { tab: { name: 'LEADERBOARD' } });
   };
 
   return (

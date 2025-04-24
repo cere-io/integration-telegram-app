@@ -1,6 +1,6 @@
 import './index.css';
 import { useEffect, useState } from 'react';
-import { AppRoot, Tabbar, MediaIcon, LeaderboardIcon, QuestsIcon, Text } from '@tg-app/ui';
+import { AppRoot, Tabbar, MediaIcon, LeaderboardIcon, QuestsIcon, Text, Button } from '@tg-app/ui';
 import Reporting from '@tg-app/reporting';
 import { useInitData, useThemeParams } from '@vkruglikov/react-telegram-web-app';
 
@@ -11,7 +11,7 @@ import { useEvents, useStartParam } from './hooks';
 import hbs from 'handlebars';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { useCereWallet } from './cere-wallet';
-import Analytics, { AnalyticsId } from '@tg-app/analytics';
+import Analytics from '@tg-app/analytics';
 import { useData } from './providers';
 
 const tabs = [
@@ -39,7 +39,7 @@ export type ActiveTab = {
 
 export const App = () => {
   const [initDataUnsafe] = useInitData() || {};
-  const { campaignExpired } = useData();
+  const { campaignExpired, campaignPaused, debugMode } = useData();
   const [theme] = useThemeParams();
   const { campaignId, referrerId } = useStartParam();
 
@@ -53,10 +53,17 @@ export const App = () => {
 
   const Screen = tabs[activeTab.index].screen;
 
-  useEffect(
-    () => (!user ? Reporting.clearUser() : Reporting.setUser({ id: user.id.toString(), username: user.username })),
-    [user],
-  );
+  useEffect(() => {
+    if (!user) {
+      Reporting.clearUser();
+      Analytics.clearUser();
+    } else {
+      Reporting.setUser({ id: user.id.toString(), username: user.username });
+      Analytics.setUser({ id: user.id.toString(), username: user.username });
+    }
+    Analytics.setTags({ campaign_id: campaignId });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   useEffect(() => {
     if (!eventSource) return;
@@ -76,9 +83,6 @@ export const App = () => {
           data: integrationScriptResults,
         });
 
-        Analytics.trackEvent(AnalyticsId.questCompleted, {
-          questId: (integrationScriptResults as Array<any>)[0].questId,
-        });
         setNotificationHtml(compiledHTML);
       }
     };
@@ -134,6 +138,24 @@ export const App = () => {
         </div>
       );
     }
+    if (campaignPaused) {
+      return (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100vh',
+            textAlign: 'center',
+            padding: '2rem',
+          }}
+        >
+          <Text>This campaign has been paused</Text>
+          <Text>Please circle back late</Text>
+        </div>
+      );
+    }
     return (
       <>
         {notificationHtml && (
@@ -153,6 +175,20 @@ export const App = () => {
           <WelcomeScreen onStart={() => setWelcomeScreenVisible(false)} />
         ) : (
           <>
+            {debugMode && (
+              <Button
+                style={{ position: 'absolute', right: '5px', top: '5px' }}
+                onClick={() => {
+                  localStorage.clear();
+                  sessionStorage.clear();
+                  indexedDB.databases().then((dbs) => dbs.forEach((db) => indexedDB.deleteDatabase(db?.name || '')));
+                  window.location.reload();
+                }}
+              >
+                Clear cache
+              </Button>
+            )}
+
             <Screen setActiveTab={setActiveTab} {...activeTab.props} />
 
             <Tabbar

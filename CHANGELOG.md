@@ -4,6 +4,11 @@
 
 -
 
+### v0.2.1
+
+- Fix media tab
+- Fixed first render of leaderboard
+
 ### v0.2.0
 
 - Cache logic implementation

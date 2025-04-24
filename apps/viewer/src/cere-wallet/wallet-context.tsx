@@ -1,8 +1,7 @@
 import { createContext, PropsWithChildren, useContext, useMemo } from 'react';
 import { EmbedWallet, WalletEnvironment } from '@cere/embed-wallet';
 import { APP_ENV, TELEGRAM_BOT_ID } from '../constants.ts';
-import Reporting from '@tg-app/reporting';
-import Analytics, { AnalyticsId } from '@tg-app/analytics';
+import Analytics from '@tg-app/analytics';
 import { useForceHideTorusIframe } from '../hooks';
 
 const CereWalletContext = createContext<EmbedWallet | null>(null);
@@ -68,25 +67,7 @@ export const CereWalletProvider = ({ children }: PropsWithChildren<NonNullable<u
             const endTime = performance.now();
             const initialisationTime = endTime - startTime;
             console.log(`Cere Wallet initialisation time: ${initialisationTime.toFixed(2)} ms`);
-            Reporting.message(`Cere Wallet Initialised: ${initialisationTime.toFixed(2)}`, {
-              level: 'info',
-              tags: {
-                environment: APP_ENV as WalletEnvironment,
-                wallet: 'Cere Wallet',
-              },
-              context: {
-                performance: {
-                  initialisationTime: `${initialisationTime.toFixed(2)}`,
-                },
-              },
-            });
-
-            wallet.getUserInfo().then((user) => {
-              if (user.isNewWallet) {
-                Analytics.trackEvent(AnalyticsId.cereWalletCreated);
-              }
-              console.log('Cere Wallet details: ', user);
-            });
+            Analytics.transaction('WALLET_INITIALISED', initialisationTime);
           });
         });
       });

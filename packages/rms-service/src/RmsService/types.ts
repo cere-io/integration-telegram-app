@@ -86,6 +86,7 @@ export type FormDataType = {
     endDate: string;
     status: string;
     description: string;
+    debug: boolean;
     configuration: {
       welcomeScreen: {
         title?: string;
