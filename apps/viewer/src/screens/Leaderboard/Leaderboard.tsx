@@ -100,6 +100,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
     return () => {
       window.removeEventListener('message', handleIframeClick);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [setActiveTab]);
 
   const handleIframeLoad = () => {
