@@ -1,6 +1,6 @@
 import './Leaderboard.css';
 import { Snackbar, Loader, truncateText } from '@tg-app/ui';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useStartParam, useEvents, useEngagementData } from '../../hooks';
 import { ActiveTab } from '~/App.tsx';
 import { ClipboardCheck } from 'lucide-react';
@@ -8,6 +8,7 @@ import { useThemeParams } from '@vkruglikov/react-telegram-web-app';
 import { useData } from '../../providers';
 import { IframeRenderer } from '../../components/IframeRenderer';
 import Analytics from '@tg-app/analytics';
+import { ActivityEvent } from '@cere-activity-sdk/events';
 
 type LeaderboardProps = {
   setActiveTab: (tab: ActiveTab) => void;
@@ -90,6 +91,9 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           index: 0,
         });
       }
+      if (event.data.type === 'ATTACH_EXTERNAL_ADDRESS') {
+        await sendAttachExternalEventAddressEvent(event.data.walletAddress);
+      }
     };
     window.addEventListener('message', handleIframeClick);
 
@@ -103,6 +107,21 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
     console.log(`Leaderboard Tab Loaded: ${renderTime.toFixed(2)}ms`);
     Analytics.transaction('TAB_LOADED', renderTime, { tab: { name: 'LEADERBOARD' } });
   };
+
+  const sendAttachExternalEventAddressEvent = useCallback(
+    async (walletAddress: string) => {
+      if (!eventSource || !walletAddress) return;
+
+      const activityEventPayload = {
+        campaign_id: campaignId,
+        walletAddress,
+      };
+      const activityEvent = new ActivityEvent('ATTACH_EXTERNAL_ADDRESS', activityEventPayload);
+
+      await eventSource.dispatchEvent(activityEvent);
+    },
+    [campaignId, eventSource],
+  );
 
   return (
     <div className="leaderboard" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
