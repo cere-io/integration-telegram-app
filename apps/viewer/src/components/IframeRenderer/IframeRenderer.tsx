@@ -1,6 +1,18 @@
 import React, { memo, MutableRefObject, useEffect } from 'react';
+import JSON5 from 'json5';
 
-function normalizeTemplateData(html: string): any {
+function normalizeTemplateData(html: string, isLeaderboard = false): any {
+  if (isLeaderboard) {
+    try {
+      const match = html.match(/TEMPLATE_DATA\s*=\s*JSON\.stringify\((\{.*?\})\);/s);
+      if (!match) return null;
+
+      return JSON5.parse(match[1]);
+    } catch {
+      return null;
+    }
+  }
+
   try {
     const match = html.match(/TEMPLATE_DATA\s*=\s*(\{.*?\});/s);
     if (!match) return null;
@@ -44,7 +56,7 @@ type IframeRendererProps = {
 };
 
 export const IframeRenderer: React.FC<IframeRendererProps> = memo(
-  ({ iframeRef, html, title, onLoad, style }) => {
+  ({ iframeRef, html, title, onLoad, style, allow }) => {
     useEffect(() => {
       if (iframeRef.current) {
         const iframe = iframeRef.current;
@@ -79,6 +91,7 @@ export const IframeRenderer: React.FC<IframeRendererProps> = memo(
       <iframe
         ref={iframeRef}
         title={title}
+        allow={allow}
         style={{
           transition: 'opacity 0.2s ease-in-out',
           ...style,
@@ -87,8 +100,10 @@ export const IframeRenderer: React.FC<IframeRendererProps> = memo(
     );
   },
   (prevProps, nextProps) => {
-    const prevData = normalizeTemplateData(prevProps.html);
-    const nextData = normalizeTemplateData(nextProps.html);
+    const prevData = prevProps.html
+      ? normalizeTemplateData(prevProps.html, prevProps.html.includes('<div id="leaderboard"></div>'))
+      : normalizeTemplateData(prevProps.html);
+    const nextData = normalizeTemplateData(nextProps.html, nextProps.html.includes('<div id="leaderboard"></div>'));
 
     return deepEqualIgnoringSeconds(prevData, nextData);
   },

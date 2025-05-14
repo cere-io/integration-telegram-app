@@ -4,6 +4,10 @@
 
 -
 
+### v0.2.2
+
+- Support external wallet address adding
+
 ### v0.2.1
 
 - Fix media tab

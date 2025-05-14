@@ -1,7 +1,7 @@
 {
   "name": "tg-app",
   "private": true,
-  "version": "0.2.1",
+  "version": "0.2.2",
   "type": "module",
   "scripts": {
     "start": "cd apps/viewer && vite",
@@ -25,6 +25,7 @@
     "@playwright/test": "^1.40.0",
     "@vkruglikov/react-telegram-web-app": "^2.1.9",
     "handlebars": "^4.7.8",
+    "json5": "^2.2.3",
     "lucide-react": "^0.468.0",
     "playwright": "^1.50.1",
     "swiper": "^11.2.1",
