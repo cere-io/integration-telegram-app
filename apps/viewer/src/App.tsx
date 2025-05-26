@@ -13,6 +13,7 @@ import { ActivityEvent } from '@cere-activity-sdk/events';
 import { useCereWallet } from './cere-wallet';
 import Analytics from '@tg-app/analytics';
 import { useData } from './providers';
+import { ScreenErrorBoundary } from './components/ScreenErrorBoundary';
 
 const tabs = [
   {
@@ -189,7 +190,9 @@ export const App = () => {
               </Button>
             )}
 
-            <Screen setActiveTab={setActiveTab} {...activeTab.props} />
+            <ScreenErrorBoundary screenName={tabs[activeTab.index].text}>
+              <Screen setActiveTab={setActiveTab} {...activeTab.props} />
+            </ScreenErrorBoundary>
 
             <Tabbar
               style={{
