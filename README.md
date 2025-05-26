@@ -22,6 +22,17 @@ Telegram Mini Application that allows users to stream content, use a subscriptio
    npm start
    ```
 
+## Wallet and Authentication
+
+When you launch the application inside Telegram, we use **Telegram Identity** for authentication. This allows the app to securely identify users via their Telegram account.
+
+On login, you will see a wallet window:
+
+- Click **Create a new wallet**.
+- Choose login via Telegram.
+- Grant all necessary permissions.
+- After that, you can start developing and interacting with the app.
+
 ## Access Campaigns
 
 4. Open the rob admin panel (stage: https://rob.stage.cere.io/EE/admin/login.php, prod: https://rob.cere.io/).
