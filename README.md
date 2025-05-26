@@ -24,7 +24,7 @@ Telegram Mini Application that allows users to stream content, use a subscriptio
 
 ## Wallet and Authentication
 
-When you launch the application inside Telegram, we use **Telegram Identity** for authentication. This allows the app to securely identify users via their Telegram account.
+When we launch the application inside Telegram, we use **Telegram Identity** for authentication. This allows the app to securely identify users via their Telegram account.
 
 On login, you will see a wallet window:
 
