@@ -13,7 +13,7 @@ npm install
 2. Copy ENV file
 
 ```bash
-cp .env.sample .env
+cp .env.local .env
 ```
 
 3. Start for development
