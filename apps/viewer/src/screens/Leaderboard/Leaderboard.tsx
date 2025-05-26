@@ -126,7 +126,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
 
   return (
     <div className="leaderboard" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {isLoading ? (
+      {isLoading || memoizedLeaderboardHtml === '' ? (
         <Loader size="m" />
       ) : (
         <IframeRenderer

@@ -1,5 +1,5 @@
 import { Loader, Snackbar } from '@tg-app/ui';
-import { useEngagementData, useEvents, useStartParam } from '../../hooks';
+import { useEngagementData, useEvents, usePreloadLeaderboard, useStartParam } from '../../hooks';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { TELEGRAM_APP_URL } from '../../constants.ts';
@@ -30,7 +30,7 @@ type ActiveQuestsProps = {
 };
 
 export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
-  const { questsHtml, questData, updateData } = useData();
+  const { questsHtml, questData, leaderboardData, updateData } = useData();
 
   const lastHtml = useRef(questsHtml);
   const [memoizedQuestsHtml, setMemoizedQuestsHtml] = useState(questsHtml);
@@ -59,6 +59,8 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     updateData,
     iframeRef,
   });
+
+  usePreloadLeaderboard(leaderboardData, eventSource, campaignId, updateData, theme);
 
   const setSnackbarMessageIfChanged = useDebouncedCallback((newMessage: string) => {
     setSnackbarMessage(newMessage);
