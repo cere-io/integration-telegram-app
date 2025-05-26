@@ -1,33 +1,64 @@
 # DDC Streaming Telegram Mini App
 
-Telegram Mini Application that allows users to stream content/watch content, use a subscription model to get access to content and verify NFT ownership.
+Telegram Mini Application that allows users to stream content, use a subscription model to get access to content, and verify NFT ownership.
 
-# How to run
+## How to run
 
-1. Install dependencies
+1. Install dependencies:
 
-```bash
-npm install
-```
+   ```bash
+   npm install
+   ```
 
-2. Copy ENV file
+2. Copy environment variables file:
 
-```bash
-cp .env.dev .env
-```
+   ```bash
+   cp .env.local .env
+   ```
 
-3. Start for development
+3. Start the app for development:
 
-```bash
-npm start
-```
+   ```bash
+   npm start
+   ```
 
-4. Build for production
+## Wallet and Authentication
 
-```bash
-npm run build
-```
+When we launch the application inside Telegram, we use **Telegram Identity** for authentication. This allows the app to securely identify users via their Telegram account.
+
+On login, you will see a wallet window:
+
+- Click **Create a new wallet**.
+- Choose login via Telegram.
+- Grant all necessary permissions.
+- After that, you can start developing and interacting with the app.
+
+## Access Campaigns
+
+4. Open the rob admin panel (stage: https://rob.stage.cere.io/EE/admin/login.php, prod: https://rob.cere.io/).
+
+5. Hover over the **Campaigns** tab and choose **Campaigns Old**.  
+   ![Campaigns Old](./doc_images/Image1.png)
+
+6. You will see a list of available campaigns and their IDs.  
+   ![Campaigns List](./doc_images/Image2.png)
+
+7. Find the campaign you need and add its campaignId as a URL parameter to your running app:  
+   [http://localhost:5174/?campaignId=168](http://localhost:5174/?campaignId=168)
+
+8. You will see a login window for your wallet. Click **Create a new wallet**, choose login via Telegram, grant all necessary permissions, and start developing.
+
+   ![Step 1](./doc_images/Image3.png)  
+   ![Step 2](./doc_images/Image4.png)
+
+## Build for production
+
+9. Run the build command:
+
+   ```bash
+   npm run build
+   ```
 
 ## How to deploy
 
-Just merge changes into `dev` or `master` branch. [These standard CI jobs](https://github.com/cere-io/integration-telegram-app/actions) will deploy the app to appropriate environment.
+Merge changes into the `dev` or `master` branch. [These standard CI jobs](https://github.com/cere-io/integration-telegram-app/actions) will deploy the app to the appropriate environment.
