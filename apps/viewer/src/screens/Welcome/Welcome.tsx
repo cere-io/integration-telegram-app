@@ -18,6 +18,42 @@ type WelcomeScreenProps = {
   onStart?: () => void;
 };
 
+// Helper function to safely get formData
+const safeGetFormData = (formData: any) => {
+  try {
+    // If it's null or undefined, return null
+    if (formData == null) {
+      return null;
+    }
+
+    // If it's already an object (not a string), return it directly
+    if (typeof formData === 'object' && formData !== null) {
+      return formData;
+    }
+
+    // If it's a string, try to parse it
+    if (typeof formData === 'string') {
+      // Check if it's the problematic "[object Object]" case
+      if (formData === '[object Object]') {
+        console.warn('Received stringified object notation in Welcome.tsx, cannot parse');
+        return null;
+      }
+
+      // Try to parse valid JSON strings
+      if (formData.trim().startsWith('{') || formData.trim().startsWith('[')) {
+        return JSON.parse(formData);
+      }
+    }
+
+    console.warn('Unexpected formData type in Welcome.tsx:', typeof formData);
+    return null;
+  } catch (error) {
+    console.error('Error parsing formData in Welcome.tsx:', error);
+    console.error('FormData value:', formData);
+    return null;
+  }
+};
+
 export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [tempPrivacyAccepted, setTempPrivacyAccepted] = useState(false);
@@ -27,12 +63,24 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
 
   useEffect(() => {
     if (!campaignConfig) return;
-    const formData = JSON.parse((campaignConfig?.formData as unknown as string) || '');
-    if (
-      formData.campaign?.configuration &&
-      Object.prototype.hasOwnProperty.call(formData.campaign?.configuration, 'welcomeScreen')
-    ) {
-      setConfig(formData.campaign.configuration.welcomeScreen || {});
+
+    try {
+      // Use the safe helper instead of direct JSON.parse
+      const formData = safeGetFormData(campaignConfig?.formData);
+
+      if (
+        formData?.campaign?.configuration &&
+        Object.prototype.hasOwnProperty.call(formData.campaign?.configuration, 'welcomeScreen')
+      ) {
+        setConfig(formData.campaign.configuration.welcomeScreen || {});
+      } else {
+        // Set default empty config if no welcomeScreen config found
+        setConfig({});
+      }
+    } catch (error) {
+      console.error('Error processing campaign config in Welcome.tsx:', error);
+      // Set empty config as fallback
+      setConfig({});
     }
   }, [campaignConfig]);
 

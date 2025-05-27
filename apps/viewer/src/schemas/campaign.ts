@@ -100,12 +100,22 @@ export const FormDataSchema = z.object({
 
 // Full campaign schema (from RMS service)
 export const CampaignSchema = z.object({
-  campaignId: z.number().positive('Campaign ID must be positive'),
+  campaignId: z.number().positive('Campaign ID must be positive').or(z.string().transform(Number)),
   status: z.number().min(0),
-  startDate: z.string().datetime(),
-  endDate: z.string().datetime(),
+  startDate: z.string(),
+  endDate: z.string(),
   campaignName: z.string().min(1, 'Campaign name is required'),
-  type: z.string().nullable().optional(),
+  // Fix: Handle type as number or string, convert to string
+  type: z
+    .union([
+      z.string().nullable(),
+      z
+        .number()
+        .nullable()
+        .transform((val) => val?.toString() ?? null),
+      z.null(),
+    ])
+    .optional(),
   likeId: z.string().optional(),
   archive: z.number().min(0).optional(),
   mobile: z.number().min(0).optional(),
@@ -113,39 +123,51 @@ export const CampaignSchema = z.object({
   modDate: z.string().optional(),
   guid: z.string().optional(),
   formData: z.union([
-    FormDataSchema,
-    z.string().transform((str, ctx) => {
-      try {
-        const parsed = JSON.parse(str);
-        return FormDataSchema.parse(parsed);
-      } catch (error) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Invalid JSON in formData',
-        });
-        return z.NEVER;
-      }
+    FormDataSchema, // Already an object
+    z
+      .string()
+      .transform((str) => {
+        try {
+          return JSON.parse(str);
+        } catch {
+          throw new Error('Invalid JSON in formData string');
+        }
+      })
+      .pipe(FormDataSchema), // Parse string then validate
+    z.any().transform((data) => {
+      // Handle any other case - try to use as-is
+      return data;
     }),
   ]),
   templateHtml: z.string().optional(),
 });
 
 // Template schema - Updated to match actual API response
-export const TemplateSchema = z.object({
-  id: z.string().optional(),
-  name: z.string().min(1, 'Template name is required'),
-  type: z.string().refine((val) => ['GET_QUESTS', 'GET_LEADERBOARD'].includes(val), {
-    message: 'Type must be GET_QUESTS or GET_LEADERBOARD',
-  }),
-  theme: z.string().default('light'),
-  params: z.string().min(1, 'Template params are required'),
-  archived: z.number().min(0).optional(),
-  createdAt: z.string().optional(),
-  updatedAt: z.string().optional(),
-  createdBy: z.string().optional(),
-  updatedBy: z.string().optional(),
-  guid: z.string().optional(),
-});
+export const TemplateSchema = z
+  .object({
+    id: z.string().optional(),
+    name: z.string().min(1, 'Template name is required'),
+    type: z.string(), // Accept any string, we'll validate in the transform
+    theme: z.string().default('light'),
+    params: z.string().min(1, 'Template params are required'),
+    archived: z.number().min(0).optional(),
+    createdAt: z.string().optional(),
+    updatedAt: z.string().optional(),
+    createdBy: z.string().optional(),
+    updatedBy: z.string().optional(),
+    guid: z.string().optional(),
+  })
+  .transform((data) => {
+    // Normalize the type to what we expect
+    const normalizedType = ['GET_QUESTS', 'GET_LEADERBOARD'].includes(data.type)
+      ? (data.type as 'GET_QUESTS' | 'GET_LEADERBOARD')
+      : ('GET_QUESTS' as const);
+
+    return {
+      ...data,
+      type: normalizedType,
+    };
+  });
 
 // Export types
 export type Campaign = z.infer<typeof CampaignSchema>;
