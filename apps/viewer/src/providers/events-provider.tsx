@@ -98,7 +98,9 @@ export const EventsProvider: FC<EventsProviderProps> = ({ children }) => {
     connectToClient();
 
     return () => {
-      client.disconnect();
+      if (client && typeof client.disconnect === 'function') {
+        client.disconnect();
+      }
     };
   }, [cereWallet, agentServiceRegistry]);
 
