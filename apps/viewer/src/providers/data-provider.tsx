@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useRmsService, useStartParam } from '~/hooks';
 import { compileHtml, decodeHtml } from '~/helpers';
-import { validateCampaign, validateTemplate, Campaign, Template } from '../schemas/campaign';
+import { Campaign } from '@tg-app/rms-service';
 
 type DataContextType = {
   questData: any;
@@ -91,192 +91,25 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     if (!campaignId) return;
 
     try {
-      console.log('Fetching campaign config for ID:', campaignId);
-
-      // Fetch real campaign data
       const [campaignResponse, templateResponse] = await Promise.all([
         rmsService.getCampaignById(campaignId),
         rmsService.getTemplateByCampaignIdAndEventType(campaignId, 'GET_QUESTS'),
       ]);
 
-      if (!campaignResponse) {
-        throw new Error('Campaign not found');
-      }
-
-      // Validate campaign data
-      let validatedCampaign: Campaign;
-      try {
-        validatedCampaign = validateCampaign(campaignResponse);
-        console.log('✅ Campaign data validation passed');
-      } catch (validationError) {
-        console.error('❌ Campaign validation failed:', validationError);
-
-        // Log detailed validation errors
-        if (validationError instanceof Error && 'issues' in validationError) {
-          console.error('Validation issues:', (validationError as any).issues);
-        }
-
-        // Try to use the data anyway with some defensive fixes
-        const safeCampaignData = {
-          campaignId: campaignResponse.campaignId || parseInt(campaignId) || 0,
-          status: campaignResponse.status || 1,
-          startDate: campaignResponse.startDate || new Date().toISOString(),
-          endDate: campaignResponse.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          campaignName: campaignResponse.campaignName || 'Untitled Campaign',
-          type: campaignResponse.type || null,
-          likeId: campaignResponse.likeId || '',
-          archive: campaignResponse.archive || 0,
-          mobile: campaignResponse.mobile || 0,
-          userName: campaignResponse.userName || '',
-          modDate: campaignResponse.modDate || '',
-          guid: campaignResponse.guid || '',
-          formData:
-            typeof campaignResponse.formData === 'string'
-              ? JSON.parse(campaignResponse.formData)
-              : campaignResponse.formData || {
-                  campaign: {
-                    name: 'Default Campaign',
-                    description: 'Campaign data is incomplete',
-                    status: 'active',
-                    startDate: new Date().toISOString(),
-                    endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-                    debug: false,
-                  },
-                  quests: {
-                    videoTasks: [],
-                    socialTasks: [],
-                  },
-                  leaderboard: [],
-                },
-          templateHtml: campaignResponse.templateHtml || '',
-        };
-
-        validatedCampaign = safeCampaignData as Campaign;
-        console.warn('Using defensively fixed campaign data - app may be unstable');
-      }
-
-      // Validate template if available
-      let validatedTemplate: Template | undefined = templateResponse;
-      if (templateResponse) {
-        try {
-          validatedTemplate = validateTemplate(templateResponse);
-          console.log('✅ Template validation passed');
-        } catch (templateError) {
-          console.error('❌ Template validation failed:', templateError);
-
-          // Log detailed validation errors
-          if (templateError instanceof Error && 'issues' in templateError) {
-            console.error('Template validation issues:', (templateError as any).issues);
-          }
-
-          // Use the template anyway with defensive fixes
-          const safeTemplate = {
-            id: templateResponse.id || undefined,
-            name: templateResponse.name || 'Default Template',
-            type: templateResponse.type || 'GET_QUESTS',
-            theme: templateResponse.theme || 'light',
-            params: templateResponse.params || '<div>Template content unavailable</div>',
-            archived: templateResponse.archived || 0,
-            createdAt: templateResponse.createdAt || undefined,
-            updatedAt: templateResponse.updatedAt || undefined,
-            createdBy: templateResponse.createdBy || undefined,
-            updatedBy: templateResponse.updatedBy || undefined,
-            guid: templateResponse.guid || undefined,
-          };
-
-          validatedTemplate = safeTemplate as Template;
-          console.warn('Using defensively fixed template - rendering may have issues');
-        }
-      }
+      if (!campaignResponse) return;
 
       const response = {
-        ...validatedCampaign,
-        templateHtml: validatedTemplate?.params || '',
+        ...campaignResponse,
+        templateHtml: templateResponse?.params || '',
       };
 
       setCampaignConfig(response);
       setIsConfigLoaded(true);
     } catch (error) {
       console.error('Error fetching campaign config:', error);
-
-      // Enhanced fallback with proper error handling
-      const fallbackCampaign: Campaign = {
-        campaignId: parseInt(campaignId) || 0,
-        status: 1,
-        startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        campaignName: 'Campaign Unavailable',
-        type: null,
-        likeId: '',
-        archive: 0,
-        mobile: 0,
-        userName: '',
-        modDate: '',
-        guid: '',
-        formData: {
-          campaign: {
-            name: 'Campaign Unavailable',
-            description: 'Unable to load campaign data. Please check your connection and try again.',
-            status: 'active' as const,
-            startDate: new Date().toISOString(),
-            endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-            debug: true,
-          },
-          quests: {
-            videoTasks: [],
-            socialTasks: [],
-          },
-          leaderboard: [],
-        },
-        templateHtml: `
-          <div style="padding: 20px; text-align: center; font-family: sans-serif; max-width: 400px; margin: 0 auto;">
-            <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
-            <h1 style="color: #333; margin-bottom: 16px;">Campaign Unavailable</h1>
-            <p style="color: #666; margin-bottom: 20px;">We're having trouble loading the campaign data.</p>
-            <p style="color: #666; margin-bottom: 20px;">Please check your internet connection and try refreshing the page.</p>
-            <button onclick="window.location.reload()" style="
-              background: #9244E0; 
-              color: white; 
-              border: none; 
-              padding: 12px 24px; 
-              border-radius: 8px; 
-              cursor: pointer;
-              font-size: 14px;
-            ">
-              Retry Loading
-            </button>
-            <details style="margin-top: 20px; text-align: left; font-size: 12px;">
-              <summary style="cursor: pointer; color: #9244E0;">Show Error Details</summary>
-              <pre style="
-                background: #f5f5f5; 
-                padding: 10px; 
-                margin-top: 10px; 
-                border-radius: 4px; 
-                overflow-x: auto;
-                white-space: pre-wrap;
-                word-wrap: break-word;
-              ">${error instanceof Error ? error.message : String(error)}</pre>
-            </details>
-          </div>
-        `,
-      };
-
-      setCampaignConfig(fallbackCampaign);
-      setIsConfigLoaded(true);
-
-      // Send error to analytics if available
-      try {
-        if (window.gtag) {
-          window.gtag('event', 'exception', {
-            description: `Campaign fetch failed: ${error instanceof Error ? error.message : String(error)}`,
-            fatal: false,
-          });
-        }
-      } catch (analyticsError) {
-        console.warn('Failed to send error to analytics:', analyticsError);
-      }
     }
-  }, [campaignId, rmsService]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [questData]);
 
   const prepareDataFromConfig = () => {
     if (!campaignConfig) return;
@@ -293,10 +126,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
   const parseCampaignData = (response: Campaign) => {
     try {
-      // Handle both string and object formData
-      const formDataObj = typeof response.formData === 'string' ? JSON.parse(response.formData) : response.formData;
-
-      const { campaign: formDataCampaign, quests } = formDataObj;
+      const { campaign: formDataCampaign, quests } = JSON.parse(response?.formData as unknown as string);
 
       const remainingTime = calculateRemainingTime(formDataCampaign.endDate);
       if (!remainingTime) return null;
@@ -322,103 +152,78 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const calculateRemainingTime = (endDateString: string) => {
-    try {
-      const endDate = new Date(endDateString);
-      if (isNaN(endDate.getTime())) {
-        console.error('Invalid date format:', endDateString);
-        return null;
-      }
-
-      const remainingMilliseconds = Math.max(endDate.getTime() - Date.now(), 0);
-
-      if (remainingMilliseconds <= 0) {
-        setIsCampaignExpired(true);
-      }
-
-      return {
-        days: Math.floor(remainingMilliseconds / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((remainingMilliseconds / (1000 * 60 * 60)) % 24),
-        minutes: Math.floor((remainingMilliseconds / (1000 * 60)) % 60),
-        seconds: Math.floor((remainingMilliseconds / 1000) % 60),
-      };
-    } catch (error) {
-      console.error('Error calculating remaining time:', error);
+    const endDate = new Date(endDateString);
+    if (isNaN(endDate.getTime())) {
+      console.error('Invalid date format:', endDateString);
       return null;
     }
+
+    const remainingMilliseconds = Math.max(endDate.getTime() - Date.now(), 0);
+
+    if (remainingMilliseconds <= 0) {
+      setIsCampaignExpired(true);
+    }
+
+    return {
+      days: Math.floor(remainingMilliseconds / (1000 * 60 * 60 * 24)),
+      hours: Math.floor((remainingMilliseconds / (1000 * 60 * 60)) % 24),
+      minutes: Math.floor((remainingMilliseconds / (1000 * 60)) % 60),
+      seconds: Math.floor((remainingMilliseconds / 1000) % 60),
+    };
   };
 
   const loadCache = useCallback(async () => {
     if (!campaignKey) return;
 
-    try {
-      const cachedQuestData = JSON.parse(localStorage.getItem(`${campaignKey}_quest_data`) || 'null');
-      const cachedQuestsHtml = localStorage.getItem(`${campaignKey}_quests_html_template`) || '';
-      const cachedQuestsOriginalHtml = localStorage.getItem(`${campaignKey}_quests_original_html`) || '';
-      const cachedLeaderboardData = JSON.parse(localStorage.getItem(`${campaignKey}_leaderboard`) || 'null');
-      const cachedLeaderboardHtml = localStorage.getItem(`${campaignKey}_leaderboard_html_template`) || '';
-      const cachedLeaderboardOriginalHtml = localStorage.getItem(`${campaignKey}_leaderboard_original_html`) || '';
+    const cachedQuestData = JSON.parse(localStorage.getItem(`${campaignKey}_quest_data`) || 'null');
+    const cachedQuestsHtml = localStorage.getItem(`${campaignKey}_quests_html_template`) || '';
+    const cachedQuestsOriginalHtml = localStorage.getItem(`${campaignKey}_quests_original_html`) || '';
+    const cachedLeaderboardData = JSON.parse(localStorage.getItem(`${campaignKey}_leaderboard`) || 'null');
+    const cachedLeaderboardHtml = localStorage.getItem(`${campaignKey}_leaderboard_html_template`) || '';
+    const cachedLeaderboardOriginalHtml = localStorage.getItem(`${campaignKey}_leaderboard_original_html`) || '';
 
-      setQuestData(cachedQuestData);
-      setQuestsHtml(cachedQuestsHtml);
-      setQuestsOriginalHtml(cachedQuestsOriginalHtml);
-      setLeaderboardData(cachedLeaderboardData);
-      setLeaderboardHtml(cachedLeaderboardHtml);
-      setLeaderboardOriginalHtml(cachedLeaderboardOriginalHtml);
-      setTimeout(() => {}, 0);
+    setQuestData(cachedQuestData);
+    setQuestsHtml(cachedQuestsHtml);
+    setQuestsOriginalHtml(cachedQuestsOriginalHtml);
+    setLeaderboardData(cachedLeaderboardData);
+    setLeaderboardHtml(cachedLeaderboardHtml);
+    setLeaderboardOriginalHtml(cachedLeaderboardOriginalHtml);
+    setTimeout(() => {}, 0);
 
-      if (!initialQuestsHtmlRef.current) {
-        initialQuestsHtmlRef.current = cachedQuestsHtml;
-      }
-      if (!initialLeaderboardHtmlRef.current) {
-        initialLeaderboardHtmlRef.current = cachedLeaderboardHtml;
-      }
-    } catch (error) {
-      console.error('Error loading cache:', error);
-      // Clear potentially corrupted cache
-      try {
-        localStorage.removeItem(`${campaignKey}_quest_data`);
-        localStorage.removeItem(`${campaignKey}_quests_html_template`);
-        localStorage.removeItem(`${campaignKey}_quests_original_html`);
-        localStorage.removeItem(`${campaignKey}_leaderboard`);
-        localStorage.removeItem(`${campaignKey}_leaderboard_html_template`);
-        localStorage.removeItem(`${campaignKey}_leaderboard_original_html`);
-      } catch (clearError) {
-        console.error('Error clearing corrupted cache:', clearError);
-      }
+    if (!initialQuestsHtmlRef.current) {
+      initialQuestsHtmlRef.current = cachedQuestsHtml;
+    }
+    if (!initialLeaderboardHtmlRef.current) {
+      initialLeaderboardHtmlRef.current = cachedLeaderboardHtml;
     }
   }, [campaignKey]);
 
   const saveCache = useCallback(async () => {
     if (!campaignKey) return;
 
-    try {
-      if (questData !== null && questData !== previousQuestData.current) {
-        localStorage.setItem(`${campaignKey}_quest_data`, JSON.stringify(questData));
-        previousQuestData.current = questData;
-      }
-      if (questsHtml !== '' && questsHtml !== previousQuestsHtml.current) {
-        localStorage.setItem(`${campaignKey}_quests_html_template`, questsHtml);
-        previousQuestsHtml.current = questsHtml;
-      }
-      if (questsOriginalHtml !== '' && questsOriginalHtml !== previousQuestsOriginalHtml.current) {
-        localStorage.setItem(`${campaignKey}_quests_original_html`, questsOriginalHtml);
-        previousQuestsOriginalHtml.current = questsOriginalHtml;
-      }
-      if (leaderboardData !== null && leaderboardData !== previousLeaderboardData.current) {
-        localStorage.setItem(`${campaignKey}_leaderboard`, JSON.stringify(leaderboardData));
-        previousLeaderboardData.current = leaderboardData;
-      }
-      if (leaderboardHtml !== '' && leaderboardHtml !== previousLeaderboardHtml.current) {
-        localStorage.setItem(`${campaignKey}_leaderboard_html_template`, leaderboardHtml);
-        previousLeaderboardHtml.current = leaderboardHtml;
-      }
-      if (leaderboardOriginalHtml !== previousLeaderboardOriginalHtml.current) {
-        localStorage.setItem(`${campaignKey}_leaderboard_original_html`, leaderboardOriginalHtml);
-        previousLeaderboardOriginalHtml.current = leaderboardOriginalHtml;
-      }
-    } catch (error) {
-      console.error('Error saving to cache:', error);
-      // Cache errors shouldn't break the app
+    if (questData !== null && questData !== previousQuestData.current) {
+      localStorage.setItem(`${campaignKey}_quest_data`, JSON.stringify(questData));
+      previousQuestData.current = questData;
+    }
+    if (questsHtml !== '' && questsHtml !== previousQuestsHtml.current) {
+      localStorage.setItem(`${campaignKey}_quests_html_template`, questsHtml);
+      previousQuestsHtml.current = questsHtml;
+    }
+    if (questsOriginalHtml !== '' && questsOriginalHtml !== previousQuestsOriginalHtml.current) {
+      localStorage.setItem(`${campaignKey}_quests_original_html`, questsOriginalHtml);
+      previousQuestsOriginalHtml.current = questsOriginalHtml;
+    }
+    if (leaderboardData !== null && leaderboardData !== previousLeaderboardData.current) {
+      localStorage.setItem(`${campaignKey}_leaderboard`, JSON.stringify(leaderboardData));
+      previousLeaderboardData.current = leaderboardData;
+    }
+    if (leaderboardHtml !== '' && leaderboardHtml !== previousLeaderboardHtml.current) {
+      localStorage.setItem(`${campaignKey}_leaderboard_html_template`, leaderboardHtml);
+      previousLeaderboardHtml.current = leaderboardHtml;
+    }
+    if (leaderboardOriginalHtml !== previousLeaderboardOriginalHtml.current) {
+      localStorage.setItem(`${campaignKey}_leaderboard_original_html`, leaderboardOriginalHtml);
+      previousLeaderboardOriginalHtml.current = leaderboardOriginalHtml;
     }
   }, [
     questData,
@@ -451,60 +256,56 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     async (questId: string, taskType: string, newStatus: boolean, points: number) => {
       if (!questData || !leaderboardData) return;
 
-      try {
-        const updatedQuestData = [
-          {
-            ...questData[0],
-            quests: {
-              ...questData[0].quests,
-              videoTasks: questData[0].quests?.[taskType].map((quest: any) => {
-                if (quest.videoUrl === questId) {
-                  return { ...quest, completed: newStatus };
-                }
-                return quest;
-              }),
-            },
+      const updatedQuestData = [
+        {
+          ...questData[0],
+          quests: {
+            ...questData[0].quests,
+            videoTasks: questData[0].quests?.[taskType].map((quest: any) => {
+              if (quest.videoUrl === questId) {
+                return { ...quest, completed: newStatus };
+              }
+              return quest;
+            }),
           },
-        ];
+        },
+      ];
 
-        const updatedLeaderboardData = [
-          {
-            ...leaderboardData[0],
-            users: [
-              ...leaderboardData[0].users.map((user: any) => {
-                if (Object.prototype.hasOwnProperty.call(user, 'quests')) {
-                  return {
-                    ...user,
-                    points: points ? user.points + points : user.points,
-                    quests: {
-                      ...user.quests,
-                      [taskType]: user.quests[taskType].map((quest: any) =>
-                        quest.videoUrl === questId ? { ...quest, completed: newStatus } : quest,
-                      ),
-                    },
-                  };
-                }
-                return user;
-              }),
-            ],
-          },
-        ];
+      const updatedLeaderboardData = [
+        {
+          ...leaderboardData[0],
+          users: [
+            ...leaderboardData[0].users.map((user: any) => {
+              if (Object.prototype.hasOwnProperty.call(user, 'quests')) {
+                return {
+                  ...user,
+                  points: points ? user.points + points : user.points,
+                  quests: {
+                    ...user.quests,
+                    [taskType]: user.quests[taskType].map((quest: any) =>
+                      quest.videoUrl === questId ? { ...quest, completed: newStatus } : quest,
+                    ),
+                  },
+                };
+              }
+              return user;
+            }),
+          ],
+        },
+      ];
 
-        const updatedQuestsHtml = compileHtml(questsOriginalHtml, updatedQuestData);
-        const updatedLeaderboardHtml = compileHtml(leaderboardOriginalHtml, updatedLeaderboardData);
+      const updatedQuestsHtml = compileHtml(questsOriginalHtml, updatedQuestData);
 
-        setQuestData(updatedQuestData);
-        setQuestsHtml(updatedQuestsHtml);
+      const updatedLeaderboardHtml = compileHtml(leaderboardOriginalHtml, updatedLeaderboardData);
 
-        setLeaderboardData(updatedLeaderboardData);
-        setLeaderboardHtml(updatedLeaderboardHtml);
+      setQuestData(updatedQuestData);
+      setQuestsHtml(updatedQuestsHtml);
 
-        await saveCache();
-        resetInitialHtmlRefs();
-      } catch (error) {
-        console.error('Error updating quest status:', error);
-        // Don't throw - let the app continue functioning
-      }
+      setLeaderboardData(updatedLeaderboardData);
+      setLeaderboardHtml(updatedLeaderboardHtml);
+
+      await saveCache();
+      resetInitialHtmlRefs();
     },
     [leaderboardData, leaderboardOriginalHtml, questData, questsOriginalHtml, resetInitialHtmlRefs, saveCache],
   );
