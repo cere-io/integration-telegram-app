@@ -14,6 +14,7 @@ hbs.registerHelper('json', (context) => JSON.stringify(context));
 type UseEngagementDataProps = {
   eventSource: EventSource | null;
   eventType: 'GET_QUESTS' | 'GET_LEADERBOARD';
+  organizationId: string | null;
   campaignId: string | null;
   theme?: ColorScheme;
   updateData: (data: any, originalHtml: string, html: string, key: 'quests' | 'leaderboard') => void;
@@ -23,12 +24,13 @@ type UseEngagementDataProps = {
 export const useEngagementData = ({
   eventSource,
   eventType,
+  organizationId,
   campaignId,
   theme,
   updateData,
   iframeRef,
 }: UseEngagementDataProps) => {
-  const { questsHtml, leaderboardHtml } = useData();
+  const { questsHtml, leaderboardHtml, activeCampaignId } = useData();
   const { addToQueue } = useEventQueue();
   const [isLoading, setLoading] = useState(eventType === 'GET_QUESTS' ? !questsHtml : !leaderboardHtml);
   const activityStartTime = useRef<number | null>(null);
@@ -50,8 +52,8 @@ export const useEngagementData = ({
         }
         activityStartTime.current = performance.now();
         const event = new ActivityEvent(eventType, {
-          campaignId,
-          campaign_id: campaignId,
+          organization_id: organizationId,
+          campaign_id: campaignId || activeCampaignId,
           ...(theme && { theme }),
           timestamp: new Date().toISOString(),
         });
@@ -75,15 +77,16 @@ export const useEngagementData = ({
 
     const handleEngagementEvent = (event: any) => {
       clearTimeout(engagementTimeout);
-      if (event?.payload?.integrationScriptResults[0]?.eventType === eventType) {
+      if (event?.payload?.integrationScriptResults[0]?.data?.eventType === eventType) {
         const engagementTime = performance.now() - (activityStartTime.current || 0);
         Analytics.transaction('ENGAGEMENT_LOADED', engagementTime, { event: { type: eventType } });
 
-        const { engagement, integrationScriptResults }: EngagementEventData = event.payload;
-        const compiledHTML = compileHtml(engagement.widget_template.params || '', integrationScriptResults);
+        const { integrationScriptResults }: EngagementEventData = event.payload;
+        const { data, htmlTemplate } = integrationScriptResults[0];
+        const compiledHTML = compileHtml(htmlTemplate, data);
         updateData(
           integrationScriptResults,
-          engagement.widget_template.params,
+          htmlTemplate,
           decodeHtml(compiledHTML),
           eventType === 'GET_QUESTS' ? 'quests' : 'leaderboard',
         );

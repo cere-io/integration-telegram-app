@@ -39,9 +39,9 @@ export type ActiveTab = {
 
 export const App = () => {
   const [initDataUnsafe] = useInitData() || {};
-  const { campaignExpired, campaignPaused, debugMode } = useData();
+  const { campaignExpired, campaignPaused, debugMode, activeCampaignId } = useData();
   const [theme] = useThemeParams();
-  const { campaignId, referrerId } = useStartParam();
+  const { organizationId, campaignId, referrerId } = useStartParam();
 
   const cereWallet = useCereWallet();
   const eventSource = useEvents();
@@ -61,7 +61,7 @@ export const App = () => {
       Reporting.setUser({ id: user.id.toString(), username: user.username });
       Analytics.setUser({ id: user.id.toString(), username: user.username });
     }
-    Analytics.setTags({ campaign_id: campaignId });
+    Analytics.setTags({ organization_id: organizationId, campaign_id: campaignId || activeCampaignId });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
@@ -99,13 +99,20 @@ export const App = () => {
     const sendJoinCampaignEvent = async () => {
       const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
       const userInfo = await cereWallet.getUserInfo();
-      const campaignKey = `campaign:${accountId}:${campaignId}`;
+      const campaignKeyParts = ['campaign', accountId, campaignId || activeCampaignId];
+
+      if (organizationId) {
+        campaignKeyParts.push(organizationId);
+      }
+
+      const campaignKey = campaignKeyParts.join(':');
       if (localStorage.getItem(campaignKey) === 'true') {
         return;
       }
 
       const payload: any = {
-        campaign_id: campaignId,
+        organization_id: organizationId,
+        campaign_id: campaignId || activeCampaignId,
       };
       if (referrerId) {
         payload.referrer_id = referrerId;
@@ -117,7 +124,7 @@ export const App = () => {
       localStorage.setItem(campaignKey, 'true');
     };
     sendJoinCampaignEvent();
-  }, [cereWallet, eventSource, campaignId, referrerId, user?.username]);
+  }, [cereWallet, eventSource, campaignId, referrerId, user?.username, organizationId, activeCampaignId]);
 
   const renderContent = () => {
     if (campaignExpired) {
