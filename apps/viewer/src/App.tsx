@@ -10,7 +10,7 @@ import '@telegram-apps/telegram-ui/dist/styles.css';
 import { useEvents, useStartParam } from './hooks';
 import hbs from 'handlebars';
 import { ActivityEvent } from '@cere-activity-sdk/events';
-import { useCereWallet } from './cere-wallet';
+import { useCereWalletState } from './cere-wallet'; // Changed import
 import Analytics from '@tg-app/analytics';
 import { useData } from './providers';
 
@@ -43,7 +43,8 @@ export const App = () => {
   const [theme] = useThemeParams();
   const { campaignId, referrerId } = useStartParam();
 
-  const cereWallet = useCereWallet();
+  // Use wallet state hook to get wallet and status (FIXED: proper hook usage)
+  const { wallet: cereWallet, error: walletError } = useCereWalletState();
   const eventSource = useEvents();
   const user = initDataUnsafe?.user;
 
@@ -94,30 +95,49 @@ export const App = () => {
   }, [eventSource]);
 
   useEffect(() => {
-    if (!eventSource || !cereWallet) return;
+    if (!eventSource || !cereWallet || walletError) return;
 
     const sendJoinCampaignEvent = async () => {
-      const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
-      const userInfo = await cereWallet.getUserInfo();
-      const campaignKey = `campaign:${accountId}:${campaignId}`;
-      if (localStorage.getItem(campaignKey) === 'true') {
-        return;
-      }
+      try {
+        const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
+        const userInfo = await cereWallet.getUserInfo();
+        const campaignKey = `campaign:${accountId}:${campaignId}`;
+        if (localStorage.getItem(campaignKey) === 'true') {
+          return;
+        }
 
-      const payload: any = {
-        campaign_id: campaignId,
-      };
-      if (referrerId) {
-        payload.referrer_id = referrerId;
+        const payload: any = {
+          campaign_id: campaignId,
+        };
+        if (referrerId) {
+          payload.referrer_id = referrerId;
+        }
+        if (userInfo?.name) {
+          payload.username = userInfo.name;
+        }
+        await eventSource.dispatchEvent(new ActivityEvent('JOIN_CAMPAIGN', payload));
+        localStorage.setItem(campaignKey, 'true');
+      } catch (error) {
+        const joinError = error instanceof Error ? error : new Error('Unknown join campaign error');
+
+        // Report join campaign errors to Sentry (NEW: comprehensive error tracking)
+        Reporting.message(
+          `Failed to send join campaign event: ${joinError.message}`,
+          {
+            context: 'join_campaign_error',
+            component: 'App',
+            campaignId,
+            referrerId,
+            hasWallet: !!cereWallet,
+            errorStack: joinError.stack || 'No stack trace',
+          },
+          'error',
+        );
       }
-      if (userInfo?.name) {
-        payload.username = userInfo.name;
-      }
-      await eventSource.dispatchEvent(new ActivityEvent('JOIN_CAMPAIGN', payload));
-      localStorage.setItem(campaignKey, 'true');
     };
+
     sendJoinCampaignEvent();
-  }, [cereWallet, eventSource, campaignId, referrerId, user?.username]);
+  }, [cereWallet, eventSource, campaignId, referrerId, user?.username, walletError]);
 
   const renderContent = () => {
     if (campaignExpired) {
