@@ -1,13 +1,14 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useRmsService, useStartParam } from '~/hooks';
 import { compileHtml, decodeHtml } from '~/helpers';
-import { Campaign } from '@tg-app/rms-service';
+import { Campaign, Template } from '@tg-app/rms-service';
 
 type DataContextType = {
   questData: any;
   questsHtml: string;
   leaderboardData: any;
   leaderboardHtml: string;
+  activeCampaignId: string | null;
   campaignConfig: Campaign | null;
   campaignConfigLoaded: boolean;
   campaignExpired: boolean;
@@ -31,6 +32,7 @@ export const useData = () => {
 export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [campaignKey, setCampaignKey] = useState<string | null>(null);
   const [campaignConfig, setCampaignConfig] = useState<Campaign | null>(null);
+  const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null);
   const [isConfigLoaded, setIsConfigLoaded] = useState(false);
   const [questData, setQuestData] = useState<any | null>(null);
   const [questsHtml, setQuestsHtml] = useState<string>('');
@@ -52,14 +54,18 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const previousLeaderboardHtml = useRef<string>('');
   const previousLeaderboardOriginalHtml = useRef<string>('');
 
-  const { campaignId } = useStartParam();
+  const { organizationId, campaignId } = useStartParam();
   const rmsService = useRmsService();
 
   useEffect(() => {
     let isMounted = true;
     const fetchCampaignKey = async () => {
       if (isMounted) {
-        setCampaignKey(`campaign_${campaignId}`);
+        setCampaignKey(
+          organizationId
+            ? `campaign_${campaignId || activeCampaignId}organization_${organizationId}`
+            : `campaign_${campaignId}`,
+        );
       }
     };
 
@@ -68,7 +74,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       isMounted = false;
     };
-  }, [campaignId]);
+  }, [activeCampaignId, campaignId, organizationId]);
 
   useEffect(() => {
     fetchCampaignConfig();
@@ -88,22 +94,32 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   }, [campaignConfig, questData, questsHtml]);
 
   const fetchCampaignConfig = useCallback(async () => {
-    if (!campaignId) return;
+    if (!organizationId && !campaignId) return;
 
     try {
-      const [campaignResponse, templateResponse] = await Promise.all([
-        rmsService.getCampaignById(campaignId),
-        rmsService.getTemplateByCampaignIdAndEventType(campaignId, 'GET_QUESTS'),
-      ]);
+      let campaignResponse: Campaign | undefined = undefined;
+      if (organizationId) {
+        campaignResponse = await rmsService.getCampaignByOrganizationId(organizationId);
+      } else if (campaignId) {
+        campaignResponse = await rmsService.getCampaignById(campaignId);
+      }
 
-      if (!campaignResponse) return;
+      let templateResponse: Template | undefined = undefined;
+      if (!organizationId) {
+        templateResponse = await rmsService.getTemplateByCampaignIdAndEventType(
+          campaignResponse?.campaignId.toString() ?? '',
+          'GET_QUESTS',
+        );
+      }
+
+      setActiveCampaignId(campaignResponse?.campaignId.toString() || null);
 
       const response = {
         ...campaignResponse,
-        templateHtml: templateResponse?.params || '',
+        templateHtml: templateResponse?.params || undefined,
       };
 
-      setCampaignConfig(response);
+      setCampaignConfig(response as Campaign);
       setIsConfigLoaded(true);
     } catch (error) {
       console.error('Error fetching campaign config:', error);
@@ -330,6 +346,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         questsHtml,
         leaderboardData,
         leaderboardHtml,
+        activeCampaignId,
         campaignConfig,
         campaignConfigLoaded: isConfigLoaded,
         campaignExpired: isCampaignExpired,

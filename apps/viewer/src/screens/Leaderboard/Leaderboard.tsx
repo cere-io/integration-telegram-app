@@ -15,7 +15,7 @@ type LeaderboardProps = {
 };
 
 export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
-  const { leaderboardHtml, updateData } = useData();
+  const { leaderboardHtml, updateData, activeCampaignId } = useData();
 
   const lastHtml = useRef(leaderboardHtml);
   const [memoizedLeaderboardHtml, setMemoizedLeaderboardHtml] = useState(leaderboardHtml);
@@ -33,13 +33,14 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   const eventSource = useEvents();
 
   const [theme] = useThemeParams();
-  const { campaignId } = useStartParam();
+  const { organizationId, campaignId } = useStartParam();
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
 
   const { isLoading } = useEngagementData({
     eventSource,
     eventType: 'GET_LEADERBOARD',
+    organizationId: organizationId as string | null,
     campaignId,
     theme,
     updateData,
@@ -114,14 +115,15 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
       if (!eventSource || !walletAddress) return;
 
       const activityEventPayload = {
-        campaign_id: campaignId,
+        organization_id: organizationId,
+        campaign_id: campaignId || activeCampaignId,
         walletAddress,
       };
       const activityEvent = new ActivityEvent('ATTACH_EXTERNAL_ADDRESS', activityEventPayload);
 
       await eventSource.dispatchEvent(activityEvent);
     },
-    [campaignId, eventSource],
+    [eventSource, organizationId, campaignId, activeCampaignId],
   );
 
   return (
