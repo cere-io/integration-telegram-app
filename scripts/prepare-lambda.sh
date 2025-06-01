@@ -46,16 +46,20 @@ export default defineConfig({
     launchOptions: {
       executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
       args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--no-zygote',
-        '--single-process',
-        '--disable-web-security',
-        '--disable-features=site-per-process',
-        '--disable-features=IsolateOrigins',
-        '--disable-site-isolation-trials'
+       '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--no-zygote',
+                '--single-process',
+                '--disable-web-security',
+                '--disable-features=site-per-process',
+                '--disable-features=IsolateOrigins',
+                '--disable-site-isolation-trials',
+                '--allow-insecure-localhost',
+                '--disable-extensions',
+                '--disable-popup-blocking',
+                '--ignore-certificate-errors'
       ],
       timeout: 120000,
       env: {
@@ -139,16 +143,20 @@ async function runTests() {
       headless: true,
       executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
       args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--no-zygote',
-        '--single-process',
-        '--disable-web-security',
-        '--disable-features=site-per-process',
-        '--disable-features=IsolateOrigins',
-        '--disable-site-isolation-trials'
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--no-zygote',
+          '--single-process',
+          '--disable-web-security',
+          '--disable-features=site-per-process',
+          '--disable-features=IsolateOrigins',
+          '--disable-site-isolation-trials',
+          '--allow-insecure-localhost',
+          '--disable-extensions',
+          '--disable-popup-blocking',
+          '--ignore-certificate-errors'
       ],
       timeout: 120000,
       env: {
@@ -217,18 +225,37 @@ async function runTests() {
     let output = '';
     let errorOutput = '';
     let metrics = [];
+    let authError = null;
+    let testResult = null;
+    let performanceMetrics = '';
 
     try {
       const testFn = testModule.default;
-      const result = await testFn({ browser, context });
-      output = 'Tests completed successfully';
-      console.log(output);
+      testResult = await testFn({ browser, context });
 
-      // Extract metrics from test result if available
-      if (result && result.metrics) {
-        metrics = result.metrics;
-        console.log('Metrics received from test:', metrics);
+      if (testResult.authError) {
+        authError = testResult.authError;
+        console.log('Authentication error detected:', authError);
       }
+
+      metrics = testResult.metrics || [];
+      console.log('Collected metrics:', metrics.length);
+
+      if (metrics && metrics.length > 0) {
+        for (const metric of metrics) {
+          const authErrorTag = metric.faked ? ' [AUTH_ERROR]' : '';
+          performanceMetrics += `${metric.name} took ${metric.duration}ms${authErrorTag}\n`;
+        }
+      }
+
+      success = testResult.success === true;
+      output = success ? 'Tests completed successfully' : 'Tests completed with errors';
+
+      if (testResult.errorInfo) {
+        errorOutput = testResult.errorInfo.message;
+      }
+
+      console.log(output);
     } catch (error) {
       success = false;
       errorOutput = error.message;
@@ -241,6 +268,17 @@ async function runTests() {
           console.log('Browser process still running:', await checkBrowserProcess(chromePid));
         }
       }
+
+      if (testResult && testResult.authError) {
+        authError = testResult.authError;
+      }
+
+      if (testResult && testResult.metrics) {
+        for (const metric of testResult.metrics) {
+          const authErrorTag = metric.faked ? ' [AUTH_ERROR]' : '';
+          performanceMetrics += `${metric.name} took ${metric.duration}ms${authErrorTag}\n`;
+        }
+      }
     }
 
     return {
@@ -248,6 +286,8 @@ async function runTests() {
       output,
       errorOutput,
       metrics,
+      authError,
+      performanceMetrics,
       code: success ? 0 : 1,
       environment: process.env.TEST_ENV,
       region: process.env.AWS_REGION
@@ -261,6 +301,8 @@ async function runTests() {
       output: '',
       errorOutput: `${error.message}\nStack: ${error.stack}`,
       metrics: [],
+      authError: null,
+      performanceMetrics: '',
       code: 1,
       environment: process.env.TEST_ENV,
       region: process.env.AWS_REGION
@@ -307,21 +349,38 @@ import { brotliDecompressSync } from 'zlib';
 
 const CHROMIUM_URL = 'https://github.com/Sparticuz/chromium/releases/download/v133.0.0/chromium-v133.0.0-pack.tar';
 
-// Configuration for different environments
-const envConfigs = {
-  dev: {
-    baseURL: 'https://telegram-viewer-app.stage.cere.io',
-    campaignId: '117',
-  },
-  stage: {
-    baseURL: 'https://telegram-viewer-app.stage.cere.io',
-    campaignId: '117',
-  },
-  prod: {
-    baseURL: 'https://telegram-viewer-app.cere.io',
-    campaignId: '117',
-  },
-};
+// More flexible configuration handling
+function getEnvConfig(environment) {
+  // Extract config from environment variables with dynamic keys
+  const config = {
+    baseURL: process.env[`${environment.toUpperCase()}_APP_URL`] || null,
+    campaignId: process.env[`${environment.toUpperCase()}_CAMPAIGN_ID`] || null
+  };
+
+  // Check for event-provided config
+  if (process.env.EVENT_APP_URL && process.env.EVENT_APP_URL !== 'undefined') {
+    config.baseURL = process.env.EVENT_APP_URL;
+    console.log('Using app URL from event:', config.baseURL);
+  }
+
+  if (process.env.EVENT_CAMPAIGN_ID && process.env.EVENT_CAMPAIGN_ID !== 'undefined') {
+    config.campaignId = process.env.EVENT_CAMPAIGN_ID;
+    console.log('Using campaign ID from event:', config.campaignId);
+  }
+
+  // Apply fallback defaults if needed
+  if (!config.baseURL) {
+    config.baseURL = environment === 'prod'
+      ? 'https://telegram-viewer-app.cere.io'
+      : 'https://telegram-viewer-app.stage.cere.io';
+  }
+
+  if (!config.campaignId) {
+    config.campaignId = environment === 'prod' ? '40' : '120';
+  }
+
+  return config;
+}
 
 async function downloadFile(url, destination) {
   console.log('Starting download from:', url);
@@ -515,12 +574,21 @@ export const handler = async (event) => {
     const region = event.region || process.env.AWS_REGION || 'unknown';
     const environment = event.environment || 'stage';
 
+    // Store event config if provided
+    if (event.appUrl) {
+      process.env.EVENT_APP_URL = event.appUrl;
+    }
+
+    if (event.campaignId) {
+      process.env.EVENT_CAMPAIGN_ID = event.campaignId;
+    }
+
     // Set environment variables for tests
     process.env.AWS_REGION = region;
     process.env.TEST_ENV = environment;
 
     // Get environment config
-    const config = envConfigs[environment] || envConfigs.stage;
+    const config = getEnvConfig(environment);
 
     // Set test specific environment variables
     process.env.TEST_APP_URL = config.baseURL;
@@ -589,6 +657,73 @@ export const handler = async (event) => {
      ]);
      console.log(`Tests completed with success=${testResult.success}`);
 
+     let consoleErrorsFromFile = [];
+     if (fs.existsSync('/tmp/console-errors.txt')) {
+       console.log('Console errors log found, processing...');
+       try {
+         const consoleErrorsContent = fs.readFileSync('/tmp/console-errors.txt', 'utf8');
+
+         if (consoleErrorsContent.trim()) {
+           consoleErrorsFromFile = consoleErrorsContent.split('\n')
+             .filter(line => line.trim())
+             .map(line => {
+               const match = line.match(/\[(error|warning|pageerror)\]\s*\[(.*?)\]\s*(.*)/);
+               if (match) {
+                 return {
+                   type: match[1],
+                   time: match[2],
+                   text: match[3]
+                 };
+               }
+               return { type: 'unknown', text: line, time: new Date().toISOString() };
+             });
+
+           console.log(`Parsed ${consoleErrorsFromFile.length} console errors from file`);
+
+           fs.copyFileSync('/tmp/console-errors.txt', `${tmpDir}/console-errors.txt`);
+           console.log('Console errors log copied successfully');
+         } else {
+           console.log('Console errors file is empty');
+         }
+       } catch (fileError) {
+         console.error('Error processing console errors file:', fileError);
+       }
+     } else {
+       console.log('No console errors log found');
+     }
+
+     if (fs.existsSync('/tmp/console-errors-formatted.txt')) {
+       console.log('Formatted console errors file found, copying...');
+       try {
+         fs.copyFileSync('/tmp/console-errors-formatted.txt', `${tmpDir}/console-errors-formatted.txt`);
+         console.log('Formatted console errors file copied successfully');
+       } catch (copyError) {
+         console.error('Error copying formatted console errors file:', copyError);
+       }
+     }
+
+     if (fs.existsSync('/tmp/console-errors.json')) {
+       console.log('Console errors JSON file found, processing...');
+       try {
+         const jsonContent = fs.readFileSync('/tmp/console-errors.json', 'utf8');
+         const jsonErrors = JSON.parse(jsonContent);
+
+         if (Array.isArray(jsonErrors) && jsonErrors.length > 0) {
+           console.log(`Found ${jsonErrors.length} console errors in JSON file`);
+           consoleErrorsFromFile = [...consoleErrorsFromFile, ...jsonErrors];
+
+           fs.copyFileSync('/tmp/console-errors.json', `${tmpDir}/console-errors.json`);
+           console.log('Console errors JSON file copied successfully');
+         } else {
+           console.log('Console errors JSON file is empty or invalid');
+         }
+       } catch (jsonError) {
+         console.error('Error processing console errors JSON file:', jsonError);
+       }
+     } else {
+       console.log('No console errors JSON file found');
+     }
+
      let metrics = testResult.metrics || [];
      console.log(`Found ${metrics.length} metrics in test result`);
 
@@ -609,8 +744,15 @@ export const handler = async (event) => {
              metrics = performanceMetrics.split('\n')
                .filter(line => line.trim())
                .map(line => {
-                 const match = line.match(/([A-Za-z ]+) took ([0-9]+)ms/);
-                 return match ? { name: match[1], duration: parseInt(match[2]) } : null;
+                 const match = line.match(/([A-Za-z ]+) took ([0-9]+)ms(\s*\[AUTH_ERROR\])?/);
+                 if (match) {
+                   return {
+                     name: match[1],
+                     duration: parseInt(match[2]),
+                     faked: match[3] !== undefined
+                   };
+                 }
+                 return null;
                })
                .filter(m => m !== null);
              console.log(`Parsed ${metrics.length} metrics from file`);
@@ -643,6 +785,31 @@ export const handler = async (event) => {
      console.log('Final metrics to be returned:');
      console.log(metrics);
 
+     const combinedConsoleErrors = [
+       ...(testResult.consoleErrors || []),
+       ...consoleErrorsFromFile
+     ];
+
+     const uniqueConsoleErrors = Array.from(
+       new Map(combinedConsoleErrors.map(
+         error => [`${error.type}-${error.text}-${error.time}`, error]
+       )).values()
+     );
+
+     console.log(`Total console errors: ${uniqueConsoleErrors.length} (${testResult.consoleErrors ? testResult.consoleErrors.length : 0} from test result, ${consoleErrorsFromFile.length} from file, ${combinedConsoleErrors.length - uniqueConsoleErrors.length} duplicates removed)`);
+
+     try {
+       const allErrors = {
+         fromTestResult: testResult.consoleErrors || [],
+         fromFile: consoleErrorsFromFile,
+         combined: uniqueConsoleErrors
+       };
+       fs.writeFileSync(`${tmpDir}/all-console-errors.json`, JSON.stringify(allErrors, null, 2));
+       console.log('Created comprehensive error report in all-console-errors.json');
+     } catch (error) {
+       console.error('Failed to create comprehensive error report:', error);
+     }
+
      return {
        statusCode: testResult.success ? 200 : 500,
        body: JSON.stringify({
@@ -651,6 +818,14 @@ export const handler = async (event) => {
          errorOutput: testResult.errorOutput || '',
          performanceMetrics: performanceMetrics,
          metrics: metrics,
+         testConfig: {
+           appUrl: config.baseURL,
+           campaignId: config.campaignId,
+           environment: environment,
+           region: region
+         },
+         authError: testResult.authError || null,
+         consoleErrors: uniqueConsoleErrors.length > 0 ? uniqueConsoleErrors : [],
          region: region,
          environment: environment,
          executionTime: new Date().toISOString()
@@ -659,25 +834,105 @@ export const handler = async (event) => {
    } catch (error) {
      console.error('Error in Lambda handler:', error);
 
+     let consoleErrorsFromFile = [];
+     try {
+       if (fs.existsSync('/tmp/console-errors.txt')) {
+         const consoleErrorsContent = fs.readFileSync('/tmp/console-errors.txt', 'utf8');
+
+         if (consoleErrorsContent.trim()) {
+           consoleErrorsFromFile = consoleErrorsContent.split('\n')
+             .filter(line => line.trim())
+             .map(line => {
+               const match = line.match(/\[(error|warning|pageerror)\]\s*\[(.*?)\]\s*(.*)/);
+               if (match) {
+                 return {
+                   type: match[1],
+                   time: match[2],
+                   text: match[3]
+                 };
+               }
+               return { type: 'unknown', text: line, time: new Date().toISOString() };
+             });
+           console.log(`Parsed ${consoleErrorsFromFile.length} console errors from file in error handler`);
+         }
+       }
+
+       if (fs.existsSync('/tmp/console-errors.json')) {
+         console.log('Console errors JSON file found in error handler, processing...');
+         try {
+           const jsonContent = fs.readFileSync('/tmp/console-errors.json', 'utf8');
+           const jsonErrors = JSON.parse(jsonContent);
+
+           if (Array.isArray(jsonErrors) && jsonErrors.length > 0) {
+             console.log(`Found ${jsonErrors.length} console errors in JSON file in error handler`);
+             consoleErrorsFromFile = [...consoleErrorsFromFile, ...jsonErrors];
+
+             fs.copyFileSync('/tmp/console-errors.json', `${tmpDir}/console-errors.json`);
+           }
+         } catch (jsonError) {
+           console.error('Error processing console errors JSON file in error handler:', jsonError);
+         }
+       }
+     } catch (fileError) {
+       console.error('Error reading console errors in catch block:', fileError);
+     }
+
+     // Get environment config even in case of error
+     const environment = event.environment || 'unknown';
+     let config = { baseURL: 'unknown', campaignId: 'unknown' };
+
+     try {
+       config = getEnvConfig(environment);
+     } catch (configError) {
+       console.error('Failed to get config:', configError);
+     }
+
      return {
        statusCode: 500,
        body: JSON.stringify({
          success: false,
          error: error.message,
          stack: error.stack,
-         region: region,
-         environment: environment,
+         authError: testResult && testResult.authError ? testResult.authError : null,
+         consoleErrors: (testResult && testResult.consoleErrors && testResult.consoleErrors.length > 0) ?
+                         testResult.consoleErrors : consoleErrorsFromFile,
+         testConfig: {
+           appUrl: config.baseURL,
+           campaignId: config.campaignId,
+           environment: environment,
+           region: event.region || process.env.AWS_REGION || 'unknown'
+         },
+         region: event.region || process.env.AWS_REGION || 'unknown',
+         environment: event.environment || 'unknown',
          executionTime: new Date().toISOString()
        }, null, 2)
      };
    }
   } catch (error) {
     console.error('Error:', error);
+
+    // Get environment config even in case of error
+    const environment = event.environment || 'unknown';
+    let config = { baseURL: 'unknown', campaignId: 'unknown' };
+
+    try {
+      config = getEnvConfig(environment);
+    } catch (configError) {
+      console.error('Failed to get config:', configError);
+    }
+
     return {
       statusCode: 500,
       body: JSON.stringify({
         error: error.message,
         stack: error.stack,
+        authError: null,
+        testConfig: {
+          appUrl: config.baseURL,
+          campaignId: config.campaignId,
+          environment: environment,
+          region: event.region || process.env.AWS_REGION || 'unknown'
+        },
         region: event.region || process.env.AWS_REGION || 'unknown',
         environment: event.environment || 'unknown'
       })

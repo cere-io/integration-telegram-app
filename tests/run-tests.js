@@ -42,7 +42,7 @@ async function runTests() {
     }
 
     const launchOptions = {
-      headless: true,
+      headless: false,
       executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
       args: [
         '--no-sandbox',
@@ -55,6 +55,10 @@ async function runTests() {
         '--disable-features=site-per-process',
         '--disable-features=IsolateOrigins',
         '--disable-site-isolation-trials',
+        '--allow-insecure-localhost',
+        '--disable-extensions',
+        '--disable-popup-blocking',
+        '--ignore-certificate-errors',
       ],
       timeout: 120000,
       env: {
@@ -125,11 +129,36 @@ async function runTests() {
     let success = true;
     let output = '';
     let errorOutput = '';
+    let authError = null;
+    let testResult = null;
+    let performanceMetrics = '';
 
     try {
       const testFn = testModule.default;
-      await testFn({ browser, context });
-      output = 'Tests completed successfully';
+      testResult = await testFn({ browser, context });
+
+      if (testResult.authError) {
+        authError = testResult.authError;
+        console.log('Authentication error detected:', authError);
+      }
+
+      const metrics = testResult.metrics || [];
+      console.log('Collected metrics:', metrics.length);
+
+      if (metrics && metrics.length > 0) {
+        for (const metric of metrics) {
+          const authErrorTag = metric.faked ? ' [AUTH_ERROR]' : '';
+          performanceMetrics += `${metric.name} took ${metric.duration}ms${authErrorTag}\n`;
+        }
+      }
+
+      success = testResult.success === true;
+      output = success ? 'Tests completed successfully' : 'Tests completed with errors';
+
+      if (testResult.errorInfo) {
+        errorOutput = testResult.errorInfo.message;
+      }
+
       console.log(output);
     } catch (error) {
       success = false;
@@ -140,14 +169,30 @@ async function runTests() {
       if (browser) {
         console.log('Browser connected after error:', browser.isConnected());
       }
+
+      if (testResult && testResult.authError) {
+        authError = testResult.authError;
+      }
+
+      if (testResult && testResult.metrics) {
+        for (const metric of testResult.metrics) {
+          const authErrorTag = metric.faked ? ' [AUTH_ERROR]' : '';
+          performanceMetrics += `${metric.name} took ${metric.duration}ms${authErrorTag}\n`;
+        }
+      }
     }
 
-    return {
+    const result = {
       success,
       output,
       errorOutput,
+      performanceMetrics,
+      metrics: testResult ? testResult.metrics || [] : [],
+      authError,
       code: success ? 0 : 1,
     };
+
+    return result;
   } catch (error) {
     console.error('Error during test execution:', error);
     console.error('Error stack:', error.stack);
