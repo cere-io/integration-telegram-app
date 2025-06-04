@@ -169,6 +169,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
       organizationId,
       campaignId,
       theme,
+      activeCampaignId,
       getReferralProgramMessage,
       setSnackbarMessageIfChanged,
     ],

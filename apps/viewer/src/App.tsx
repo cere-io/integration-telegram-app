@@ -8,11 +8,11 @@ import { Leaderboard, Media, ActiveQuests, WelcomeScreen, EngagementEventData } 
 
 import '@telegram-apps/telegram-ui/dist/styles.css';
 import { useEvents, useStartParam } from './hooks';
-import hbs from 'handlebars';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { useCereWallet } from './cere-wallet';
 import Analytics from '@tg-app/analytics';
 import { useData } from './providers';
+import { compileHtml } from '~/helpers';
 
 const tabs = [
   {
@@ -70,18 +70,16 @@ export const App = () => {
 
     const handleNotificationEvent = (event: any) => {
       if (
-        (event?.payload && event.payload.integrationScriptResults[0].eventType === 'SEGMENT_WATCHED') ||
-        (event?.payload && event.payload.integrationScriptResults[0].eventType === 'X_REPOST') ||
-        (event?.payload && event.payload.integrationScriptResults[0].eventType === 'QUESTION_ANSWERED')
+        (event?.payload && event.payload.integrationScriptResults[0]?.data.eventType === 'SEGMENT_WATCHED') ||
+        (event?.payload && event.payload.integrationScriptResults[0]?.data.eventType === 'X_REPOST') ||
+        (event?.payload && event.payload.integrationScriptResults[0]?.data.eventType === 'QUESTION_ANSWERED')
       ) {
-        const { engagement, integrationScriptResults }: EngagementEventData = event.payload;
-        const { widget_template } = engagement;
+        const { integrationScriptResults }: EngagementEventData = event.payload;
+        const { data, htmlTemplate } = integrationScriptResults[0];
 
-        (integrationScriptResults as Array<any>)[0].duration = 10000;
+        (data as any).duration = 10000;
 
-        const compiledHTML = hbs.compile(widget_template.params || '')({
-          data: integrationScriptResults,
-        });
+        const compiledHTML = compileHtml(htmlTemplate, data);
 
         setNotificationHtml(compiledHTML);
       }

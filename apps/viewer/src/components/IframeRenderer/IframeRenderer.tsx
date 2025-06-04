@@ -12,9 +12,9 @@ function normalizeTemplateData(html: string, isLeaderboard = false): any {
       return null;
     }
   }
-
   try {
-    const match = html.match(/TEMPLATE_DATA\s*=\s*(\{.*?\});/s);
+    const templateDataRegex = /TEMPLATE_DATA\s*=\s*JSON\.stringify\((\{.*?\})\);/s;
+    const match = html.match(templateDataRegex);
     if (!match) return null;
 
     const data = JSON.parse(match[1]);

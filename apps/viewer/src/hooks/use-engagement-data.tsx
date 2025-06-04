@@ -84,12 +84,7 @@ export const useEngagementData = ({
         const { integrationScriptResults }: EngagementEventData = event.payload;
         const { data, htmlTemplate } = integrationScriptResults[0];
         const compiledHTML = compileHtml(htmlTemplate, data);
-        updateData(
-          integrationScriptResults,
-          htmlTemplate,
-          decodeHtml(compiledHTML),
-          eventType === 'GET_QUESTS' ? 'quests' : 'leaderboard',
-        );
+        updateData(data, htmlTemplate, decodeHtml(compiledHTML), eventType === 'GET_QUESTS' ? 'quests' : 'leaderboard');
 
         if (iframeRef?.current) {
           const eventData = {
@@ -98,15 +93,15 @@ export const useEngagementData = ({
               ...(eventType === 'GET_QUESTS' && {
                 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                 // @ts-expect-error
-                quests: integrationScriptResults?.[0].quests || {},
+                quests: data?.quests || {},
                 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                 // @ts-expect-error
-                accountId: integrationScriptResults?.[0].accountId || '',
+                accountId: data?.accountId || '',
               }),
               ...(eventType === 'GET_LEADERBOARD' && {
                 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                 // @ts-expect-error
-                users: integrationScriptResults[0].users,
+                users: data?.users,
               }),
             },
           };
