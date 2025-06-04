@@ -31,7 +31,7 @@ export class RmsService {
   }
 
   async getCampaignByOrganizationId(organizationId: string): Promise<Campaign | undefined> {
-    const response = await this.request(`campaign/organization/${organizationId}`);
+    const response = await this.request(`/api/campaign/organization/${organizationId}`);
 
     const responseBody: Response<Campaign> = await response.json();
 
