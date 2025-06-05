@@ -4,7 +4,7 @@ import { AppRoot, Tabbar, MediaIcon, LeaderboardIcon, QuestsIcon, Text, Button }
 import Reporting from '@tg-app/reporting';
 import { useInitData, useThemeParams } from '@vkruglikov/react-telegram-web-app';
 
-import { Leaderboard, Media, ActiveQuests, WelcomeScreen, EngagementEventData } from './screens';
+import { Leaderboard, Media, ActiveQuests, WelcomeScreen } from './screens';
 
 import '@telegram-apps/telegram-ui/dist/styles.css';
 import { useEvents, useStartParam } from './hooks';
@@ -69,19 +69,32 @@ export const App = () => {
     if (!eventSource) return;
 
     const handleNotificationEvent = (event: any) => {
-      if (
-        (event?.payload && event.payload.integrationScriptResults[0]?.data.eventType === 'SEGMENT_WATCHED') ||
-        (event?.payload && event.payload.integrationScriptResults[0]?.data.eventType === 'X_REPOST') ||
-        (event?.payload && event.payload.integrationScriptResults[0]?.data.eventType === 'QUESTION_ANSWERED')
-      ) {
-        const { integrationScriptResults }: EngagementEventData = event.payload;
-        const { data, htmlTemplate } = integrationScriptResults[0];
+      const results = event?.payload?.integrationScriptResults;
+      if (!Array.isArray(results) || results.length === 0) return;
 
-        (data as any).duration = 10000;
+      const result = results[0];
 
-        const compiledHTML = compileHtml(htmlTemplate, data);
+      const isNewFormat = 'data' in result && 'htmlTemplate' in result;
 
-        setNotificationHtml(compiledHTML);
+      if (isNewFormat) {
+        const { data, htmlTemplate } = result;
+
+        if (['SEGMENT_WATCHED', 'X_REPOST', 'QUESTION_ANSWERED'].includes(data.eventType)) {
+          data.duration = 10000;
+          const compiledHTML = compileHtml(htmlTemplate, data);
+          setNotificationHtml(compiledHTML);
+        }
+      } else {
+        const eventType = result.eventType;
+        if (['SEGMENT_WATCHED', 'X_REPOST', 'QUESTION_ANSWERED'].includes(eventType)) {
+          result.duration = 10000;
+
+          const template = event.engagement?.widget_template?.params;
+          if (template) {
+            const compiledHTML = compileHtml(template, { data: results });
+            setNotificationHtml(compiledHTML);
+          }
+        }
       }
     };
     eventSource.addEventListener('engagement', handleNotificationEvent);

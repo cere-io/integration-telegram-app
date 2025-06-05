@@ -13,7 +13,9 @@ export type MediaTypeProps = {
 
 export const Media = ({ videoUrl }: MediaTypeProps) => {
   const { questData, updateData, updateQuestStatus } = useData();
-  const [videos, setVideos] = useState<Video[]>(questData?.quests.videoTasks || []);
+  const [videos, setVideos] = useState<Video[]>(
+    (Array.isArray(questData) ? questData[0]?.quests?.videoTasks : questData?.quests?.videoTasks) || [],
+  );
   const [currentVideo, setCurrentVideo] = useState<Video>();
   const [pendingUpdates, setPendingUpdates] = useState<Partial<Video>[]>([]);
   const eventSource = useEvents();
