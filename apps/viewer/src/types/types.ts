@@ -17,7 +17,7 @@ export interface Engagement {
 }
 export interface EngagementEventData {
   engagement: Engagement;
-  integrationScriptResults: unknown;
+  integrationScriptResults: [{ data: unknown; htmlTemplate: string }];
   userProfile: unknown;
 }
 

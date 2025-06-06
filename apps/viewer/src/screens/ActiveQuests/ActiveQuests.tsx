@@ -30,7 +30,7 @@ type ActiveQuestsProps = {
 };
 
 export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
-  const { questsHtml, questData, updateData } = useData();
+  const { questsHtml, questData, updateData, activeCampaignId } = useData();
 
   const lastHtml = useRef(questsHtml);
   const [memoizedQuestsHtml, setMemoizedQuestsHtml] = useState(questsHtml);
@@ -45,7 +45,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
 
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const eventSource = useEvents();
-  const { campaignId } = useStartParam();
+  const { organizationId, campaignId } = useStartParam();
   const cereWallet = useCereWallet();
   const [theme] = useThemeParams();
 
@@ -54,6 +54,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
   const { isLoading } = useEngagementData({
     eventSource,
     eventType: 'GET_QUESTS',
+    organizationId: organizationId as string | null,
     campaignId,
     theme,
     updateData,
@@ -96,6 +97,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
           event_type: 'X_REPOST_STARTED',
           timestamp: new Date().toISOString(),
           data: JSON.stringify({
+            organization_id: organizationId,
             campaignId: campaignId,
             campaign_id: campaignId,
             tweet_id_original: event.data.tweetId,
@@ -120,8 +122,9 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
           event_type: 'QUESTION_ANSWERED',
           timestamp: new Date().toISOString(),
           data: JSON.stringify({
-            campaign_id: campaignId,
-            campaignId: campaignId,
+            organization_id: organizationId,
+            campaign_id: campaignId || activeCampaignId,
+            campaignId: campaignId || activeCampaignId,
             quizId: event.data.quizId,
             questionId: event.data.questionId,
             answerId: event.data.answerId,
@@ -160,7 +163,16 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
         return;
       }
     },
-    [setActiveTab, eventSource, campaignId, theme, getReferralProgramMessage, setSnackbarMessageIfChanged],
+    [
+      setActiveTab,
+      eventSource,
+      organizationId,
+      campaignId,
+      theme,
+      activeCampaignId,
+      getReferralProgramMessage,
+      setSnackbarMessageIfChanged,
+    ],
   );
 
   useEffect(() => {
@@ -169,7 +181,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     return () => {
       window.removeEventListener('message', handleIframeClick);
     };
-  }, [campaignId, cereWallet, handleIframeClick, setActiveTab, eventSource]);
+  }, [campaignId, campaignId, cereWallet, handleIframeClick, setActiveTab, eventSource]);
 
   const handleIframeLoad = () => {
     const renderTime = performance.now() - mountTimeRef.current;

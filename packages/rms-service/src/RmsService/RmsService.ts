@@ -8,7 +8,7 @@ export class RmsService {
   readonly baseUrl: URL;
 
   constructor(baseUrl: string) {
-    this.baseUrl = new URL(baseUrl);
+    this.baseUrl = new URL(baseUrl.endsWith('/') ? baseUrl : baseUrl + '/');
   }
 
   private async request(url: string, { allowStatus = [], ...options }: RequestOptions = {}) {
@@ -24,6 +24,14 @@ export class RmsService {
 
   async getCampaignById(campaignId: string): Promise<Campaign | undefined> {
     const response = await this.request(`/api/campaign/${campaignId}`);
+
+    const responseBody: Response<Campaign> = await response.json();
+
+    return responseBody.data;
+  }
+
+  async getCampaignByOrganizationId(organizationId: string): Promise<Campaign | undefined> {
+    const response = await this.request(`/api/campaign/organization/${organizationId}`);
 
     const responseBody: Response<Campaign> = await response.json();
 

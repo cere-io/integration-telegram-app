@@ -1,7 +1,6 @@
 import { MutableRefObject, useEffect, useRef, useState } from 'react';
 import { useEventQueue } from '../hooks';
 import { ActivityEvent, EventSource } from '@cere-activity-sdk/events';
-import { EngagementEventData } from '../types';
 import Analytics from '@tg-app/analytics';
 import * as hbs from 'handlebars';
 import { ENGAGEMENT_TIMEOUT_DURATION } from '../constants';
@@ -14,6 +13,7 @@ hbs.registerHelper('json', (context) => JSON.stringify(context));
 type UseEngagementDataProps = {
   eventSource: EventSource | null;
   eventType: 'GET_QUESTS' | 'GET_LEADERBOARD';
+  organizationId: string | null;
   campaignId: string | null;
   theme?: ColorScheme;
   updateData: (data: any, originalHtml: string, html: string, key: 'quests' | 'leaderboard') => void;
@@ -23,12 +23,13 @@ type UseEngagementDataProps = {
 export const useEngagementData = ({
   eventSource,
   eventType,
+  organizationId,
   campaignId,
   theme,
   updateData,
   iframeRef,
 }: UseEngagementDataProps) => {
-  const { questsHtml, leaderboardHtml } = useData();
+  const { questsHtml, leaderboardHtml, activeCampaignId } = useData();
   const { addToQueue } = useEventQueue();
   const [isLoading, setLoading] = useState(eventType === 'GET_QUESTS' ? !questsHtml : !leaderboardHtml);
   const activityStartTime = useRef<number | null>(null);
@@ -50,8 +51,8 @@ export const useEngagementData = ({
         }
         activityStartTime.current = performance.now();
         const event = new ActivityEvent(eventType, {
-          campaignId,
-          campaign_id: campaignId,
+          organization_id: organizationId,
+          campaign_id: campaignId || activeCampaignId,
           ...(theme && { theme }),
           timestamp: new Date().toISOString(),
         });
@@ -75,45 +76,43 @@ export const useEngagementData = ({
 
     const handleEngagementEvent = (event: any) => {
       clearTimeout(engagementTimeout);
-      if (event?.payload?.integrationScriptResults[0]?.eventType === eventType) {
-        const engagementTime = performance.now() - (activityStartTime.current || 0);
-        Analytics.transaction('ENGAGEMENT_LOADED', engagementTime, { event: { type: eventType } });
 
-        const { engagement, integrationScriptResults }: EngagementEventData = event.payload;
-        const compiledHTML = compileHtml(engagement.widget_template.params || '', integrationScriptResults);
-        updateData(
-          integrationScriptResults,
-          engagement.widget_template.params,
-          decodeHtml(compiledHTML),
-          eventType === 'GET_QUESTS' ? 'quests' : 'leaderboard',
-        );
+      const payload = event?.payload;
+      const result = payload?.integrationScriptResults?.[0];
 
-        if (iframeRef?.current) {
-          const eventData = {
-            type: eventType === 'GET_QUESTS' ? 'QUESTS_UPDATE' : 'LEADERBOARD_UPDATE',
-            payload: {
-              ...(eventType === 'GET_QUESTS' && {
-                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                // @ts-expect-error
-                quests: integrationScriptResults?.[0].quests || {},
-                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                // @ts-expect-error
-                accountId: integrationScriptResults?.[0].accountId || '',
-              }),
-              ...(eventType === 'GET_LEADERBOARD' && {
-                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                // @ts-expect-error
-                users: integrationScriptResults[0].users,
-              }),
-            },
-          };
-          iframeRef.current.contentWindow?.postMessage(eventData, '*');
-        }
+      const isNewVersion = !!result?.data && !!result?.htmlTemplate;
+      const eventTypeFromPayload = isNewVersion ? result.data.eventType : result?.eventType;
 
-        setTimeout(() => setLoading(false), 0);
+      if (eventTypeFromPayload !== eventType) return;
+
+      const engagementTime = performance.now() - (activityStartTime.current || 0);
+      Analytics.transaction('ENGAGEMENT_LOADED', engagementTime, { event: { type: eventType } });
+
+      const data = isNewVersion ? result.data : result;
+      const htmlTemplate = isNewVersion ? result.htmlTemplate : payload.engagement?.widget_template?.params || '';
+
+      const compiledHTML = compileHtml(htmlTemplate, result, isNewVersion);
+
+      updateData(data, htmlTemplate, decodeHtml(compiledHTML), eventType === 'GET_QUESTS' ? 'quests' : 'leaderboard');
+
+      if (iframeRef?.current) {
+        const eventData = {
+          type: eventType === 'GET_QUESTS' ? 'QUESTS_UPDATE' : 'LEADERBOARD_UPDATE',
+          payload: {
+            ...(eventType === 'GET_QUESTS' && {
+              quests: data?.quests || {},
+              accountId: data?.accountId || '',
+            }),
+            ...(eventType === 'GET_LEADERBOARD' && {
+              users: data?.users,
+            }),
+          },
+        };
+        iframeRef.current.contentWindow?.postMessage(eventData, '*');
       }
-    };
 
+      setTimeout(() => setLoading(false), 0);
+    };
     engagementTimeout = setTimeout(() => {
       console.error(`${eventType} Engagement Timeout after ${ENGAGEMENT_TIMEOUT_DURATION}ms`);
       Analytics.exception('ENGAGEMENT_TIMEOUT', {

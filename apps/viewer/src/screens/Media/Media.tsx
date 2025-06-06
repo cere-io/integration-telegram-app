@@ -13,11 +13,13 @@ export type MediaTypeProps = {
 
 export const Media = ({ videoUrl }: MediaTypeProps) => {
   const { questData, updateData, updateQuestStatus } = useData();
-  const [videos, setVideos] = useState<Video[]>(questData?.[0].quests.videoTasks || []);
+  const [videos, setVideos] = useState<Video[]>(
+    (Array.isArray(questData) ? questData[0]?.quests?.videoTasks : questData?.quests?.videoTasks) || [],
+  );
   const [currentVideo, setCurrentVideo] = useState<Video>();
   const [pendingUpdates, setPendingUpdates] = useState<Partial<Video>[]>([]);
   const eventSource = useEvents();
-  const { campaignId } = useStartParam();
+  const { organizationId, campaignId } = useStartParam();
 
   const mountTimeRef = useRef<number>(performance.now());
   const [isRendered, setIsRendered] = useState(false);
@@ -25,6 +27,7 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
   const { isLoading } = useEngagementData({
     eventSource,
     eventType: 'GET_QUESTS',
+    organizationId: organizationId as string | null,
     campaignId,
     updateData,
   });

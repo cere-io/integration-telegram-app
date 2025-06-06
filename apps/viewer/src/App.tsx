@@ -4,15 +4,15 @@ import { AppRoot, Tabbar, MediaIcon, LeaderboardIcon, QuestsIcon, Text, Button }
 import Reporting from '@tg-app/reporting';
 import { useInitData, useThemeParams } from '@vkruglikov/react-telegram-web-app';
 
-import { Leaderboard, Media, ActiveQuests, WelcomeScreen, EngagementEventData } from './screens';
+import { Leaderboard, Media, ActiveQuests, WelcomeScreen } from './screens';
 
 import '@telegram-apps/telegram-ui/dist/styles.css';
 import { useEvents, useStartParam } from './hooks';
-import hbs from 'handlebars';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { useCereWallet } from './cere-wallet';
 import Analytics from '@tg-app/analytics';
 import { useData } from './providers';
+import { compileHtml } from '~/helpers';
 
 const tabs = [
   {
@@ -39,9 +39,9 @@ export type ActiveTab = {
 
 export const App = () => {
   const [initDataUnsafe] = useInitData() || {};
-  const { campaignExpired, campaignPaused, debugMode } = useData();
+  const { campaignExpired, campaignPaused, debugMode, activeCampaignId } = useData();
   const [theme] = useThemeParams();
-  const { campaignId, referrerId } = useStartParam();
+  const { organizationId, campaignId, referrerId } = useStartParam();
 
   const cereWallet = useCereWallet();
   const eventSource = useEvents();
@@ -61,7 +61,7 @@ export const App = () => {
       Reporting.setUser({ id: user.id.toString(), username: user.username });
       Analytics.setUser({ id: user.id.toString(), username: user.username });
     }
-    Analytics.setTags({ campaign_id: campaignId });
+    Analytics.setTags({ organization_id: organizationId, campaign_id: campaignId || activeCampaignId });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
@@ -69,21 +69,32 @@ export const App = () => {
     if (!eventSource) return;
 
     const handleNotificationEvent = (event: any) => {
-      if (
-        (event?.payload && event.payload.integrationScriptResults[0].eventType === 'SEGMENT_WATCHED') ||
-        (event?.payload && event.payload.integrationScriptResults[0].eventType === 'X_REPOST') ||
-        (event?.payload && event.payload.integrationScriptResults[0].eventType === 'QUESTION_ANSWERED')
-      ) {
-        const { engagement, integrationScriptResults }: EngagementEventData = event.payload;
-        const { widget_template } = engagement;
+      const results = event?.payload?.integrationScriptResults;
+      if (!Array.isArray(results) || results.length === 0) return;
 
-        (integrationScriptResults as Array<any>)[0].duration = 10000;
+      const result = results[0];
 
-        const compiledHTML = hbs.compile(widget_template.params || '')({
-          data: integrationScriptResults,
-        });
+      const isNewFormat = 'data' in result && 'htmlTemplate' in result;
 
-        setNotificationHtml(compiledHTML);
+      if (isNewFormat) {
+        const { data, htmlTemplate } = result;
+
+        if (['SEGMENT_WATCHED', 'X_REPOST', 'QUESTION_ANSWERED'].includes(data.eventType)) {
+          data.duration = 10000;
+          const compiledHTML = compileHtml(htmlTemplate, data);
+          setNotificationHtml(compiledHTML);
+        }
+      } else {
+        const eventType = result.eventType;
+        if (['SEGMENT_WATCHED', 'X_REPOST', 'QUESTION_ANSWERED'].includes(eventType)) {
+          result.duration = 10000;
+
+          const template = event.engagement?.widget_template?.params;
+          if (template) {
+            const compiledHTML = compileHtml(template, { data: results });
+            setNotificationHtml(compiledHTML);
+          }
+        }
       }
     };
     eventSource.addEventListener('engagement', handleNotificationEvent);
@@ -99,13 +110,20 @@ export const App = () => {
     const sendJoinCampaignEvent = async () => {
       const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
       const userInfo = await cereWallet.getUserInfo();
-      const campaignKey = `campaign:${accountId}:${campaignId}`;
+      const campaignKeyParts = ['campaign', accountId, campaignId || activeCampaignId];
+
+      if (organizationId) {
+        campaignKeyParts.push(organizationId);
+      }
+
+      const campaignKey = campaignKeyParts.join(':');
       if (localStorage.getItem(campaignKey) === 'true') {
         return;
       }
 
       const payload: any = {
-        campaign_id: campaignId,
+        organization_id: organizationId,
+        campaign_id: campaignId || activeCampaignId,
       };
       if (referrerId) {
         payload.referrer_id = referrerId;
@@ -117,7 +135,7 @@ export const App = () => {
       localStorage.setItem(campaignKey, 'true');
     };
     sendJoinCampaignEvent();
-  }, [cereWallet, eventSource, campaignId, referrerId, user?.username]);
+  }, [cereWallet, eventSource, campaignId, referrerId, user?.username, organizationId, activeCampaignId]);
 
   const renderContent = () => {
     if (campaignExpired) {

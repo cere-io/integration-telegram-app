@@ -8,6 +8,7 @@ import { memo, useCallback, useEffect, useState } from 'react';
 import { Video } from '../../types';
 import { useWebApp, useExpand } from '@vkruglikov/react-telegram-web-app';
 import { VIDEO_SEGMENT_LENGTH } from '../../constants.ts';
+import { useData } from '~/providers';
 
 export type VideoPlayerProps = Pick<ModalProps, 'open'> & {
   video?: Video;
@@ -29,13 +30,14 @@ const createUrl = (video?: Video) => {
 export const VideoPlayer = memo(
   ({ video, open = false, onClose }: VideoPlayerProps) => {
     const miniApp = useWebApp();
+    const { activeCampaignId } = useData();
     const [isExpanded, expand] = useExpand();
     const [currentVideoTime, setCurrentVideoTime] = useState<number>(0);
 
     const width = miniApp.viewportWidth || window.innerWidth;
 
     const eventSource = useEvents();
-    const { campaignId } = useStartParam();
+    const { organizationId, campaignId } = useStartParam();
     /**
      * TODO: Properly detect the video aspect ratio
      * TODO: Apply aspect ratio using CSS
@@ -63,8 +65,9 @@ export const VideoPlayer = memo(
       async (eventName: string, payload?: any) => {
         if (!eventSource) return;
         const activityEventPayload = {
-          campaignId: campaignId,
-          campaign_id: campaignId,
+          organization_id: organizationId,
+          campaignId: campaignId || activeCampaignId,
+          campaign_id: campaignId || activeCampaignId,
           videoId: video?.videoUrl,
           ...payload,
         };
@@ -72,7 +75,7 @@ export const VideoPlayer = memo(
 
         await eventSource.dispatchEvent(activityEvent);
       },
-      [eventSource, campaignId, video?.videoUrl],
+      [eventSource, organizationId, campaignId, activeCampaignId, video?.videoUrl],
     );
 
     const onSegmentWatched = useCallback(
