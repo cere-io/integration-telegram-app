@@ -133,7 +133,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     if (!parsedData) return;
 
     setQuestData([parsedData]);
-    const compiledHtml = compileHtml(campaignConfig.templateHtml || '', [parsedData]);
+    const compiledHtml = compileHtml(campaignConfig.templateHtml || '', parsedData);
     setQuestData([parsedData]);
     setQuestsHtml(decodeHtml(compiledHtml));
     setQuestsOriginalHtml(campaignConfig.templateHtml || '');
