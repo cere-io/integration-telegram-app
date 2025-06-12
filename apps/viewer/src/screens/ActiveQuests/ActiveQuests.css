@@ -81,9 +81,8 @@
   transition: width 0.3s ease;
 }
 
-/* Отступ сверху для контента, когда показан баннер */
 .active-quests-container.with-banner {
-  padding-top: 120px; /* Примерная высота баннера */
+  padding-top: 120px;
 }
 
 .quests-list {

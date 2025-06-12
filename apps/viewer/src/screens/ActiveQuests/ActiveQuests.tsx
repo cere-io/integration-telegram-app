@@ -167,11 +167,9 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     });
   }, [quests]);
 
-  // Calculate campaign progress - убираем Math.random()
   const campaignProgress = useMemo(() => {
     if (!questsData) return 0;
-    // Возвращаем статичное значение вместо Math.random()
-    return 65; // Пример: 65% прогресса
+    return 65; // @TODO
   }, [questsData]);
 
   useEffect(() => {
