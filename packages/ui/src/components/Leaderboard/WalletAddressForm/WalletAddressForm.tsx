@@ -1,6 +1,9 @@
+import { ActivityEvent } from '@cere-activity-sdk/events';
+import { useEvents, useStartParam } from '@integration-telegram-app/viewer/src/hooks';
+import { useData } from '@integration-telegram-app/viewer/src/providers';
 import { Text } from '@telegram-apps/telegram-ui';
 import clsx from 'clsx';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 
 import styles from './WalletAddressForm.module.css';
 
@@ -162,11 +165,21 @@ export const WalletAddressForm: React.FC<WalletFormProps> = ({
   network,
   enable,
 }) => {
-  const [walletAddress, setWalletAddress] = useState(existedWalletAddress);
+  const eventSource = useEvents();
+  const { organizationId, campaignId } = useStartParam();
+  const { activeCampaignId } = useData();
+
+  const [walletAddress, setWalletAddress] = useState('');
   const [validation, setValidation] = useState<{ isValid: boolean; message: string; network?: string }>({
     isValid: true,
     message: '',
   });
+
+  useEffect(() => {
+    if (existedWalletAddress) {
+      setWalletAddress(existedWalletAddress);
+    }
+  }, [existedWalletAddress]);
 
   const getPlaceholderText = () => {
     if (!addressType) return 'Your wallet address';
@@ -215,7 +228,7 @@ export const WalletAddressForm: React.FC<WalletFormProps> = ({
   );
 
   const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
+    async (e: React.FormEvent) => {
       e.preventDefault();
       const trimmedAddress = walletAddress.trim();
 
@@ -226,13 +239,16 @@ export const WalletAddressForm: React.FC<WalletFormProps> = ({
 
       const result = validateWalletAddress(trimmedAddress, addressType, network);
       if (result.isValid) {
-        window.parent.postMessage(
-          {
-            type: 'ATTACH_EXTERNAL_ADDRESS',
-            walletAddress: trimmedAddress,
-          },
-          '*',
-        );
+        if (!eventSource) return;
+        const activityEventPayload = {
+          organization_id: organizationId,
+          campaign_id: campaignId || activeCampaignId,
+          walletAddress: trimmedAddress,
+        };
+
+        const activityEvent = new ActivityEvent('ATTACH_EXTERNAL_ADDRESS', activityEventPayload);
+
+        await eventSource.dispatchEvent(activityEvent);
 
         setValidation({ isValid: true, message: 'Address submitted successfully', network: result.network });
       } else {
@@ -244,7 +260,7 @@ export const WalletAddressForm: React.FC<WalletFormProps> = ({
         });
       }
     },
-    [walletAddress, addressType, network],
+    [walletAddress, addressType, network, eventSource, organizationId, campaignId, activeCampaignId],
   );
 
   if (!enable) return null;

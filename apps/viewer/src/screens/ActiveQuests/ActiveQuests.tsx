@@ -9,6 +9,7 @@ import FlipMove from 'react-flip-move';
 import { ActiveTab } from '~/App.tsx';
 import { useData } from '~/providers';
 
+import { getPreviewCustomization } from '../../helpers';
 import { useStartParam } from '../../hooks';
 import { Quests, Task } from '../../types';
 
@@ -17,12 +18,41 @@ type ActiveQuestsProps = {
 };
 
 export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
-  const { questData: questsData, isQuestsLoading, error, refetchQuestsForTab, activeCampaignId } = useData();
+  const {
+    questData: questsData,
+    isQuestsLoading,
+    error,
+    refetchQuestsForTab,
+    activeCampaignId,
+    campaignConfig,
+  } = useData();
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0 });
   const [mounted, setMounted] = useState(false);
 
   const { organizationId, campaignId } = useStartParam();
+
+  // Get customization data
+  const previewCustomization = getPreviewCustomization();
+  const [bannerConfig, setBannerConfig] = useState<any>(null);
+
+  // Load banner configuration from campaign config or preview
+  useEffect(() => {
+    let config = null;
+
+    if (previewCustomization?.activeQuests) {
+      config = previewCustomization.activeQuests;
+    } else if (campaignConfig) {
+      try {
+        const formData = JSON.parse((campaignConfig?.formData as unknown as string) || '{}');
+        config = formData.campaign?.configuration?.activeQuests;
+      } catch (error) {
+        console.error('Error parsing campaign config:', error);
+      }
+    }
+
+    setBannerConfig(config);
+  }, [previewCustomization, campaignConfig]);
 
   // Mark component as mounted
   useEffect(() => {
@@ -154,6 +184,25 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
   // Show loading state only if we're actually loading and don't have any cached data
   const shouldShowLoader = isQuestsLoading && !questsData;
 
+  // Apply custom CSS variables
+  useEffect(() => {
+    if (bannerConfig) {
+      const root = document.documentElement;
+
+      if (bannerConfig.topBannerContent?.backgroundColor) {
+        root.style.setProperty('--campaign-banner-bg-color', bannerConfig.topBannerContent.backgroundColor);
+      }
+
+      if (bannerConfig.topBannerContent?.textColor) {
+        root.style.setProperty('--campaign-banner-text-color', bannerConfig.topBannerContent.textColor);
+      }
+
+      if (bannerConfig.colors?.primary) {
+        root.style.setProperty('--active-quests-primary-color', bannerConfig.colors.primary);
+      }
+    }
+  }, [bannerConfig]);
+
   if (shouldShowLoader) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
@@ -170,56 +219,90 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     );
   }
 
+  const showBanner = bannerConfig?.showTopBanner !== false;
+
   return (
-    <div className="active-quests-container">
-      <Title weight="1" level="1" className="active-quests-title" style={{ marginLeft: 16, marginTop: 16 }}>
-        Complete Quests to Earn!
-      </Title>
-      {campaignDescription && (
-        <Title level="2" className="active-quests-subtitle" style={{ marginLeft: 16, marginTop: 16, marginBottom: 32 }}>
-          {campaignDescription}
+    <>
+      {showBanner && (
+        <div className="banner">
+          <div className="banner-header">
+            <Text weight="1" className="banner-title">
+              {bannerConfig?.topBannerContent?.title || ''}
+            </Text>
+          </div>
+
+          {bannerConfig?.topBannerContent?.description && (
+            <Text style={{ fontSize: '14px', marginBottom: '8px' }}>
+              {bannerConfig?.topBannerContent?.description || ''}
+            </Text>
+          )}
+
+          {bannerConfig?.topBannerContent?.linkText && bannerConfig?.topBannerContent?.linkUrl && (
+            <a
+              href={bannerConfig.topBannerContent.linkUrl}
+              className="banner-link"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Text>{bannerConfig.topBannerContent.linkText}</Text>
+            </a>
+          )}
+        </div>
+      )}
+      <div className="active-quests-container">
+        <Title weight="1" level="1" className="active-quests-title" style={{ marginLeft: 16, marginTop: 16 }}>
+          Complete Quests to Earn!
         </Title>
-      )}
-      <div className="campaign-info">
-        <div className="campaign-header">
-          <Text weight="1" className="campaign-title">
-            {campaignName}
-          </Text>
-          <Text className="campaign-time">
-            {timeLeft.days}d {timeLeft.hours}h {timeLeft.minutes}m
-          </Text>
-        </div>
-        <div className="progress-bar">
-          <div className="progress-fill" style={{ width: `${campaignProgress}%` }} />
-        </div>
-      </div>
-      <QuestsList>
-        {sortedQuests.length > 0 ? (
-          <FlipMove>
-            {sortedQuests.map((quest, idx) => (
-              <QuestsListItem
-                key={`${idx}_${quest.title}`}
-                quest={quest}
-                campaignId={Number(campaignId || activeCampaignId)}
-                organizationId={Number(organizationId)}
-                accountId={accountId}
-                remainingDays={remainingTime.days}
-                setActiveTab={setActiveTab}
-              />
-            ))}
-          </FlipMove>
-        ) : (
-          <Text className="no-quests">{isQuestsLoading ? 'Loading quests...' : 'There are no quests yet.'}</Text>
-        )}
-      </QuestsList>
-      {snackbarMessage && (
-        <Snackbar onClose={() => setSnackbarMessage(null)} duration={5000}>
-          <Title style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <ClipboardCheck />
-            {snackbarMessage}
+        {campaignDescription && (
+          <Title
+            level="2"
+            className="active-quests-subtitle"
+            style={{ marginLeft: 16, marginTop: 16, marginBottom: 32 }}
+          >
+            {campaignDescription}
           </Title>
-        </Snackbar>
-      )}
-    </div>
+        )}
+        <div className="campaign-info">
+          <div className="campaign-header">
+            <Text weight="1" className="campaign-title">
+              {campaignName}
+            </Text>
+            <Text className="campaign-time">
+              {timeLeft.days}d {timeLeft.hours}h {timeLeft.minutes}m
+            </Text>
+          </div>
+          <div className="progress-bar">
+            <div className="progress-fill" style={{ width: `${campaignProgress}%` }} />
+          </div>
+        </div>
+        <QuestsList>
+          {sortedQuests.length > 0 ? (
+            <FlipMove>
+              {sortedQuests.map((quest, idx) => (
+                <QuestsListItem
+                  key={`${idx}_${quest.title}`}
+                  quest={quest}
+                  campaignId={Number(campaignId || activeCampaignId)}
+                  organizationId={Number(organizationId)}
+                  accountId={accountId}
+                  remainingDays={remainingTime.days}
+                  setActiveTab={setActiveTab}
+                />
+              ))}
+            </FlipMove>
+          ) : (
+            <Text className="no-quests">{isQuestsLoading ? 'Loading quests...' : 'There are no quests yet.'}</Text>
+          )}
+        </QuestsList>
+        {snackbarMessage && (
+          <Snackbar onClose={() => setSnackbarMessage(null)} duration={5000}>
+            <Title style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <ClipboardCheck />
+              {snackbarMessage}
+            </Title>
+          </Snackbar>
+        )}
+      </div>
+    </>
   );
 };

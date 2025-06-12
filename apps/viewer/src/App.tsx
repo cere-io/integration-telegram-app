@@ -9,7 +9,13 @@ import { useInitData, useThemeParams } from '@vkruglikov/react-telegram-web-app'
 import { useEffect, useState } from 'react';
 
 import { useCereWallet } from './cere-wallet';
-import { applyPreviewCustomization, compileHtml, getPreviewCustomization, isPreviewMode } from './helpers';
+import {
+  applyPreviewCustomization,
+  compileHtml,
+  getPreviewCustomization,
+  getPreviewTab,
+  isPreviewMode,
+} from './helpers';
 import { useEvents, useStartParam } from './hooks';
 import { useData } from './providers';
 import { ActiveQuests, Leaderboard, Media, WelcomeScreen } from './screens';
@@ -79,6 +85,29 @@ export const App = () => {
     const previewCustomization = getPreviewCustomization();
     if (previewCustomization) {
       applyPreviewCustomization(previewCustomization);
+    }
+  }, []);
+
+  // Handle preview tab switching
+  useEffect(() => {
+    const previewTab = getPreviewTab();
+    if (previewTab && isPreviewMode()) {
+      const tabMap: Record<string, number> = {
+        welcomeScreen: -1,
+        activeQuests: 0,
+        leaderboard: 1,
+        library: 2,
+      };
+
+      const tabIndex = tabMap[previewTab];
+      if (tabIndex !== undefined) {
+        if (tabIndex === -1) {
+          setWelcomeScreenVisible(true);
+        } else {
+          setWelcomeScreenVisible(false);
+          setActiveTab({ index: tabIndex });
+        }
+      }
     }
   }, []);
 
@@ -220,7 +249,7 @@ export const App = () => {
           <>
             {debugMode && (
               <Button
-                style={{ position: 'absolute', right: '5px', top: '5px' }}
+                style={{ position: 'absolute', right: '5px', top: '5px', zIndex: '1000' }}
                 onClick={() => {
                   localStorage.clear();
                   sessionStorage.clear();
@@ -237,6 +266,7 @@ export const App = () => {
             <Tabbar
               style={{
                 paddingBottom: 'calc(env(safe-area-inset-bottom) + 13px)',
+                zIndex: '1000',
               }}
             >
               {tabs.map(({ icon: Icon, text }, index) => (

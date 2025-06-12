@@ -14,3 +14,17 @@ body .App-root {
 body {
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
+
+.banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: fixed;
+  top: 0;
+  width: -webkit-fill-available;
+  margin: 0 auto;
+  padding: 0.6rem 1rem;
+  z-index: 888;
+  background: var(--campaign-banner-bg-color, var(--tgui--bg_color));
+  color: var(--campaign-banner-text-color, var(--tgui--text_color));
+}

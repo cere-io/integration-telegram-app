@@ -21,6 +21,7 @@ import { ActiveTab } from '~/App.tsx';
 import { useData } from '~/providers';
 
 import { useCereWallet } from '../../cere-wallet';
+import { getPreviewCustomization } from '../../helpers';
 import { LeaderboardUser } from '../../types';
 import userIcon from './user-icon.svg';
 
@@ -69,15 +70,37 @@ const getNonLinearLeaderboard = (
 };
 
 export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
-  const { walletStatus, leaderboardData, isLeaderboardLoading, error, refetchLeaderboardForTab } = useData();
+  const { walletStatus, leaderboardData, isLeaderboardLoading, error, refetchLeaderboardForTab, campaignConfig } =
+    useData();
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const [expandedRanges, setExpandedRanges] = useState<Record<string, boolean>>({});
   const [mounted, setMounted] = useState(false);
   const [isModalOpen, setModalOpen] = useState(false);
 
   const [theme] = useThemeParams();
-
   const cereWallet = useCereWallet();
+
+  // Get customization data
+  const previewCustomization = getPreviewCustomization();
+  const [leaderboardConfig, setLeaderboardConfig] = useState<any>(null);
+
+  // Load leaderboard configuration from campaign config or preview
+  useEffect(() => {
+    let config = null;
+
+    if (previewCustomization?.leaderboard) {
+      config = previewCustomization.leaderboard;
+    } else if (campaignConfig) {
+      try {
+        const formData = JSON.parse((campaignConfig?.formData as unknown as string) || '{}');
+        config = formData.campaign?.configuration?.leaderboard;
+      } catch (error) {
+        console.error('Error parsing campaign config:', error);
+      }
+    }
+
+    setLeaderboardConfig(config);
+  }, [previewCustomization, campaignConfig]);
 
   // Mark component as mounted
   useEffect(() => {
@@ -301,7 +324,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
 
   return (
     <div className="leaderboardContainer">
-      <TopWidget widgetImage={undefined} /> {/* @TODO add widget image from campaignConfigurator*/}
+      <TopWidget widgetImage={leaderboardConfig?.topWidgetImage} />
       <WalletAddressForm
         enable={true}
         // enable={enableRewards}
@@ -338,7 +361,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           <QuestsModalContent
             currentUser={currentUserData}
             onRowClick={handleRowClick}
-            widgetImage={undefined}
+            widgetImage={leaderboardConfig?.topWidgetImage}
             setActiveTab={setActiveTab}
           />
         }

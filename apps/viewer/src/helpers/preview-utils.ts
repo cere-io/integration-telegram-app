@@ -11,7 +11,34 @@ interface WelcomeScreenCustomization {
   };
 }
 
-interface TabCustomization {
+interface ActiveQuestsCustomization {
+  colors?: {
+    primary?: string;
+    secondary?: string;
+    background?: string;
+    text?: string;
+  };
+  showTopBanner?: boolean;
+  topBannerContent?: {
+    title?: string;
+    description?: string;
+    progressVisible?: boolean;
+    backgroundColor?: string;
+    textColor?: string;
+  };
+}
+
+interface LeaderboardCustomization {
+  colors?: {
+    primary?: string;
+    secondary?: string;
+    background?: string;
+    text?: string;
+  };
+  topWidgetImage?: string;
+}
+
+interface LibraryCustomization {
   colors?: {
     primary?: string;
     secondary?: string;
@@ -22,9 +49,9 @@ interface TabCustomization {
 
 export interface PreviewCustomization {
   welcomeScreen?: WelcomeScreenCustomization;
-  activeQuests?: TabCustomization;
-  leaderboard?: TabCustomization;
-  library?: TabCustomization;
+  activeQuests?: ActiveQuestsCustomization;
+  leaderboard?: LeaderboardCustomization;
+  library?: LibraryCustomization;
 }
 
 export const getPreviewCustomization = (): PreviewCustomization | null => {
@@ -42,6 +69,11 @@ export const getPreviewCustomization = (): PreviewCustomization | null => {
     console.error('Failed to parse preview customization:', error);
     return null;
   }
+};
+
+export const getPreviewTab = (): string | null => {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get('tab');
 };
 
 export const isPreviewMode = (): boolean => {
