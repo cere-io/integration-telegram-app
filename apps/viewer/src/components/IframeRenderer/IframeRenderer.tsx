@@ -1,5 +1,5 @@
-import React, { memo, MutableRefObject, useEffect } from 'react';
 import JSON5 from 'json5';
+import React, { memo, MutableRefObject, useEffect } from 'react';
 
 function normalizeTemplateData(html: string, isLeaderboard = false): any {
   if (isLeaderboard) {

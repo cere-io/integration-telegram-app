@@ -1,0 +1,89 @@
+.container {
+    padding: 20px 0;
+}
+
+.text {
+    margin-bottom: 10px;
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    margin-top: 10px;
+}
+
+.inputContainer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.input {
+    flex: 1;
+    padding: 12px;
+    border-radius: 16px;
+    border: none;
+    background-color: var(--input-bg);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+    color: var(--input-color);
+}
+
+.input.valid {
+    box-shadow: inset 0 0 0 1px rgba(0, 255, 0, 0.2);
+}
+
+.input.invalid {
+    box-shadow: inset 0 0 0 1px rgba(255, 0, 0, 0.4);
+}
+
+.button {
+    padding: 12px 24px;
+    border-radius: 16px;
+    border: none;
+    background: linear-gradient(90deg, #7B5DF9, #D24CF6);
+    color: white;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.validationMessage {
+    margin-top: 8px;
+    font-size: 14px;
+    text-align: left;
+}
+
+.success {
+    color: #2e7d32;
+}
+
+.error {
+    color: #f44336;
+}
+
+.networkBadge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background-color: var(--badge-bg);
+    color: var(--badge-color);
+    font-size: 12px;
+    margin-left: 8px;
+}
+
+/* THEME OVERRIDES */
+.dark {
+    --input-bg: #111523;
+    --input-color: white;
+    --badge-bg: #1e293b;
+    --badge-color: #a5b4fc;
+}
+
+.light {
+    --input-bg: #f5f5f5;
+    --input-color: #333;
+    --badge-bg: #e0e7ff;
+    --badge-color: #4f46e5;
+}

@@ -1,14 +1,39 @@
-import { createContext, PropsWithChildren, useContext, useMemo } from 'react';
 import { EmbedWallet, WalletEnvironment } from '@cere/embed-wallet';
-import { APP_ENV, TELEGRAM_BOT_ID } from '../constants.ts';
 import Analytics from '@tg-app/analytics';
+import { createContext, PropsWithChildren, useContext, useMemo } from 'react';
+
+import { APP_ENV, TELEGRAM_BOT_ID } from '../constants.ts';
+import { isPreviewMode } from '../helpers';
 import { useForceHideTorusIframe } from '../hooks';
 
 const CereWalletContext = createContext<EmbedWallet | null>(null);
 
+// Mock wallet for preview mode
+const createMockWallet = (): Partial<EmbedWallet> =>
+  ({
+    init: () => Promise.resolve(),
+    connect: () => Promise.resolve(),
+    isReady: Promise.resolve(),
+    isConnected: Promise.resolve(true),
+    getSigner: () => ({
+      getAddress: () => Promise.resolve('0x1234567890abcdef1234567890abcdef12345678'),
+    }),
+    getUserInfo: () =>
+      Promise.resolve({
+        name: 'Preview User',
+        email: 'preview@example.com',
+      }),
+    naclBoxEdek: () => Promise.resolve('mock-edek'),
+  }) as any;
+
 export const useCereWallet = () => {
   const wallet = useContext(CereWalletContext);
   useForceHideTorusIframe();
+
+  // Return mock wallet in preview mode
+  if (isPreviewMode()) {
+    return createMockWallet() as EmbedWallet;
+  }
 
   if (!wallet) {
     throw new Error('Not in wallet context');
@@ -24,6 +49,12 @@ export const CereWalletProvider = ({ children }: PropsWithChildren<NonNullable<u
   console.log('initData: ', initDataRaw);
 
   const wallet = useMemo(() => {
+    // In preview mode, return null as we'll use mock wallet
+    if (isPreviewMode()) {
+      console.log('Preview mode detected - skipping wallet initialization');
+      return null;
+    }
+
     const wallet = new EmbedWallet({
       env: APP_ENV as WalletEnvironment,
     });

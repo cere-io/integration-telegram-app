@@ -1,0 +1,127 @@
+.questContainer {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 16px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.questHeader {
+    display: flex;
+    align-content: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.questionHeader {
+    font-size: 1.25rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+}
+
+.optionContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+}
+
+.optionContainer.allCorrect {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.option {
+    font-family: sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    user-select: none;
+    transition: background-color 0.2s ease;
+    flex-direction: row;
+}
+
+.option.allCorrect {
+    border: none;
+}
+
+.option:hover {
+    background-color: #f5f5f5;
+}
+
+.radioInput {
+    display: none;
+}
+
+.customRadio {
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    border: 2px solid #aaa;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.2s ease;
+}
+
+.customRadio::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background-color: transparent;
+    border-radius: 50%;
+    transition: background-color 0.2s ease;
+}
+
+.checked {
+    border-color: #000000;
+}
+
+.checked::after {
+    background-color: #000000;
+}
+
+.button {
+    display: block;
+    font-size: 14px;
+    width: 100%;
+    padding: 12px;
+    background: #000000;
+    color: white;
+    text-align: center;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    border: none;
+    margin-top: 1rem;
+}
+
+.button:hover {
+    cursor: pointer;
+    opacity: 0.8;
+}
+
+.button:disabled {
+    opacity: 0.8;
+    cursor: initial;
+}
+
+.bounceAnimation {
+    animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}

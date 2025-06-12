@@ -1,11 +1,11 @@
-import * as path from 'path';
-import { defineConfig, searchForWorkspaceRoot, loadEnv } from 'vite';
 // import preact from '@preact/preset-vite'; // TonConnect dosn't work with preact. TODO: Figure out why
 import react from '@vitejs/plugin-react';
-import { nodePolyfills } from 'vite-plugin-node-polyfills';
-import tsconfigPaths from 'vite-tsconfig-paths';
+import * as path from 'path';
+import { defineConfig, loadEnv, searchForWorkspaceRoot } from 'vite';
 import { ngrok } from 'vite-plugin-ngrok';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import svgr from 'vite-plugin-svgr';
+import tsconfigPaths from 'vite-tsconfig-paths';
 
 const rootDir = searchForWorkspaceRoot(__dirname);
 const outDir = path.join(rootDir, 'dist', path.basename(__dirname));
@@ -36,5 +36,8 @@ export default defineConfig(({ mode }) => {
     envDir: rootDir,
     build: { outDir, emptyOutDir: true },
     plugins,
+    server: {
+      port: 5174,
+    },
   };
 });

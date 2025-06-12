@@ -1,33 +1,28 @@
-import { useEffect, useRef, useState } from 'react';
-import { MediaList, MediaListItem, Title, Text, Loader } from '@tg-app/ui';
 import Analytics from '@tg-app/analytics';
-import { useEngagementData, useEvents, useStartParam } from '../../hooks';
-import { VideoPlayer } from '../../components';
-import { EngagementEventData, Video } from '../../types';
-import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
+import { Loader, MediaList, MediaListItem, Text, Title } from '@tg-app/ui';
+import { useEffect, useRef, useState } from 'react';
+
 import { useData } from '~/providers';
+
+import { VideoPlayer } from '../../components';
+import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
+import { useEvents } from '../../hooks';
+import { EngagementEventData, Video } from '../../types';
 
 export type MediaTypeProps = {
   videoUrl?: string;
 };
 
 export const Media = ({ videoUrl }: MediaTypeProps) => {
-  const { questData, updateData, updateQuestStatus } = useData();
-  const [videos, setVideos] = useState<Video[]>(questData?.[0].quests.videoTasks || []);
+  const { questData: questsData, updateQuestStatus, isQuestsLoading, error, refetchQuestsForTab } = useData();
+  const [videos, setVideos] = useState<Video[]>(questsData.quests.videoTasks || []);
   const [currentVideo, setCurrentVideo] = useState<Video>();
   const [pendingUpdates, setPendingUpdates] = useState<Partial<Video>[]>([]);
   const eventSource = useEvents();
-  const { campaignId } = useStartParam();
 
   const mountTimeRef = useRef<number>(performance.now());
   const [isRendered, setIsRendered] = useState(false);
-
-  const { isLoading } = useEngagementData({
-    eventSource,
-    eventType: 'GET_QUESTS',
-    campaignId,
-    updateData,
-  });
+  const [mounted, setMounted] = useState(false);
 
   const sortedVideos = videos.sort((a, b) => {
     const completedA = a.completed ?? false;
@@ -35,6 +30,18 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
 
     return Number(completedA) - Number(completedB);
   });
+
+  // Mark component as mounted
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Silently refetch data when component mounts or becomes visible
+  useEffect(() => {
+    if (mounted) {
+      refetchQuestsForTab();
+    }
+  }, [mounted, refetchQuestsForTab]);
 
   useEffect(() => {
     if (!isRendered) {
@@ -45,7 +52,7 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
 
       setIsRendered(true);
     }
-  }, [isLoading, isRendered]);
+  }, [isRendered]);
 
   useEffect(() => {
     // eslint-disable-next-line prefer-const
@@ -105,6 +112,21 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
     }
   }, [videoUrl, videos]);
 
+  // Show loading state only if we're actually loading and don't have any cached data
+  const shouldShowLoader = isQuestsLoading && !questsData;
+
+  if (shouldShowLoader) {
+    return <Loader size="m" style={{ marginTop: '50%' }} />;
+  }
+
+  if (error && !questsData) {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+        <Text>Error loading videos: {error}</Text>
+      </div>
+    );
+  }
+
   return (
     <div style={{ paddingBottom: 65 }}>
       <Title weight="2" style={{ marginLeft: 16, marginTop: 16 }}>
@@ -115,29 +137,25 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
         closer to unlocking exclusive prizes!
       </Text>
 
-      {isLoading ? (
-        <Loader size="m" style={{ marginTop: '50%' }} />
-      ) : (
-        <MediaList>
-          {sortedVideos.length > 0 ? (
-            sortedVideos.map((video, index) => (
-              <MediaListItem
-                key={index}
-                completed={video?.completed || false}
-                name={video.title}
-                description={video.description}
-                thumbnailUrl={video.thumbnailUrl}
-                onClick={() => setCurrentVideo(video)}
-                rewardPoints={video.points}
-              />
-            ))
-          ) : (
-            <div style={{ margin: '16px 16px 0px' }}>
-              <Text style={{ color: '#333' }}>No videos available</Text>
-            </div>
-          )}
-        </MediaList>
-      )}
+      <MediaList>
+        {sortedVideos.length > 0 ? (
+          sortedVideos.map((video, index) => (
+            <MediaListItem
+              key={index}
+              completed={video?.completed || false}
+              name={video.title}
+              description={video.description}
+              thumbnailUrl={video.thumbnailUrl}
+              onClick={() => setCurrentVideo(video)}
+              rewardPoints={video.points}
+            />
+          ))
+        ) : (
+          <div style={{ margin: '16px 16px 0px' }}>
+            <Text style={{ color: '#333' }}>No videos available</Text>
+          </div>
+        )}
+      </MediaList>
 
       {!!currentVideo && (
         <VideoPlayer open={!!currentVideo} video={currentVideo} onClose={() => setCurrentVideo(undefined)} />

@@ -1,4 +1,4 @@
-import { GtmAnalytics } from './GtmAnalytics.ts';
+import { CereAnalytics } from './CereAnalytics.ts';
 import {
   CERE_ANALYTICS_APP_ID,
   CERE_ANALYTICS_APP_MNEMONIC,
@@ -6,7 +6,7 @@ import {
   EVENT_DISPATCH_URL,
   GTM_ID,
 } from './constants';
-import { CereAnalytics } from './CereAnalytics.ts';
+import { GtmAnalytics } from './GtmAnalytics.ts';
 
 export * from './identifiers';
 
@@ -44,5 +44,5 @@ const loadGeo = async () => {
 
 loadGeo();
 
-export { gtmAnalytics, cereAnalytics };
+export { cereAnalytics, gtmAnalytics };
 export default cereAnalytics;

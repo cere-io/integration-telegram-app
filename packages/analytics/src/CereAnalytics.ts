@@ -1,7 +1,7 @@
 import { UriSigner } from '@cere-activity-sdk/events';
 import { u8aToHex } from '@polkadot/util';
-import { v4 as uuid } from 'uuid';
 import { blake2bHex } from 'blakejs';
+import { v4 as uuid } from 'uuid';
 
 const signingProtocolVersion1 = 0x00;
 const signingSignerApp = 0x02;

@@ -1,4 +1,4 @@
-import { Response, Edek } from './types';
+import { Edek, Response } from './types';
 
 type RequestOptions = RequestInit & {
   allowStatus?: number[];

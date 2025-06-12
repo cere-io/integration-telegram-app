@@ -1,4 +1,5 @@
 import { useContext } from 'react';
+
 import { EventsContext } from '../providers';
 
 export const useEvents = () => {

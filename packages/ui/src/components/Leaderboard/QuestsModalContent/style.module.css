@@ -1,0 +1,112 @@
+.topBlock {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    background: linear-gradient(65.05deg, #6864f4 4.42%, #ac55f2 66.24%, #eb4799 104.02%);
+    border-radius: 8px;
+    margin-bottom: 24px;
+    color: white;
+    cursor: pointer;
+}
+
+.placeBlock {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(245, 250, 252, 0.2);
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 12px;
+    max-width: 32px;
+    height: 28px;
+    width: 100%;
+}
+
+.progressBarText {
+    color: #707579;
+}
+
+.progress {
+    width: 100%;
+    height: 8px;
+    background: rgba(162, 172, 176, 0.4);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 4px;
+    position: relative;
+}
+
+.progress::after {
+    content: '';
+    display: block;
+    height: 100%;
+    background: #9244e0;
+    transition: width 0.3s ease;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.questsBoard {
+    margin-top: 24px;
+}
+
+.questBlock {
+    display: grid;
+    grid-template-columns: auto 88px;
+    column-gap: 8px;
+    padding: 16px;
+    border-radius: 16px;
+    background-color: rgba(246, 246, 249, 1);
+    margin-bottom: 8px;
+}
+
+.questBlock:last-child {
+    margin-bottom: 0;
+}
+
+.questColumn {
+    display: flex;
+    flex-direction: column;
+}
+
+.questTitle {
+    color: #000000;
+}
+
+.pseudoLink {
+    color: #9244e0;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.pseudoLink:hover {
+    opacity: 0.9;
+}
+
+.questStatus {
+    padding: 7px 12px;
+    border-radius: 200px;
+    text-align: center;
+    white-space: nowrap;
+    height: fit-content;
+}
+
+.questStatus svg {
+    margin-right: 5px;
+}
+
+.questStatus.watched {
+    background-color: rgba(162, 172, 176, 0.2);
+    color: rgba(73, 191, 99, 1);
+}
+
+.questStatus.unwatched {
+    color: #000000;
+}
+
+.userIcon {
+    margin-left: 4px;
+}

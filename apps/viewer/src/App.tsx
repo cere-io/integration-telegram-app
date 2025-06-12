@@ -1,18 +1,19 @@
 import './index.css';
-import { useEffect, useState } from 'react';
-import { AppRoot, Tabbar, MediaIcon, LeaderboardIcon, QuestsIcon, Text, Button } from '@tg-app/ui';
-import Reporting from '@tg-app/reporting';
-import { useInitData, useThemeParams } from '@vkruglikov/react-telegram-web-app';
-
-import { Leaderboard, Media, ActiveQuests, WelcomeScreen, EngagementEventData } from './screens';
-
 import '@telegram-apps/telegram-ui/dist/styles.css';
-import { useEvents, useStartParam } from './hooks';
-import hbs from 'handlebars';
+
 import { ActivityEvent } from '@cere-activity-sdk/events';
-import { useCereWallet } from './cere-wallet';
 import Analytics from '@tg-app/analytics';
+import Reporting from '@tg-app/reporting';
+import { AppRoot, Button, LeaderboardIcon, MediaIcon, QuestsIcon, Tabbar, Text } from '@tg-app/ui';
+import { useInitData, useThemeParams } from '@vkruglikov/react-telegram-web-app';
+import hbs from 'handlebars';
+import { useEffect, useState } from 'react';
+
+import { useCereWallet } from './cere-wallet';
+import { applyPreviewCustomization, compileHtml, getPreviewCustomization, isPreviewMode } from './helpers';
+import { useEvents, useStartParam } from './hooks';
 import { useData } from './providers';
+import { ActiveQuests, EngagementEventData, Leaderboard, Media, WelcomeScreen } from './screens';
 
 const tabs = [
   {
@@ -39,9 +40,16 @@ export type ActiveTab = {
 
 export const App = () => {
   const [initDataUnsafe] = useInitData() || {};
-  const { campaignExpired, campaignPaused, debugMode } = useData();
+  const {
+    campaignExpired,
+    campaignPaused,
+    debugMode,
+    activeCampaignId,
+    refetchQuestsForTab,
+    refetchLeaderboardForTab,
+  } = useData();
   const [theme] = useThemeParams();
-  const { campaignId, referrerId } = useStartParam();
+  const { organizationId, campaignId, referrerId } = useStartParam();
 
   const cereWallet = useCereWallet();
   const eventSource = useEvents();
@@ -53,7 +61,35 @@ export const App = () => {
 
   const Screen = tabs[activeTab.index].screen;
 
+  // Handle tab change and trigger refetch for specific tabs
+  const handleTabChange = (newTab: ActiveTab) => {
+    setActiveTab(newTab);
+
+    // Trigger refetch when switching to specific tabs
+    if (newTab.index === 0) {
+      // ActiveQuests tab
+      refetchQuestsForTab();
+    } else if (newTab.index === 1) {
+      // Leaderboard tab
+      refetchLeaderboardForTab();
+    }
+  };
+
+  // Apply preview customization if in preview mode
   useEffect(() => {
+    const previewCustomization = getPreviewCustomization();
+    if (previewCustomization) {
+      applyPreviewCustomization(previewCustomization);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Skip analytics in preview mode
+    if (isPreviewMode()) {
+      console.log('Preview mode detected - skipping analytics initialization');
+      return;
+    }
+
     if (!user) {
       Reporting.clearUser();
       Analytics.clearUser();
@@ -61,7 +97,7 @@ export const App = () => {
       Reporting.setUser({ id: user.id.toString(), username: user.username });
       Analytics.setUser({ id: user.id.toString(), username: user.username });
     }
-    Analytics.setTags({ campaign_id: campaignId });
+    Analytics.setTags({ organization_id: organizationId, campaign_id: campaignId || activeCampaignId });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
@@ -70,19 +106,16 @@ export const App = () => {
 
     const handleNotificationEvent = (event: any) => {
       if (
-        (event?.payload && event.payload.integrationScriptResults[0].eventType === 'SEGMENT_WATCHED') ||
-        (event?.payload && event.payload.integrationScriptResults[0].eventType === 'X_REPOST') ||
-        (event?.payload && event.payload.integrationScriptResults[0].eventType === 'QUESTION_ANSWERED')
+        (event?.payload && event.payload.integrationScriptResults[0].data.eventType === 'SEGMENT_WATCHED') ||
+        (event?.payload && event.payload.integrationScriptResults[0].data.eventType === 'X_REPOST') ||
+        (event?.payload && event.payload.integrationScriptResults[0].data.eventType === 'QUESTION_ANSWERED')
       ) {
-        const { engagement, integrationScriptResults }: EngagementEventData = event.payload;
-        const { widget_template } = engagement;
-
-        (integrationScriptResults as Array<any>)[0].duration = 10000;
-
-        const compiledHTML = hbs.compile(widget_template.params || '')({
-          data: integrationScriptResults,
-        });
-
+        const results = event?.payload?.integrationScriptResults;
+        const result = results[0];
+        const { data, htmlTemplate } = result;
+        data.duration = 10000;
+        const compiledHTML = compileHtml(htmlTemplate, data);
+        debugger;
         setNotificationHtml(compiledHTML);
       }
     };
@@ -94,18 +127,30 @@ export const App = () => {
   }, [eventSource]);
 
   useEffect(() => {
+    // Skip join campaign event in preview mode
+    if (isPreviewMode()) {
+      console.log('Preview mode detected - skipping join campaign event');
+      return;
+    }
+
     if (!eventSource || !cereWallet) return;
 
     const sendJoinCampaignEvent = async () => {
       const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
       const userInfo = await cereWallet.getUserInfo();
-      const campaignKey = `campaign:${accountId}:${campaignId}`;
+      const campaignKeyParts = ['campaign', accountId, campaignId || activeCampaignId];
+      if (organizationId) {
+        campaignKeyParts.push(organizationId);
+      }
+
+      const campaignKey = campaignKeyParts.join(':');
       if (localStorage.getItem(campaignKey) === 'true') {
         return;
       }
 
       const payload: any = {
-        campaign_id: campaignId,
+        organization_id: organizationId,
+        campaign_id: campaignId || activeCampaignId,
       };
       if (referrerId) {
         payload.referrer_id = referrerId;
@@ -117,7 +162,7 @@ export const App = () => {
       localStorage.setItem(campaignKey, 'true');
     };
     sendJoinCampaignEvent();
-  }, [cereWallet, eventSource, campaignId, referrerId, user?.username]);
+  }, [cereWallet, eventSource, campaignId, referrerId, user?.username, activeCampaignId, organizationId]);
 
   const renderContent = () => {
     if (campaignExpired) {
@@ -189,7 +234,7 @@ export const App = () => {
               </Button>
             )}
 
-            <Screen setActiveTab={setActiveTab} {...activeTab.props} />
+            <Screen setActiveTab={handleTabChange} {...activeTab.props} />
 
             <Tabbar
               style={{
@@ -201,7 +246,7 @@ export const App = () => {
                   key={index}
                   text={text}
                   selected={activeTab.index === index}
-                  onClick={() => setActiveTab({ index })}
+                  onClick={() => handleTabChange({ index })}
                 >
                   <Icon style={{ margin: 2, fontSize: 28 }} />
                 </Tabbar.Item>
@@ -219,7 +264,7 @@ export const App = () => {
         style={{
           display: 'flex',
           flexDirection: 'column',
-          height: '100vh',
+          height: 'calc(100vh - env(safe-area-inset-bottom))',
         }}
       >
         {renderContent()}

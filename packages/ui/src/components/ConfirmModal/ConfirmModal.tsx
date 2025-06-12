@@ -1,6 +1,6 @@
-import { Modal, ModalProps, Button, Headline } from '@telegram-apps/telegram-ui';
-
 import './ConfirmModal.css';
+
+import { Button, Headline, Modal, ModalProps } from '@telegram-apps/telegram-ui';
 
 export type ConfirmModalProps = ModalProps & {
   title?: string;

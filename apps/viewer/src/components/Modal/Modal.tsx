@@ -1,4 +1,5 @@
 import './Modal.css';
+
 import { CloseIcon } from '@tg-app/ui';
 
 type ModalProps = {

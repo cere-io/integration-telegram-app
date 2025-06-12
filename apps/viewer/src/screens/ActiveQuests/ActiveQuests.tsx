@@ -1,205 +1,223 @@
-import { Loader, Snackbar } from '@tg-app/ui';
-import { useEngagementData, useEvents, useStartParam } from '../../hooks';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityEvent } from '@cere-activity-sdk/events';
-import { TELEGRAM_APP_URL } from '../../constants.ts';
-import { ActiveTab } from '~/App.tsx';
-import { useThemeParams } from '@vkruglikov/react-telegram-web-app';
-import { ClipboardCheck } from 'lucide-react';
-import { useCereWallet } from '../../cere-wallet';
-import { useData } from '../../providers';
-import { IframeRenderer } from '../../components/IframeRenderer';
+import './ActiveQuests.css';
+
 import Analytics from '@tg-app/analytics';
+import { Loader, QuestsList, QuestsListItem, Snackbar, Text, Title } from '@tg-app/ui';
+import { ClipboardCheck } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import FlipMove from 'react-flip-move';
 
-// eslint-disable-next-line @typescript-eslint/ban-types
-function useDebouncedCallback(callback: Function, delay: number) {
-  const [timer, setTimer] = useState<any>(null);
+import { ActiveTab } from '~/App.tsx';
+import { useData } from '~/providers';
 
-  return useCallback(
-    (...args: any[]) => {
-      if (timer) clearTimeout(timer);
-      setTimer(setTimeout(() => callback(...args), delay));
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [callback, delay],
-  );
-}
+import { useStartParam } from '../../hooks';
+import { Quests, Task } from '../../types';
 
 type ActiveQuestsProps = {
   setActiveTab: (tab: ActiveTab) => void;
 };
 
 export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
-  const { questsHtml, questData, updateData } = useData();
-
-  const lastHtml = useRef(questsHtml);
-  const [memoizedQuestsHtml, setMemoizedQuestsHtml] = useState(questsHtml);
-  const mountTimeRef = useRef<number>(performance.now());
-
-  useEffect(() => {
-    if (lastHtml.current !== questsHtml) {
-      lastHtml.current = questsHtml;
-      setMemoizedQuestsHtml(questsHtml);
-    }
-  }, [questsHtml]);
-
+  const { questData: questsData, isQuestsLoading, error, refetchQuestsForTab, activeCampaignId } = useData();
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
-  const eventSource = useEvents();
-  const { campaignId } = useStartParam();
-  const cereWallet = useCereWallet();
-  const [theme] = useThemeParams();
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0 });
+  const [mounted, setMounted] = useState(false);
 
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const { organizationId, campaignId } = useStartParam();
 
-  const { isLoading } = useEngagementData({
-    eventSource,
-    eventType: 'GET_QUESTS',
-    campaignId,
-    theme,
-    updateData,
-    iframeRef,
-  });
-
-  const setSnackbarMessageIfChanged = useDebouncedCallback((newMessage: string) => {
-    setSnackbarMessage(newMessage);
-  }, 500);
-
-  const getReferralProgramMessage = useCallback(async () => {
-    if (!cereWallet) return;
-    const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
-    const invitationLink = `${TELEGRAM_APP_URL}?startapp=${campaignId}_${accountId}`;
-
-    const messageText: string = questData[0].quests.referralTask.message;
-    const decodedText = messageText.replace(/\\u[0-9A-Fa-f]{4,}/g, (match) =>
-      String.fromCodePoint(parseInt(match.replace('\\u', ''), 16)),
-    );
-    return decodedText.replace('{link}', invitationLink);
-  }, [campaignId, cereWallet, questData]);
-
-  const handleIframeClick = useCallback(
-    async (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-
-      if (event.data.type === 'VIDEO_QUEST_CLICK') {
-        setActiveTab({
-          index: 2,
-          props: {
-            videoUrl: event.data.videoUrl,
-          },
-        });
-      }
-
-      if (event.data.type === 'SOCIAL_QUEST_CLICKED') {
-        if (!eventSource) return;
-
-        const { event_type, timestamp, data } = {
-          event_type: 'X_REPOST_STARTED',
-          timestamp: new Date().toISOString(),
-          data: JSON.stringify({
-            campaignId: campaignId,
-            campaign_id: campaignId,
-            tweet_id_original: event.data.tweetId,
-            theme,
-          }),
-        };
-        const parsedData = JSON.parse(data);
-
-        const activityEvent = new ActivityEvent(event_type, {
-          ...parsedData,
-          timestamp,
-        });
-
-        void eventSource.dispatchEvent(activityEvent);
-        return;
-      }
-
-      if (event.data.type === 'QUESTION_ANSWERED') {
-        if (!eventSource) return;
-
-        const { event_type, timestamp, data } = {
-          event_type: 'QUESTION_ANSWERED',
-          timestamp: new Date().toISOString(),
-          data: JSON.stringify({
-            campaign_id: campaignId,
-            campaignId: campaignId,
-            quizId: event.data.quizId,
-            questionId: event.data.questionId,
-            answerId: event.data.answerId,
-          }),
-        };
-        const parsedData = JSON.parse(data);
-
-        const activityEvent = new ActivityEvent(event_type, {
-          ...parsedData,
-          timestamp,
-        });
-
-        setTimeout(() => void eventSource.dispatchEvent(activityEvent), 1000);
-        return;
-      }
-
-      if (event.data.type === 'REFERRAL_LINK_CLICK') {
-        const message = await getReferralProgramMessage();
-        if (!message) return;
-        const tempInput = document.createElement('textarea');
-        tempInput.value = message;
-        document.body.appendChild(tempInput);
-        tempInput.select();
-        if (document.execCommand('copy')) {
-          setSnackbarMessageIfChanged('Invitation copied to clipboard successfully!');
-        } else {
-          setSnackbarMessageIfChanged('Failed to copy the invitation.');
-        }
-        return;
-      }
-
-      if (event.data.type === 'REFERRAL_BUTTON_CLICK') {
-        const message = await getReferralProgramMessage();
-        if (!message) return;
-        window.open(`https://t.me/share/url?url=${encodeURIComponent(message)}`);
-        return;
-      }
-    },
-    [setActiveTab, eventSource, campaignId, theme, getReferralProgramMessage, setSnackbarMessageIfChanged],
-  );
-
+  // Mark component as mounted
   useEffect(() => {
-    window.addEventListener('message', handleIframeClick);
+    setMounted(true);
+  }, []);
+
+  // Silently refetch data when component mounts or becomes visible
+  useEffect(() => {
+    if (mounted) {
+      refetchQuestsForTab();
+    }
+  }, [mounted, refetchQuestsForTab]);
+
+  // Refetch data when page becomes visible (user returns to tab)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && mounted) {
+        refetchQuestsForTab();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      window.removeEventListener('message', handleIframeClick);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [campaignId, cereWallet, handleIframeClick, setActiveTab, eventSource]);
+  }, [mounted, refetchQuestsForTab]);
 
-  const handleIframeLoad = () => {
-    const renderTime = performance.now() - mountTimeRef.current;
-    console.log(`Active Quests Tab Loaded: ${renderTime.toFixed(2)}ms`);
-    Analytics.transaction('TAB_LOADED', renderTime, { tab: { name: 'ACTIVE_QUESTS' } });
-  };
+  const quests: Quests = useMemo(
+    () =>
+      questsData?.quests || {
+        videoTasks: [],
+        socialTasks: [],
+        dexTasks: [],
+        quizTasks: [],
+        referralTask: undefined,
+        customTasks: [],
+      },
+    [questsData?.quests],
+  );
+
+  const campaignName = questsData?.campaignName || '';
+  const campaignDescription = questsData?.campaignDescription || '';
+  const accountId = questsData?.accountId || '';
+
+  const remainingTime = useMemo(
+    () => questsData?.remainingTime || { days: 0, hours: 0, minutes: 0 },
+    [questsData?.remainingTime],
+  );
+
+  // Update countdown timer
+  useEffect(() => {
+    setTimeLeft(remainingTime);
+
+    const timer = setInterval(() => {
+      setTimeLeft((prevTime) => {
+        const totalMinutes = prevTime.days * 1440 + prevTime.hours * 60 + prevTime.minutes - 1;
+
+        if (totalMinutes <= 0) {
+          clearInterval(timer);
+          return { days: 0, hours: 0, minutes: 0 };
+        }
+
+        const days = Math.floor(totalMinutes / 1440);
+        const hours = Math.floor((totalMinutes % 1440) / 60);
+        const minutes = totalMinutes % 60;
+
+        return { days, hours, minutes };
+      });
+    }, 60000);
+
+    return () => clearInterval(timer);
+  }, [remainingTime]);
+
+  // Sort quests by completion status and order
+  const sortedQuests = useMemo(() => {
+    const {
+      videoTasks = [],
+      socialTasks = [],
+      dexTasks = [],
+      quizTasks = [],
+      referralTask = undefined,
+      customTasks = [],
+    } = quests;
+
+    const allTasks: Task[] = [
+      ...(videoTasks.map((task, index) => ({ ...task, type: 'video' as const, originalIndex: index })) || []),
+      ...(socialTasks.map((task, index) => ({ ...task, type: 'social' as const, originalIndex: index })) || []),
+      ...(dexTasks.map((task, index) => ({ ...task, type: 'dex' as const, originalIndex: index })) || []),
+      ...(quizTasks.map((task, index) => ({ ...task, type: 'quiz' as const, originalIndex: index })) || []),
+      ...(referralTask
+        ? [{ ...referralTask, type: 'referral' as const, originalIndex: 0, completed: referralTask.completed ?? false }]
+        : []),
+      ...(customTasks.map((task, index) => ({ ...task, type: 'custom' as const, originalIndex: index })) || []),
+    ];
+
+    const hasOrder = allTasks.some((task) => task.order !== undefined);
+
+    return allTasks.sort((a, b) => {
+      if (Boolean(a.completed) !== Boolean(b.completed)) {
+        return a.completed ? 1 : -1;
+      }
+
+      if (hasOrder) {
+        const aOrder = a.order !== undefined ? a.order : Infinity;
+        const bOrder = b.order !== undefined ? b.order : Infinity;
+        return aOrder - bOrder;
+      } else {
+        const typeOrder = ['video', 'quiz', 'social', 'dex', 'referral', 'custom'];
+        return typeOrder.indexOf(a.type) - typeOrder.indexOf(b.type);
+      }
+    });
+  }, [quests]);
+
+  // Calculate campaign progress - убираем Math.random()
+  const campaignProgress = useMemo(() => {
+    if (!questsData) return 0;
+    // Возвращаем статичное значение вместо Math.random()
+    return 65; // Пример: 65% прогресса
+  }, [questsData]);
+
+  useEffect(() => {
+    if (questsData && mounted) {
+      const renderTime = performance.now();
+      Analytics.transaction('TAB_LOADED', renderTime, { tab: { name: 'ACTIVE_QUESTS' } });
+    }
+  }, [questsData, mounted]);
+
+  // Show loading state only if we're actually loading and don't have any cached data
+  const shouldShowLoader = isQuestsLoading && !questsData;
+
+  if (shouldShowLoader) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+        <Loader size="m" />
+      </div>
+    );
+  }
+
+  if (error && !questsData) {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+        <Text>Error loading quests: {error}</Text>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {isLoading || memoizedQuestsHtml === '' ? (
-        <Loader size="m" />
-      ) : (
-        <IframeRenderer
-          iframeRef={iframeRef}
-          title="Active Quests"
-          html={memoizedQuestsHtml}
-          style={{
-            width: '100%',
-            height: 'calc(100vh - 74px)',
-            border: 'none',
-          }}
-          onLoad={handleIframeLoad}
-        />
+    <div className="active-quests-container">
+      <Title weight="1" level="1" className="active-quests-title" style={{ marginLeft: 16, marginTop: 16 }}>
+        Complete Quests to Earn!
+      </Title>
+      {campaignDescription && (
+        <Title level="2" className="active-quests-subtitle" style={{ marginLeft: 16, marginTop: 16, marginBottom: 32 }}>
+          {campaignDescription}
+        </Title>
       )}
+      <div className="campaign-info">
+        <div className="campaign-header">
+          <Text weight="1" className="campaign-title">
+            {campaignName}
+          </Text>
+          <Text className="campaign-time">
+            {timeLeft.days}d {timeLeft.hours}h {timeLeft.minutes}m
+          </Text>
+        </div>
+        <div className="progress-bar">
+          <div className="progress-fill" style={{ width: `${campaignProgress}%` }} />
+        </div>
+      </div>
+      <QuestsList>
+        {sortedQuests.length > 0 ? (
+          <FlipMove>
+            {sortedQuests.map((quest, idx) => (
+              <QuestsListItem
+                key={`${idx}_${quest.title}`}
+                quest={quest}
+                campaignId={Number(campaignId || activeCampaignId)}
+                organizationId={Number(organizationId)}
+                accountId={accountId}
+                remainingDays={remainingTime.days}
+                setActiveTab={setActiveTab}
+              />
+            ))}
+          </FlipMove>
+        ) : (
+          <Text className="no-quests">{isQuestsLoading ? 'Loading quests...' : 'There are no quests yet.'}</Text>
+        )}
+      </QuestsList>
       {snackbarMessage && (
         <Snackbar onClose={() => setSnackbarMessage(null)} duration={5000}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Title style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <ClipboardCheck />
             {snackbarMessage}
-          </div>
+          </Title>
         </Snackbar>
       )}
     </div>
