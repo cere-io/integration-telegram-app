@@ -1,8 +1,17 @@
+import { ActiveTab } from '@integration-telegram-app/viewer/src/App.tsx';
+import {
+  CustomTask,
+  DexTask,
+  Quests,
+  QuizTask,
+  ReferralTask,
+  SocialTask,
+  VideoTask,
+} from '@integration-telegram-app/viewer/src/types';
 import { Text } from '@telegram-apps/telegram-ui';
 import clsx from 'clsx';
 
 import { Truncate } from '../../Truncate';
-import { CustomTask, DexTask, Quests, QuizTask, ReferralTask, SocialTask, VideoTask } from '../../types';
 import { TopWidget } from '../TopWidget';
 import checkMarkIcon from './check-mark-icon.svg';
 import styles from './style.module.css';
@@ -16,10 +25,11 @@ function isArrayOfInvitees(val: string[] | number | undefined): val is string[] 
 type Props = {
   currentUser?: { publicKey: string; score: number; rank: number; username?: string; quests?: Quests };
   onRowClick: (publicKey: string, isLoggedInUser: boolean) => void;
+  setActiveTab: (tab: ActiveTab) => void;
   widgetImage?: string;
 };
 
-export const QuestsModalContent = ({ currentUser, onRowClick, widgetImage }: Props) => {
+export const QuestsModalContent = ({ currentUser, onRowClick, widgetImage, setActiveTab }: Props) => {
   const renderPoints = ({
     completed,
     points,
@@ -70,17 +80,10 @@ export const QuestsModalContent = ({ currentUser, onRowClick, widgetImage }: Pro
     progressText = 'Nice work!';
   }
 
-  const handleOnQuestClick = (task: VideoTask | SocialTask | DexTask | ReferralTask | QuizTask | CustomTask) => {
-    if (task.type === 'video') {
-      window.parent.postMessage({ type: 'VIDEO_QUEST_CLICK', videoUrl: task.videoUrl });
-    } else if (task.type === 'custom') {
-      window.parent.postMessage({ type: task.startEvent });
-      if (task.link) {
-        window.open(task.link, '_blank');
-      }
-    } else {
-      window.parent.postMessage({ type: 'QUEST_CLICKED' });
-    }
+  const handleOnQuestClick = () => {
+    setActiveTab({
+      index: 0,
+    });
   };
 
   const handleOnAddressClick = () => {
@@ -102,7 +105,7 @@ export const QuestsModalContent = ({ currentUser, onRowClick, widgetImage }: Pro
             <div className={styles.questColumn}>
               <Text className={styles.questTitle}>
                 {task.title}{' '}
-                <span className={styles.pseudoLink} onClick={() => handleOnQuestClick(task)}>
+                <span className={styles.pseudoLink} onClick={handleOnQuestClick}>
                   {task.description}
                 </span>
               </Text>
@@ -114,7 +117,7 @@ export const QuestsModalContent = ({ currentUser, onRowClick, widgetImage }: Pro
           ) : (
             <Text className={styles.questTitle}>
               {task.type !== 'quiz' ? task.title : 'Quiz'}{' '}
-              <span className={styles.pseudoLink} onClick={() => handleOnQuestClick(task)}>
+              <span className={styles.pseudoLink} onClick={handleOnQuestClick}>
                 {task.type !== 'quiz' ? task.description : task.title}
               </span>
             </Text>

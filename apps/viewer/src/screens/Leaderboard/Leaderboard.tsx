@@ -13,9 +13,8 @@ import {
 } from '@tg-app/ui';
 import { Title, TopWidget } from '@tg-app/ui';
 import { useThemeParams } from '@vkruglikov/react-telegram-web-app';
-import clsx from 'clsx';
 import { ClipboardCheck } from 'lucide-react';
-import { CSSProperties, ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import FlipMove from 'react-flip-move';
 
 import { ActiveTab } from '~/App.tsx';
@@ -68,28 +67,6 @@ const getNonLinearLeaderboard = (
 
   return blocks;
 };
-
-const LeaderboardRow = ({
-  children,
-  isPlaceholder,
-  isLoggedInUser,
-  onClick,
-  style,
-}: {
-  children: ReactNode;
-  onClick: () => void;
-  isPlaceholder?: boolean;
-  isLoggedInUser?: boolean;
-  style?: CSSProperties;
-}) => (
-  <div
-    onClick={onClick}
-    style={style}
-    className={clsx('leaderboardRow', isLoggedInUser && 'rowLoggedInUser', isPlaceholder && 'rowPlaceholder')}
-  >
-    {children}
-  </div>
-);
 
 export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   const { walletStatus, leaderboardData, isLeaderboardLoading, error, refetchLeaderboardForTab } = useData();
@@ -286,7 +263,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           >
             <Text>{rank}</Text>
             <Text>
-              {username ? username : publicKey}
+              {username ? username : <Truncate maxLength={8} variant="address" text={publicKey} />}
               {isLoggedInUser && <img className="userIcon" src={userIcon} alt="" />}
             </Text>
             <Text>{points}</Text>
@@ -358,7 +335,12 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         isOpen={isModalOpen}
         onClose={() => setModalOpen(false)}
         content={
-          <QuestsModalContent currentUser={currentUserData} onRowClick={handleRowClick} widgetImage={undefined} />
+          <QuestsModalContent
+            currentUser={currentUserData}
+            onRowClick={handleRowClick}
+            widgetImage={undefined}
+            setActiveTab={setActiveTab}
+          />
         }
       />
       {snackbarMessage && (

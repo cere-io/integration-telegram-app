@@ -1,4 +1,4 @@
-import { CereWalletCipher, NoOpCipher } from '@cere-activity-sdk/ciphers';
+import { CereWalletCipher } from '@cere-activity-sdk/ciphers';
 import { CereWalletSigner, EventSource } from '@cere-activity-sdk/events';
 import { createContext, FC, ReactNode, useEffect, useState } from 'react';
 
@@ -82,7 +82,7 @@ export const EventsProvider: FC<EventsProviderProps> = ({ children }) => {
 
         const signer = new CereWalletSigner(cereWallet);
         await signer.isReady();
-        const cipher = new NoOpCipher();
+        const cipher = new CereWalletCipher(cereWallet);
         await cipher.isReady();
 
         await shareEdek(signer);
