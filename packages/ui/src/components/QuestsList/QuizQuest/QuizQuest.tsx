@@ -1,5 +1,8 @@
 import './QuizQuest.css';
 
+import { ActivityEvent } from '@cere-activity-sdk/events';
+import { useEvents, useStartParam } from '@integration-telegram-app/viewer/src/hooks';
+import { useData } from '@integration-telegram-app/viewer/src/providers';
 import { QuizTask } from '@integration-telegram-app/viewer/src/types';
 import { Text, Title } from '@telegram-apps/telegram-ui';
 import confetti from 'canvas-confetti';
@@ -23,17 +26,37 @@ export const QuizQuest = ({ quizTask, isDisabled }: QuizQuestProps) => {
   const [userAnswers, setUserAnswers] = useState<{ id: string; text: string }[]>([]);
   const [quizFinished, setQuizFinished] = useState(false);
 
+  const eventSource = useEvents();
+  const { activeCampaignId } = useData();
+  const { organizationId, campaignId } = useStartParam();
+
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     setSelectedOption(event.target.value);
   };
 
   const handleClick = useCallback(() => {
-    window.parent.postMessage({
-      type: 'QUESTION_ANSWERED',
-      quizId: quizTask.id,
-      questionId: quizTask.questions[currentQuestion].id,
-      answerId: selectedOption,
+    if (!eventSource) return;
+
+    const { event_type, timestamp, data } = {
+      event_type: 'QUESTION_ANSWERED',
+      timestamp: new Date().toISOString(),
+      data: JSON.stringify({
+        campaign_id: campaignId || activeCampaignId,
+        organization_id: organizationId,
+        quizId: quizTask.id,
+        questionId: quizTask.questions[currentQuestion].id,
+        answerId: selectedOption,
+      }),
+    };
+    const parsedData = JSON.parse(data);
+
+    const activityEvent = new ActivityEvent(event_type, {
+      ...parsedData,
+      timestamp,
     });
+
+    setTimeout(() => void eventSource.dispatchEvent(activityEvent), 1000);
+
     if (currentQuestion === quizTask.questions.length - 1) {
       setQuizFinished(true);
     } else {
@@ -52,7 +75,7 @@ export const QuizQuest = ({ quizTask, isDisabled }: QuizQuestProps) => {
       ]);
       setSelectedOption(null);
     }
-  }, [currentQuestion, quizTask.id, quizTask.questions, selectedOption]);
+  }, [campaignId, currentQuestion, eventSource, quizTask.id, quizTask.questions, selectedOption]);
 
   const totalPoints = quizTask.questions.reduce((prev, next) => +prev + parseInt(String(next.points), 10), 0);
 

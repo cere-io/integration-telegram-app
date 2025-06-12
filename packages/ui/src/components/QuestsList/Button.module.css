@@ -1,7 +1,6 @@
 .button {
     display: block;
-    font-size: 14px;
-    width: 100%;
+    width: auto;
     padding: 12px;
     background: #111827;
     color: white;
@@ -11,11 +10,12 @@
     font-weight: 500;
     border: none;
     margin-bottom: 16px;
+    margin-top: 8px;
 }
 
 .button.card {
     padding: 0;
-    background: #fff;
+    background: #fff!important;
     text-align: inherit;
 }
 

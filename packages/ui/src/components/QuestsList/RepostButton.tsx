@@ -1,10 +1,12 @@
-import { SocialTask } from '@integration-telegram-app/viewer/src/types';
-import { Button } from '@tg-app/ui';
+import clsx from 'clsx';
 import { ReactNode } from 'react';
 import { tweet } from 'twitter-intent';
 
+import { Text } from '../../index.ts';
+import styles from './Button.module.css';
+
 type RepostButtonType = {
-  quest: SocialTask;
+  quest: any;
   accountId?: string;
   disabled?: boolean;
   campaignId?: number;
@@ -13,16 +15,15 @@ type RepostButtonType = {
 };
 
 export const RepostButton = ({ quest, accountId, disabled, campaignId, card = false, children }: RepostButtonType) => {
-  const hashtags = ['#CereMedia', ...quest.hashtags.filter(Boolean).map((tag) => `#${tag}`)];
+  const hashtags = ['#CereMedia', ...quest.hashtags.filter(Boolean).map((tag: any) => `#${tag}`)];
 
   const baseText = quest.tweetText?.trim() ? quest.tweetText : 'Check this out!';
 
   const tweetText = [baseText, '', 'Ref:', `${accountId}:${campaignId}`, '', hashtags.join(' ')].join('\n');
 
   return (
-    <Button
-      mode={card ? 'white' : 'cta'}
-      className={`button ${card ? 'card' : ''}`}
+    <a
+      className={clsx(styles.button, card ? styles.card : '')}
       href={tweet.url({
         url: quest.tweetLink,
         text: tweetText,
@@ -31,7 +32,7 @@ export const RepostButton = ({ quest, accountId, disabled, campaignId, card = fa
       target="_blank"
       rel="noreferrer"
     >
-      {children}
-    </Button>
+      <Text>{children}</Text>
+    </a>
   );
 };

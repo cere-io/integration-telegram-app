@@ -94,6 +94,7 @@ export type ReferralTask = BaseTask & {
   invitees?: string[] | number;
   instructions: string;
   questImage?: string;
+  message?: string;
 };
 
 export type CustomTask = BaseTask & {

@@ -6,14 +6,13 @@ import Analytics from '@tg-app/analytics';
 import Reporting from '@tg-app/reporting';
 import { AppRoot, Button, LeaderboardIcon, MediaIcon, QuestsIcon, Tabbar, Text } from '@tg-app/ui';
 import { useInitData, useThemeParams } from '@vkruglikov/react-telegram-web-app';
-import hbs from 'handlebars';
 import { useEffect, useState } from 'react';
 
 import { useCereWallet } from './cere-wallet';
 import { applyPreviewCustomization, compileHtml, getPreviewCustomization, isPreviewMode } from './helpers';
 import { useEvents, useStartParam } from './hooks';
 import { useData } from './providers';
-import { ActiveQuests, EngagementEventData, Leaderboard, Media, WelcomeScreen } from './screens';
+import { ActiveQuests, Leaderboard, Media, WelcomeScreen } from './screens';
 
 const tabs = [
   {
@@ -114,8 +113,7 @@ export const App = () => {
         const result = results[0];
         const { data, htmlTemplate } = result;
         data.duration = 10000;
-        const compiledHTML = compileHtml(htmlTemplate, data);
-        debugger;
+        const compiledHTML = compileHtml(htmlTemplate, [data]);
         setNotificationHtml(compiledHTML);
       }
     };

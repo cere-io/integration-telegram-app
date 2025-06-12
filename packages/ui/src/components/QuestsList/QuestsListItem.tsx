@@ -1,10 +1,17 @@
 import './QuestsListItem.css';
 
+import { ActivityEvent } from '@cere-activity-sdk/events';
 import { ActiveTab } from '@integration-telegram-app/viewer/src/App.tsx';
-import { Task, VideoTask } from '@integration-telegram-app/viewer/src/types';
+import { useCereWallet } from '@integration-telegram-app/viewer/src/cere-wallet';
+import { TELEGRAM_APP_URL } from '@integration-telegram-app/viewer/src/constants.ts';
+import { useEvents, useStartParam } from '@integration-telegram-app/viewer/src/hooks';
+import { useData } from '@integration-telegram-app/viewer/src/providers';
+import { ReferralTask, Task, VideoTask } from '@integration-telegram-app/viewer/src/types';
 import { Text } from '@telegram-apps/telegram-ui';
+import { Snackbar } from '@tg-app/ui';
+import { ClipboardCheck } from 'lucide-react';
 import Markdown from 'markdown-to-jsx';
-import React, { forwardRef, useCallback, useMemo } from 'react';
+import React, { forwardRef, useCallback, useMemo, useState } from 'react';
 
 import Picture from './assets/refer_a_friend.png';
 import { QuizQuest } from './QuizQuest';
@@ -48,15 +55,50 @@ export type QuestsListItemProps = {
   campaignId?: number;
 };
 
+// eslint-disable-next-line @typescript-eslint/ban-types
+function useDebouncedCallback(callback: Function, delay: number) {
+  const [timer, setTimer] = useState<any>(null);
+
+  return useCallback(
+    (...args: any[]) => {
+      if (timer) clearTimeout(timer);
+      setTimer(setTimeout(() => callback(...args), delay));
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [callback, delay],
+  );
+}
+
 export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivElement, QuestsListItemProps>(
   ({ quest, accountId, campaignId, remainingDays, setActiveTab }, ref) => {
-    const handleClick = () => {
+    const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
+
+    const cereWallet = useCereWallet();
+    const { activeCampaignId } = useData();
+    const { organizationId } = useStartParam();
+    const eventSource = useEvents();
+
+    const setSnackbarMessageIfChanged = useDebouncedCallback((newMessage: string) => {
+      setSnackbarMessage(newMessage);
+    }, 500);
+
+    const handleClick = async () => {
       if (quest.type === 'dex') {
         handleOnDexClick();
       } else if (quest.type === 'video') {
         handleOnQuestClick(quest.videoUrl);
       } else if (quest.type === 'custom') {
-        window.parent.postMessage({ type: quest.startEvent });
+        if (!eventSource) return;
+
+        const activityEventPayload = {
+          organization_id: organizationId,
+          campaign_id: campaignId || activeCampaignId,
+          campaignId: campaignId || activeCampaignId,
+        };
+        const activityEvent = new ActivityEvent(quest.startEvent, activityEventPayload);
+
+        await eventSource.dispatchEvent(activityEvent);
+
         if (quest.link) {
           window.open(quest.link, '_blank');
         }
@@ -79,17 +121,43 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
             videoUrl,
           },
         });
-        window.parent.postMessage({ type: 'VIDEO_QUEST_CLICK', videoUrl });
       }
     };
 
-    const handleOnReferralButtonClick = useCallback(() => {
-      window.parent.postMessage({ type: 'REFERRAL_BUTTON_CLICK' });
-    }, []);
+    const getReferralProgramMessage = useCallback(async () => {
+      if (!cereWallet) return;
+      const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
+      const invitationLink = organizationId
+        ? `${TELEGRAM_APP_URL}?startapp=organizationId=${organizationId}`
+        : `${TELEGRAM_APP_URL}?startapp=${campaignId}_${accountId}`;
 
-    const handleOnReferralLinkClick = useCallback(() => {
-      window.parent.postMessage({ type: 'REFERRAL_LINK_CLICK' });
-    }, []);
+      const messageText: string = (quest as ReferralTask).message || '';
+      const decodedText = messageText.replace(/\\u[0-9A-Fa-f]{4,}/g, (match) =>
+        String.fromCodePoint(parseInt(match.replace('\\u', ''), 16)),
+      );
+      return decodedText.replace('{link}', invitationLink);
+    }, [campaignId, cereWallet, organizationId, quest]);
+
+    const handleOnReferralButtonClick = useCallback(async () => {
+      const message = await getReferralProgramMessage();
+      if (!message) return;
+      window.open(`https://t.me/share/url?url=${encodeURIComponent(message)}`);
+      return;
+    }, [getReferralProgramMessage]);
+
+    const handleOnReferralLinkClick = useCallback(async () => {
+      const message = await getReferralProgramMessage();
+      if (!message) return;
+      const tempInput = document.createElement('textarea');
+      tempInput.value = message;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      if (document.execCommand('copy')) {
+        setSnackbarMessageIfChanged('Invitation copied to clipboard successfully!');
+      } else {
+        setSnackbarMessageIfChanged('Failed to copy the invitation.');
+      }
+    }, [getReferralProgramMessage, setSnackbarMessageIfChanged]);
 
     const TwitterIcon = () => (
       <div className="iconBase">
@@ -299,6 +367,16 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
               </div>
             )}
           </>
+        )}
+        {snackbarMessage && (
+          <Snackbar onClose={() => setSnackbarMessage(null)} duration={5000}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Text style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ClipboardCheck />
+                {snackbarMessage}
+              </Text>
+            </div>
+          </Snackbar>
         )}
       </div>
     );

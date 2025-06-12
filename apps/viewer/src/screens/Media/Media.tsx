@@ -7,7 +7,7 @@ import { useData } from '~/providers';
 import { VideoPlayer } from '../../components';
 import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
 import { useEvents } from '../../hooks';
-import { EngagementEventData, Video } from '../../types';
+import { Video } from '../../types';
 
 export type MediaTypeProps = {
   videoUrl?: string;
@@ -63,10 +63,12 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
     const handleEngagementEvent = (event: any) => {
       clearTimeout(engagementTimeout);
 
-      if (event?.payload && event.payload.integrationScriptResults[0].eventType === 'SEGMENT_WATCHED') {
-        const { integrationScriptResults }: EngagementEventData = event.payload;
-        const questId = (integrationScriptResults as any)[0].questId;
-        const rewardPoints = (integrationScriptResults as any)[0].rewardPoints;
+      if (event?.payload && event.payload.integrationScriptResults[0].data.eventType === 'SEGMENT_WATCHED') {
+        const results = event?.payload?.integrationScriptResults;
+        const result = results[0];
+        const { data } = result;
+        const questId = data.questId;
+        const rewardPoints = data.rewardPoints;
 
         setPendingUpdates((prevUpdates) => [...prevUpdates, { videoUrl: questId, completed: true }]);
         updateQuestStatus(questId, 'videoTasks', true, rewardPoints);
