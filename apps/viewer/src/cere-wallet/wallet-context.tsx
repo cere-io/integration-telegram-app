@@ -24,6 +24,9 @@ const createMockWallet = (): Partial<EmbedWallet> =>
         email: 'preview@example.com',
       }),
     naclBoxEdek: () => Promise.resolve('mock-edek'),
+    subscribe: () => {
+      return () => {};
+    },
   }) as any;
 
 export const useCereWallet = () => {
