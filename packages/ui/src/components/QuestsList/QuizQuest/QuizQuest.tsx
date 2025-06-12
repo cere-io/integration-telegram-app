@@ -75,7 +75,16 @@ export const QuizQuest = ({ quizTask, isDisabled }: QuizQuestProps) => {
       ]);
       setSelectedOption(null);
     }
-  }, [campaignId, currentQuestion, eventSource, quizTask.id, quizTask.questions, selectedOption]);
+  }, [
+    activeCampaignId,
+    campaignId,
+    currentQuestion,
+    eventSource,
+    organizationId,
+    quizTask.id,
+    quizTask.questions,
+    selectedOption,
+  ]);
 
   const totalPoints = quizTask.questions.reduce((prev, next) => +prev + parseInt(String(next.points), 10), 0);
 
