@@ -167,8 +167,8 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     });
   }, [quests]);
 
-  const campaignDuration = new Date(questsData.endDate).getTime() - new Date(questsData.startDate).getTime();
-  const timeElapsed = new Date().getTime() - new Date(questsData.startDate).getTime();
+  const campaignDuration = new Date(questsData?.endDate).getTime() - new Date(questsData?.startDate).getTime() || 0;
+  const timeElapsed = new Date().getTime() - new Date(questsData?.startDate).getTime();
 
   const campaignProgress = useMemo(() => {
     return Math.min(Math.max(campaignDuration > 0 ? (timeElapsed / campaignDuration) * 100 : 0, 0), 100);
