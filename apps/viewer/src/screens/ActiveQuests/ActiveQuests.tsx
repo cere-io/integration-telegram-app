@@ -167,10 +167,12 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     });
   }, [quests]);
 
+  const campaignDuration = new Date(questsData.endDate).getTime() - new Date(questsData.startDate).getTime();
+  const timeElapsed = new Date().getTime() - new Date(questsData.startDate).getTime();
+
   const campaignProgress = useMemo(() => {
-    if (!questsData) return 0;
-    return 65; // @TODO
-  }, [questsData]);
+    return Math.min(Math.max(campaignDuration > 0 ? (timeElapsed / campaignDuration) * 100 : 0, 0), 100);
+  }, [campaignDuration, timeElapsed]);
 
   useEffect(() => {
     if (questsData && mounted) {
