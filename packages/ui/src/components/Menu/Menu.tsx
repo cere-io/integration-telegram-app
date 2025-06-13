@@ -1,9 +1,10 @@
-import { Root, Trigger, Portal, Content } from '@radix-ui/react-popover';
-import { Button, IconButton, ButtonProps } from '@telegram-apps/telegram-ui';
-
 import './Menu.css';
-import { MenuIcon } from '../../icons';
+
+import { Content, Portal, Root, Trigger } from '@radix-ui/react-popover';
+import { Button, ButtonProps, IconButton } from '@telegram-apps/telegram-ui';
 import { PropsWithChildren } from 'react';
+
+import { MenuIcon } from '../../icons';
 
 export type MenuProps = PropsWithChildren;
 

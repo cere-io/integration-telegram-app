@@ -1,13 +1,12 @@
-import { Title, Button, Text, Divider } from '@telegram-apps/telegram-ui';
-
 import './WalletWidget.css';
 
-import { DisconnectIcon, ToncoinIcon } from '../../icons';
-import walletImage from './wallet.png';
+import { Button, Divider, Text, Title } from '@telegram-apps/telegram-ui';
 
-import { Truncate } from '../Truncate';
+import { DisconnectIcon, ToncoinIcon } from '../../icons';
 import { IconBanner } from '../IconBanner';
 import { Menu } from '../Menu';
+import { Truncate } from '../Truncate';
+import walletImage from './wallet.png';
 
 export type WalletWidgetProps = {
   address?: string;

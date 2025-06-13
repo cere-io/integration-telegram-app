@@ -1,15 +1,17 @@
-import { useCereWallet } from '../cere-wallet';
-import { createContext, FC, ReactNode, useEffect, useState } from 'react';
+import { CereWalletCipher } from '@cere-activity-sdk/ciphers';
 import { CereWalletSigner, EventSource } from '@cere-activity-sdk/events';
+import { createContext, FC, ReactNode, useEffect, useState } from 'react';
+
+import { useCereWallet } from '../cere-wallet';
 import {
-  MINI_APP_APP_PUBLIC_KEY,
-  MINI_APP_DATA_SERVICE_PUBLIC_KEY,
-  MINI_APP_APP_ID,
   EVENT_DISPATCH_URL,
   EVENT_LISTEN_URL,
+  MINI_APP_APP_ID,
+  MINI_APP_APP_PUBLIC_KEY,
+  MINI_APP_DATA_SERVICE_PUBLIC_KEY,
 } from '../constants';
+import { isPreviewMode } from '../helpers';
 import { useAgentServiceRegistry } from '../hooks/useAgentServiceRegistry.ts';
-import { CereWalletCipher } from '@cere-activity-sdk/ciphers';
 
 type EventsProviderProps = {
   children: ReactNode;
@@ -27,6 +29,12 @@ export const EventsProvider: FC<EventsProviderProps> = ({ children }) => {
   const agentServiceRegistry = useAgentServiceRegistry();
 
   useEffect(() => {
+    // Skip events in preview mode
+    if (isPreviewMode()) {
+      console.log('Preview mode detected - skipping event source initialization');
+      return;
+    }
+
     async function shareEdek(signer: CereWalletSigner) {
       const authorization = await signer.sign('authorization');
       const userPubKey = signer.publicKey;

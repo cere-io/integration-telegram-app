@@ -1,0 +1,31 @@
+.button {
+    display: block;
+    width: auto;
+    padding: 12px;
+    background: #111827;
+    color: white;
+    text-align: center;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    border: none;
+    margin-bottom: 16px;
+    margin-top: 8px;
+}
+
+.button.card {
+    padding: 0;
+    background: #fff!important;
+    text-align: inherit;
+}
+
+.button[data-disabled='true'] {
+    pointer-events: none;
+    opacity: 0.8;
+    cursor: default;
+}
+
+.button:hover {
+    cursor: pointer;
+    opacity: 0.8;
+}

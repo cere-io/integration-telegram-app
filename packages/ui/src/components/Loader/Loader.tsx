@@ -1,6 +1,8 @@
-import { Spinner, SpinnerProps, Text } from '../../index.ts';
 import './Loader.css';
+
 import { useEffect, useState } from 'react';
+
+import { Spinner, SpinnerProps, Text } from '../../index.ts';
 
 export const Loader = ({ size = 's', style = {} }: { size: SpinnerProps['size']; style?: React.CSSProperties }) => {
   const [showText, setShowText] = useState(false);

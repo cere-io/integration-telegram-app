@@ -1,0 +1,99 @@
+.active-quests-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 32px 16px;
+}
+
+.active-quests-content {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 32px 16px;
+  width: 100%;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 84px);
+}
+
+.active-quests-title {
+  font-size: 28px;
+  color: var(--active-quests-text-color, var(--tgui--text_color));
+}
+
+.active-quests-subtitle {
+  font-size: 16px!important;
+  font-weight: 400;
+  color: var(--tgui--subtitle_text_color);
+}
+
+.campaign-info {
+  margin-bottom: 12px;
+  padding: 16px;
+  border-radius: 12px;
+}
+
+.campaign-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.campaign-title {
+  font-size: 20px;
+  color: inherit;
+}
+
+.campaign-time {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--tgui--subtitle_text_color);
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.campaign-link {
+  color: var(--active-quests-primary-color, #3b82f6);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 14px;
+  margin-top: 8px;
+  display: inline-block;
+}
+
+.campaign-link:hover {
+  text-decoration: underline;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background: #e5e7eb;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--active-quests-primary-color, #3b82f6);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.active-quests-container.with-banner {
+  padding-top: 120px;
+}
+
+.quests-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.no-quests {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--tgui--subtitle_text_color);
+  font-size: 16px;
+}

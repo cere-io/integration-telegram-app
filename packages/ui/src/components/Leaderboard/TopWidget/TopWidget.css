@@ -1,0 +1,48 @@
+.styled-box {
+    position: relative;
+    border-radius: 16px;
+    padding: 16px 32px;
+    background: linear-gradient(90deg, #6864f4 9.44%, #ac55f2 65.64%, #eb4799 100%);
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.styled-box::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: -50px;
+    transform: translateY(-50%);
+    background: url('./gift.svg') no-repeat center / contain;
+    width: 180px;
+    height: 180px;
+}
+
+.box-with-image {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.box-with-image > img {
+    width: 100%;
+    height: auto;
+    border-radius: 12px;
+}
+
+.content {
+    max-width: 70%;
+}
+
+.title {
+    font-size: 24px;
+}
+
+.text {
+    font-size: 16px;
+}
+
+.white-text {
+    color: #fff;
+}

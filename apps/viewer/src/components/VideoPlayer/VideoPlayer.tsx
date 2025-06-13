@@ -1,13 +1,16 @@
-import { Card, Modal, ModalProps } from '@tg-app/ui';
-import { VideoPlayer as CerePlayer } from '@cere/media-sdk-react';
-
 import './VideoPlayer.css';
-import { SegmentEvent, useEvents, useStartParam, useVideoSegmentTracker } from '../../hooks';
+
+import { VideoPlayer as CerePlayer } from '@cere/media-sdk-react';
 import { ActivityEvent } from '@cere-activity-sdk/events';
+import { Card, Modal, ModalProps } from '@tg-app/ui';
+import { useExpand, useWebApp } from '@vkruglikov/react-telegram-web-app';
 import { memo, useCallback, useEffect, useState } from 'react';
-import { Video } from '../../types';
-import { useWebApp, useExpand } from '@vkruglikov/react-telegram-web-app';
+
+import { useData } from '~/providers';
+
 import { VIDEO_SEGMENT_LENGTH } from '../../constants.ts';
+import { SegmentEvent, useEvents, useStartParam, useVideoSegmentTracker } from '../../hooks';
+import { Video } from '../../types';
 
 export type VideoPlayerProps = Pick<ModalProps, 'open'> & {
   video?: Video;
@@ -35,7 +38,8 @@ export const VideoPlayer = memo(
     const width = miniApp.viewportWidth || window.innerWidth;
 
     const eventSource = useEvents();
-    const { campaignId } = useStartParam();
+    const { organizationId, campaignId } = useStartParam();
+    const { activeCampaignId } = useData();
     /**
      * TODO: Properly detect the video aspect ratio
      * TODO: Apply aspect ratio using CSS
@@ -63,8 +67,9 @@ export const VideoPlayer = memo(
       async (eventName: string, payload?: any) => {
         if (!eventSource) return;
         const activityEventPayload = {
-          campaignId: campaignId,
-          campaign_id: campaignId,
+          organization_id: organizationId,
+          campaign_id: campaignId || activeCampaignId,
+          campaignId: campaignId || activeCampaignId,
           videoId: video?.videoUrl,
           ...payload,
         };
@@ -72,7 +77,7 @@ export const VideoPlayer = memo(
 
         await eventSource.dispatchEvent(activityEvent);
       },
-      [eventSource, campaignId, video?.videoUrl],
+      [eventSource, organizationId, campaignId, activeCampaignId, video?.videoUrl],
     );
 
     const onSegmentWatched = useCallback(

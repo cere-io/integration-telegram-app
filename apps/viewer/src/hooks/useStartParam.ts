@@ -3,15 +3,41 @@ import { useInitData } from '@vkruglikov/react-telegram-web-app';
 export const useStartParam = () => {
   const [initDataUnsafe] = useInitData() || {};
   const startParam = initDataUnsafe?.start_param;
+
   if (startParam) {
-    const startParams = startParam.split('_');
-    if (startParams.length == 1) {
+    const params = new URLSearchParams(startParam);
+    const campaignId = params.get('campaignId');
+    const organizationId = params.get('organizationId');
+    const referrerId = params.get('referrerId');
+
+    if (campaignId || organizationId || referrerId) {
+      return { campaignId, organizationId, referrerId };
+    }
+
+    const colonMatch = startParam.match(/^(\w+):(\w+)$/);
+    if (colonMatch) {
+      const [, key, value] = colonMatch;
+      if (key === 'org' || key === 'organizationId') {
+        return { organizationId: value };
+      } else if (key === 'campaign' || key === 'campaignId') {
+        return { campaignId: value };
+      } else if (key === 'ref') {
+        return { referrerId: value };
+      }
+    }
+
+    const parts = startParam.split('_');
+    if (parts.length === 1) {
       return { campaignId: startParam };
     } else {
-      return { campaignId: startParams[0], referrerId: startParams[1] };
+      return { campaignId: parts[0], referrerId: parts[1] };
     }
-  } else {
-    const urlParams = new URLSearchParams(window.location.search);
-    return { campaignId: urlParams.get('campaignId'), referrerId: urlParams.get('referrerId') };
   }
+
+  const urlParams = new URLSearchParams(window.location.search);
+  return {
+    campaignId: urlParams.get('campaignId'),
+    organizationId: urlParams.get('organizationId'),
+    referrerId: urlParams.get('referrerId'),
+  };
 };

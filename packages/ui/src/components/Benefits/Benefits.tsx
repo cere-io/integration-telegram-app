@@ -1,6 +1,6 @@
-import { Headline } from '@telegram-apps/telegram-ui';
-
 import './Benefits.css';
+
+import { Headline } from '@telegram-apps/telegram-ui';
 import { PropsWithChildren } from 'react';
 
 export type BenefitsProps = PropsWithChildren;

@@ -1,6 +1,6 @@
-import { Button as UiButton, ButtonProps as UiButtonProps } from '@telegram-apps/telegram-ui';
-
 import './Button.css';
+
+import { Button as UiButton, ButtonProps as UiButtonProps } from '@telegram-apps/telegram-ui';
 
 type Mode = NonNullable<UiButtonProps['mode']> | 'cta' | 'link';
 

@@ -1,14 +1,80 @@
-.leaderboard {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  height: 100vh;
+.leaderboardContainer {
+  padding: 45px 16px 28px;
 }
 
-.cta-button-wrapper {
+.leaderboardOverlay {
+  background-color: #111523;
+  border-radius: 16px;
+}
+
+.leaderboardContent {
+  padding: 14px 24px;
+  border: 1px solid rgba(245, 250, 252, 0.15);
+  background: rgba(245, 250, 252, 0.07);
+  border-radius: 16px;
+  overflow-y: auto;
+}
+
+.tableHeader {
   display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  color: white;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.leaderboardBody {
+  display: flex;
+  flex-direction: column;
+  color: white;
+}
+
+.leaderboardRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  background: rgba(245, 250, 252, 0.07);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.leaderboardRow:not(:last-child) {
+  margin-bottom: 6px;
+}
+
+.leaderboardRow:hover {
+  opacity: 0.9;
+}
+
+.leaderboardRow div {
+  text-align: right;
+  padding: 5px;
+}
+
+.rowLoggedInUser {
+  background: linear-gradient(90deg, #6864f4 9.44%, #ac55f2 65.64%, #eb4799 100%);
+}
+
+.rowPlaceholder {
+  opacity: 0.5;
+}
+
+.placeBlock {
+  display: flex;
+  align-items: center;
   justify-content: center;
-  align-self: center;
-  position: absolute;
-  bottom: calc(var(--safe_area_inset_bottom) + 80px);
+  background: rgba(245, 250, 252, 0.2);
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 12px;
+  max-width: 32px;
+  height: 28px;
+  width: 100%;
+}
+
+.userIcon {
+  margin-left: 4px;
 }

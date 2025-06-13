@@ -1,13 +1,13 @@
 import {
-  init,
+  BrowserOptions,
+  captureEvent,
   captureException,
   captureMessage,
-  BrowserOptions,
-  SeverityLevel,
-  setUser,
-  EventHint,
   Event,
-  captureEvent,
+  EventHint,
+  init,
+  setUser,
+  SeverityLevel,
 } from '@sentry/react';
 
 export type ReportingOptions = Pick<BrowserOptions, 'environment'> & {
