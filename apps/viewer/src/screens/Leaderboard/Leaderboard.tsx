@@ -367,7 +367,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         }
       />
       {snackbarMessage && (
-        <Snackbar onClose={() => setSnackbarMessage(null)} duration={5000}>
+        <Snackbar style={{ zIndex: 99999 }} onClose={() => setSnackbarMessage(null)} duration={5000}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
             <ClipboardCheck />
             {snackbarMessage}
