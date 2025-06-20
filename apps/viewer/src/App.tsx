@@ -13,6 +13,7 @@ import { ActivityEvent } from '@cere-activity-sdk/events';
 import { useCereWallet } from './cere-wallet';
 import Analytics from '@tg-app/analytics';
 import { useData } from './providers';
+import { getDisplayName } from '~/helpers';
 
 const tabs = [
   {
@@ -104,14 +105,16 @@ export const App = () => {
         return;
       }
 
+      const displayName = getDisplayName(user, userInfo?.name);
+
       const payload: any = {
         campaign_id: campaignId,
       };
       if (referrerId) {
         payload.referrer_id = referrerId;
       }
-      if (userInfo?.name) {
-        payload.username = userInfo.name;
+      if (displayName) {
+        payload.username = displayName;
       }
       await eventSource.dispatchEvent(new ActivityEvent('JOIN_CAMPAIGN', payload));
       localStorage.setItem(campaignKey, 'true');
