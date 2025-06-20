@@ -120,7 +120,7 @@ export const App = () => {
       localStorage.setItem(campaignKey, 'true');
     };
     sendJoinCampaignEvent();
-  }, [cereWallet, eventSource, campaignId, referrerId, user?.username]);
+  }, [cereWallet, eventSource, campaignId, referrerId, user?.username, user]);
 
   const renderContent = () => {
     if (campaignExpired) {
