@@ -62,8 +62,16 @@ export class CereAnalytics {
     });
   }
   transaction(name: string, duration: number, payload?: any) {
-    this.sendEvent('TRANSACTION', { name, duration, ...payload }).then(() => {
-      console.log(`Transaction ${name} (${duration} ms) has been successfully sent to Cere Analytics`);
+    const event = {
+      name,
+      duration,
+      ...(payload || {}),
+    };
+
+    this.sendEvent('TRANSACTION', event).then(() => {
+      const tabName = payload?.tab?.name ?? '';
+      const tabInfo = tabName ? ` [tab: ${tabName}]` : '';
+      console.log(`Transaction ${name}${tabInfo} (${duration} ms) has been successfully sent to Cere Analytics`);
     });
   }
 
