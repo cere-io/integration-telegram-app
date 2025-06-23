@@ -14,7 +14,7 @@ import {
 import { Title, TopWidget } from '@tg-app/ui';
 import { useThemeParams } from '@vkruglikov/react-telegram-web-app';
 import { ClipboardCheck } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import FlipMove from 'react-flip-move';
 
 import { ActiveTab } from '~/App.tsx';
@@ -22,6 +22,7 @@ import { useData } from '~/providers';
 
 import { useCereWallet } from '../../cere-wallet';
 import { getPreviewCustomization } from '../../helpers';
+import { useStartParam } from '../../hooks';
 import { LeaderboardUser } from '../../types';
 import userIcon from './user-icon.svg';
 
@@ -70,15 +71,29 @@ const getNonLinearLeaderboard = (
 };
 
 export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
-  const { walletStatus, leaderboardData, isLeaderboardLoading, error, refetchLeaderboardForTab, campaignConfig } =
-    useData();
+  const {
+    walletStatus,
+    leaderboardData,
+    isLeaderboardLoading,
+    error,
+    refetchLeaderboardForTab,
+    campaignConfig,
+    activeCampaignId,
+  } = useData();
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const [expandedRanges, setExpandedRanges] = useState<Record<string, boolean>>({});
   const [mounted, setMounted] = useState(false);
   const [isModalOpen, setModalOpen] = useState(false);
 
+  // Add refs to prevent unnecessary refetches
+  const hasInitiallyFetched = useRef(false);
+  const lastVisibilityRefetch = useRef(0);
+
   const [theme] = useThemeParams();
   const cereWallet = useCereWallet();
+
+  // Get campaign data from hooks
+  const { campaignId } = useStartParam();
 
   // Get customization data
   const previewCustomization = getPreviewCustomization();
@@ -107,18 +122,34 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
     setMounted(true);
   }, []);
 
-  // Silently refetch data when component mounts or becomes visible
-  useEffect(() => {
-    if (mounted) {
+  // Stable refetch function to prevent dependency changes
+  const stableRefetch = useCallback(() => {
+    if (refetchLeaderboardForTab && !isLeaderboardLoading) {
+      console.log('Leaderboard: Performing refetch');
       refetchLeaderboardForTab();
     }
-  }, [mounted, refetchLeaderboardForTab]);
+  }, [refetchLeaderboardForTab, isLeaderboardLoading]);
 
-  // Refetch data when page becomes visible (user returns to tab)
+  // Only refetch once when component mounts and we don't have data
+  useEffect(() => {
+    if (mounted && !hasInitiallyFetched.current && !leaderboardData && !isLeaderboardLoading) {
+      console.log('Leaderboard: Initial fetch on mount');
+      hasInitiallyFetched.current = true;
+      stableRefetch();
+    }
+  }, [mounted, leaderboardData, isLeaderboardLoading, stableRefetch]);
+
+  // Refetch data when page becomes visible (with throttling)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden && mounted) {
-        refetchLeaderboardForTab();
+        const now = Date.now();
+        // Throttle visibility change refetches to once per 30 seconds
+        if (now - lastVisibilityRefetch.current > 30000) {
+          console.log('Leaderboard: Refetch on visibility change');
+          lastVisibilityRefetch.current = now;
+          stableRefetch();
+        }
       }
     };
 
@@ -127,7 +158,19 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [mounted, refetchLeaderboardForTab]);
+  }, [mounted, stableRefetch]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      hasInitiallyFetched.current = false;
+    };
+  }, []);
+
+  // Reset initial fetch flag when campaign changes
+  useEffect(() => {
+    hasInitiallyFetched.current = false;
+  }, [activeCampaignId, campaignId]);
 
   // Get current user's public key
   const [userPublicKey, setUserPublicKey] = useState<string | null>(null);

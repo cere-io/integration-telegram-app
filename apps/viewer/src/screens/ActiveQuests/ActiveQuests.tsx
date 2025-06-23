@@ -3,7 +3,7 @@ import './ActiveQuests.css';
 import Analytics from '@tg-app/analytics';
 import { Loader, QuestsList, QuestsListItem, Snackbar, Text, Title } from '@tg-app/ui';
 import { ClipboardCheck } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import FlipMove from 'react-flip-move';
 
 import { ActiveTab } from '~/App.tsx';
@@ -29,6 +29,10 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0 });
   const [mounted, setMounted] = useState(false);
+
+  // Add refs to prevent unnecessary refetches
+  const hasInitiallyFetched = useRef(false);
+  const lastVisibilityRefetch = useRef(0);
 
   const { organizationId, campaignId } = useStartParam();
 
@@ -59,18 +63,34 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     setMounted(true);
   }, []);
 
-  // Silently refetch data when component mounts or becomes visible
-  useEffect(() => {
-    if (mounted) {
+  // Stable refetch function to prevent dependency changes
+  const stableRefetch = useCallback(() => {
+    if (refetchQuestsForTab && !isQuestsLoading) {
+      console.log('ActiveQuests: Performing refetch');
       refetchQuestsForTab();
     }
-  }, [mounted, refetchQuestsForTab]);
+  }, [refetchQuestsForTab, isQuestsLoading]);
 
-  // Refetch data when page becomes visible (user returns to tab)
+  // Only refetch once when component mounts and we don't have data
+  useEffect(() => {
+    if (mounted && !hasInitiallyFetched.current && !questsData && !isQuestsLoading) {
+      console.log('ActiveQuests: Initial fetch on mount');
+      hasInitiallyFetched.current = true;
+      stableRefetch();
+    }
+  }, [mounted, questsData, isQuestsLoading, stableRefetch]);
+
+  // Refetch data when page becomes visible (with throttling)
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden && mounted) {
-        refetchQuestsForTab();
+        const now = Date.now();
+        // Throttle visibility change refetches to once per 30 seconds
+        if (now - lastVisibilityRefetch.current > 30000) {
+          console.log('ActiveQuests: Refetch on visibility change');
+          lastVisibilityRefetch.current = now;
+          stableRefetch();
+        }
       }
     };
 
@@ -79,7 +99,19 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [mounted, refetchQuestsForTab]);
+  }, [mounted, stableRefetch]);
+
+  // Reset initial fetch flag when campaign changes
+  useEffect(() => {
+    hasInitiallyFetched.current = false;
+  }, [activeCampaignId, campaignId]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      hasInitiallyFetched.current = false;
+    };
+  }, []);
 
   const quests: Quests = useMemo(
     () =>
@@ -306,3 +338,4 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     </>
   );
 };
+

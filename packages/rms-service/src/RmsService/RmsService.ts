@@ -1,4 +1,4 @@
-import { Campaign, Response, Template } from './types.ts';
+import { Campaign, Response } from './types.ts';
 
 type RequestOptions = RequestInit & {
   allowStatus?: number[];
@@ -38,8 +38,8 @@ export class RmsService {
     return responseBody.data;
   }
 
-  async getTemplateByCampaignIdAndEventType(campaignId: string, eventType: string): Promise<Template | undefined> {
-    const response = await this.request(`/api/template/${campaignId}/type/${eventType}`);
+  async getOrganizationAssociatedWithCampaign(campaignId: string): Promise<any> {
+    const response = await this.request(`/api/campaign/${campaignId}/organization`);
 
     return await response.json();
   }

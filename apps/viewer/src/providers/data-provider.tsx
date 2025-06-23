@@ -1,5 +1,5 @@
 import { WalletStatus } from '@cere/embed-wallet';
-import { Campaign, Template } from '@tg-app/rms-service';
+import { Campaign } from '@tg-app/rms-service';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 import { useCereWallet } from '~/cere-wallet';
@@ -157,6 +157,8 @@ export const useData = () => {
 
 export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [campaignKey, setCampaignKey] = useState<string | null>(null);
+  const [organization, setOrganization] = useState<unknown>(undefined);
+  const [organizationLoaded, setOrganizationLoaded] = useState(false);
   const [campaignConfig, setCampaignConfig] = useState<Campaign | null>(null);
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null);
   const [isConfigLoaded, setIsConfigLoaded] = useState(false);
@@ -181,11 +183,28 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const hasFetchedLeaderboard = useRef(false);
   const hasFetchedQuests = useRef(false);
 
+  // Add refs to track the last parameters used for fetching to prevent duplicate requests
+  const lastQuestFetchParams = useRef<string | null>(null);
+  const lastLeaderboardFetchParams = useRef<string | null>(null);
+
   const { organizationId, campaignId } = useStartParam();
   const rmsService = useRmsService();
   const cereWallet = useCereWallet();
 
   const currentCampaignId = campaignId || activeCampaignId;
+
+  const lastCampaignIdRef = useRef<string | null>(null);
+
+  // Reset fetch flags only when campaign actually changes
+  useEffect(() => {
+    if (lastCampaignIdRef.current !== currentCampaignId && currentCampaignId) {
+      hasFetchedLeaderboard.current = false;
+      hasFetchedQuests.current = false;
+      lastQuestFetchParams.current = null;
+      lastLeaderboardFetchParams.current = null;
+      lastCampaignIdRef.current = currentCampaignId;
+    }
+  }, [currentCampaignId]);
 
   useEffect(() => {
     const unsubscribe = cereWallet.subscribe('status-update', setWalletStatus);
@@ -227,6 +246,29 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     });
   }, []);
 
+  // Load organization with better dependency management
+  useEffect(() => {
+    if (organizationLoaded || organization || (!campaignId && !activeCampaignId)) return;
+
+    const loadOrganization = async () => {
+      const targetCampaignId = activeCampaignId || campaignId;
+      if (!targetCampaignId) return;
+
+      try {
+        const response = await rmsService.getOrganizationAssociatedWithCampaign(targetCampaignId);
+        if (response.code === 'SUCCESS') {
+          setOrganization(response.data);
+        }
+      } catch (error) {
+        console.error('Error loading organization:', error);
+      } finally {
+        setOrganizationLoaded(true);
+      }
+    };
+
+    loadOrganization();
+  }, [campaignId, activeCampaignId, organizationLoaded, organization, rmsService]);
+
   // API methods from useDataServiceApi
   const fetchLeaderboard = useCallback(
     async (silent = false) => {
@@ -235,6 +277,13 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
         if (!organizationId && !activeCampaignId && !accountId) return;
+
+        // Create a unique key for this fetch to prevent duplicates
+        const fetchKey = `${currentCampaignId}-${organizationId}-${accountId}`;
+        if (lastLeaderboardFetchParams.current === fetchKey && !silent) {
+          console.log('Skipping duplicate leaderboard fetch with same parameters');
+          return; // Skip if same parameters and not a silent refetch
+        }
 
         if (!silent) {
           setIsLeaderboardLoading(true);
@@ -249,9 +298,16 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
             if (!silent) {
               setIsLeaderboardLoading(false);
             }
-          }, 500); // Simulate network delay
+            lastLeaderboardFetchParams.current = fetchKey;
+          }, 500);
           return;
         }
+
+        console.log('Fetching leaderboard with params:', {
+          campaign_id: currentCampaignId,
+          organization_id: organizationId,
+          account_id: accountId,
+        });
 
         const response = await fetch(
           `${DEFAULT_CONFIG.baseUrl}/data-service/${DEFAULT_CONFIG.dataServiceId}/query/get_leaderboard`,
@@ -278,7 +334,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         const resultData = data.result.data.data;
 
         updateLeaderboardDataIfChanged(resultData);
-        // Save to localStorage using existing logic
+        lastLeaderboardFetchParams.current = fetchKey;
         saveCache();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch leaderboard');
@@ -289,23 +345,25 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
     },
-    [
-      walletStatus,
-      cereWallet,
-      organizationId,
-      activeCampaignId,
-      currentCampaignId,
-      saveCache,
-      updateLeaderboardDataIfChanged,
-    ],
+    [walletStatus, cereWallet, organizationId, currentCampaignId, updateLeaderboardDataIfChanged, saveCache],
   );
 
   const fetchQuests = useCallback(
     async (silent = false) => {
       if (walletStatus !== 'connected') return;
+
       try {
         const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
         if (!organizationId && !activeCampaignId && !accountId) return;
+
+        // Create a unique key for this fetch to prevent duplicates
+        const organizationIdForFetch = organizationId || (organization as any)?.appId;
+        const fetchKey = `${currentCampaignId}-${organizationIdForFetch}-${accountId}`;
+
+        if (lastQuestFetchParams.current === fetchKey && !silent) {
+          console.log('Skipping duplicate quest fetch with same parameters');
+          return; // Skip if same parameters and not a silent refetch
+        }
 
         if (!silent) {
           setIsQuestsLoading(true);
@@ -320,9 +378,16 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
             if (!silent) {
               setIsQuestsLoading(false);
             }
-          }, 300); // Simulate network delay
+            lastQuestFetchParams.current = fetchKey;
+          }, 300);
           return;
         }
+
+        console.log('Fetching quests with params:', {
+          campaign_id: currentCampaignId,
+          organization_id: organizationIdForFetch,
+          account_id: accountId,
+        });
 
         const response = await fetch(
           `${DEFAULT_CONFIG.baseUrl}/data-service/${DEFAULT_CONFIG.dataServiceId}/query/get_quests`,
@@ -334,7 +399,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
             body: JSON.stringify({
               params: {
                 campaign_id: currentCampaignId,
-                organization_id: organizationId,
+                organization_id: organizationIdForFetch,
                 account_id: accountId,
               },
             }),
@@ -350,7 +415,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
         // Update data only if changed
         updateQuestDataIfChanged(resultData);
-        // Save to localStorage using existing logic
+        lastQuestFetchParams.current = fetchKey;
         saveCache();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch quests');
@@ -361,47 +426,37 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
     },
-    [
-      walletStatus,
-      cereWallet,
-      organizationId,
-      activeCampaignId,
-      currentCampaignId,
-      saveCache,
-      updateQuestDataIfChanged,
-    ],
+    [walletStatus, cereWallet, organizationId, currentCampaignId, organization, updateQuestDataIfChanged, saveCache],
   );
 
-  // Methods for tab-specific refetch
+  // Methods for tab-specific refetch - create a stable version
   const refetchQuestsForTab = useCallback(() => {
+    console.log('refetchQuestsForTab called');
     fetchQuests(true); // Silent refetch
   }, [fetchQuests]);
 
   const refetchLeaderboardForTab = useCallback(() => {
+    console.log('refetchLeaderboardForTab called');
     fetchLeaderboard(true); // Silent refetch
   }, [fetchLeaderboard]);
 
-  // Reset fetch flags when campaign changes
-  useEffect(() => {
-    hasFetchedLeaderboard.current = false;
-    hasFetchedQuests.current = false;
-  }, [currentCampaignId]);
-
-  // Auto-fetch when wallet becomes ready
+  // Auto-fetch when wallet becomes ready - improved logic
   useEffect(() => {
     if (cereWallet && walletStatus === 'connected' && currentCampaignId) {
       // Only fetch if we haven't already tried for this campaign
       if (!hasFetchedQuests.current) {
+        console.log('Auto-fetching quests for campaign:', currentCampaignId);
         fetchQuests();
         hasFetchedQuests.current = true;
       }
 
       if (!hasFetchedLeaderboard.current) {
+        console.log('Auto-fetching leaderboard for campaign:', currentCampaignId);
         fetchLeaderboard();
         hasFetchedLeaderboard.current = true;
       }
     }
-  }, [cereWallet, walletStatus, currentCampaignId, fetchLeaderboard, fetchQuests]);
+  }, [cereWallet, walletStatus, currentCampaignId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -432,15 +487,18 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     const campaignStatus = JSON.parse(campaignConfig?.formData as unknown as string)?.campaign?.status;
     const debugMode = JSON.parse(campaignConfig?.formData as unknown as string)?.campaign?.debug || false;
     setDebugMode(debugMode);
-    if (campaignStatus !== 'paused') {
-      if (questData) return;
+
+    // Only prepare data from config if we don't have quest data yet or campaign was paused
+    if (campaignStatus === 'paused' || !questData) {
+      prepareDataFromConfig();
     }
-    prepareDataFromConfig();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [campaignConfig, questData]);
+  }, [campaignConfig]);
 
   const fetchCampaignConfig = useCallback(async () => {
     if (!organizationId && !campaignId) return;
+
+    // Prevent duplicate config fetches
+    if (isConfigLoaded && campaignConfig) return;
 
     try {
       let campaignResponse: Campaign | undefined = undefined;
@@ -450,37 +508,36 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         campaignResponse = await rmsService.getCampaignById(campaignId);
       }
 
-      let templateResponse: Template | undefined = undefined;
-      if (!organizationId) {
-        templateResponse = await rmsService.getTemplateByCampaignIdAndEventType(
-          campaignResponse?.campaignId.toString() ?? '',
-          'GET_QUESTS',
-        );
+      if (campaignResponse) {
+        setActiveCampaignId(campaignResponse?.campaignId.toString() || null);
+
+        const response = {
+          ...campaignResponse,
+        };
+
+        setCampaignConfig(response as Campaign);
       }
-
-      setActiveCampaignId(campaignResponse?.campaignId.toString() || null);
-
-      const response = {
-        ...campaignResponse,
-        templateHtml: templateResponse?.params || undefined,
-      };
-
-      setCampaignConfig(response as Campaign);
       setIsConfigLoaded(true);
     } catch (error) {
       console.error('Error fetching campaign config:', error);
+      setIsConfigLoaded(true); // Set to true even on error to prevent infinite retries
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [questData]);
+  }, [organizationId, campaignId, isConfigLoaded, campaignConfig, rmsService]);
 
-  const prepareDataFromConfig = () => {
+  useEffect(() => {
+    if (!isConfigLoaded) {
+      fetchCampaignConfig();
+    }
+  }, [fetchCampaignConfig, isConfigLoaded]);
+
+  const prepareDataFromConfig = useCallback(() => {
     if (!campaignConfig) return;
     const parsedData = parseCampaignData(campaignConfig);
     if (!parsedData) return;
 
     setQuestData(parsedData);
     saveCache();
-  };
+  }, [campaignConfig, saveCache]);
 
   const parseCampaignData = (response: Campaign) => {
     try {
