@@ -50,11 +50,12 @@ export const App = () => {
     campaignPaused,
     debugMode,
     activeCampaignId,
+    activeOrganizationId,
     refetchQuestsForTab,
     refetchLeaderboardForTab,
   } = useData();
   const [theme] = useThemeParams();
-  const { organizationId, campaignId, referrerId } = useStartParam();
+  const { campaignId, referrerId } = useStartParam();
 
   const cereWallet = useCereWallet();
   const eventSource = useEvents();
@@ -125,7 +126,7 @@ export const App = () => {
       Reporting.setUser({ id: user.id.toString(), username: user.username });
       Analytics.setUser({ id: user.id.toString(), username: user.username });
     }
-    Analytics.setTags({ organization_id: organizationId, campaign_id: campaignId || activeCampaignId });
+    Analytics.setTags({ organization_id: activeOrganizationId, campaign_id: campaignId || activeCampaignId });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
@@ -166,8 +167,8 @@ export const App = () => {
       const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
       const userInfo = await cereWallet.getUserInfo();
       const campaignKeyParts = ['campaign', accountId, campaignId || activeCampaignId];
-      if (organizationId) {
-        campaignKeyParts.push(organizationId);
+      if (activeOrganizationId) {
+        campaignKeyParts.push(activeOrganizationId);
       }
 
       const campaignKey = campaignKeyParts.join(':');
@@ -176,7 +177,7 @@ export const App = () => {
       }
 
       const payload: any = {
-        organization_id: organizationId,
+        organization_id: activeOrganizationId,
         campaign_id: campaignId || activeCampaignId,
       };
       if (referrerId) {
@@ -189,7 +190,7 @@ export const App = () => {
       localStorage.setItem(campaignKey, 'true');
     };
     sendJoinCampaignEvent();
-  }, [cereWallet, eventSource, campaignId, referrerId, user?.username, activeCampaignId, organizationId]);
+  }, [cereWallet, eventSource, campaignId, referrerId, user?.username, activeCampaignId, activeOrganizationId]);
 
   const renderContent = () => {
     if (campaignExpired) {

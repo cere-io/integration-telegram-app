@@ -27,8 +27,8 @@ export const QuizQuest = ({ quizTask, isDisabled }: QuizQuestProps) => {
   const [quizFinished, setQuizFinished] = useState(false);
 
   const eventSource = useEvents();
-  const { activeCampaignId } = useData();
-  const { organizationId, campaignId } = useStartParam();
+  const { activeCampaignId, activeOrganizationId } = useData();
+  const { campaignId } = useStartParam();
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     setSelectedOption(event.target.value);
@@ -42,7 +42,7 @@ export const QuizQuest = ({ quizTask, isDisabled }: QuizQuestProps) => {
       timestamp: new Date().toISOString(),
       data: JSON.stringify({
         campaign_id: campaignId || activeCampaignId,
-        organization_id: organizationId,
+        organization_id: activeOrganizationId,
         quizId: quizTask.id,
         questionId: quizTask.questions[currentQuestion].id,
         answerId: selectedOption,
@@ -80,7 +80,7 @@ export const QuizQuest = ({ quizTask, isDisabled }: QuizQuestProps) => {
     campaignId,
     currentQuestion,
     eventSource,
-    organizationId,
+    activeOrganizationId,
     quizTask.id,
     quizTask.questions,
     selectedOption,

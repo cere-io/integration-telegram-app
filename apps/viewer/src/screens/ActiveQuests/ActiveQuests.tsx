@@ -24,6 +24,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     error,
     refetchQuestsForTab,
     activeCampaignId,
+    activeOrganizationId,
     campaignConfig,
   } = useData();
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
@@ -315,7 +316,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
                   key={`${idx}_${quest.title}`}
                   quest={quest}
                   campaignId={Number(campaignId || activeCampaignId)}
-                  organizationId={Number(organizationId)}
+                  organizationId={Number(organizationId || activeOrganizationId)}
                   accountId={accountId}
                   remainingDays={remainingTime.days}
                   setActiveTab={setActiveTab}
@@ -338,4 +339,3 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     </>
   );
 };
-

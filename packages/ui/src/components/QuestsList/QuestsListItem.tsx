@@ -281,12 +281,12 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
                   </Text>
                   <Text className="questDescription">{formatText(quest.description ?? '')}</Text>
                   {quest.type === 'referral' && (
-                    <p className="questDescription">
+                    <Text className="questDescription">
                       Your referrals:{' '}
                       {isArrayOfInvitees(quest.invitees || [])
                         ? (quest.invitees as string[])?.length || 0
                         : quest.invitees || 0}
-                    </p>
+                    </Text>
                   )}
                   <div className="questFooter">
                     <Text className="timeRemaining">{remainingDays}d remaining</Text>

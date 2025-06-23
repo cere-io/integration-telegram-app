@@ -38,8 +38,8 @@ export const VideoPlayer = memo(
     const width = miniApp.viewportWidth || window.innerWidth;
 
     const eventSource = useEvents();
-    const { organizationId, campaignId } = useStartParam();
-    const { activeCampaignId } = useData();
+    const { campaignId } = useStartParam();
+    const { activeCampaignId, activeOrganizationId } = useData();
     /**
      * TODO: Properly detect the video aspect ratio
      * TODO: Apply aspect ratio using CSS
@@ -67,7 +67,7 @@ export const VideoPlayer = memo(
       async (eventName: string, payload?: any) => {
         if (!eventSource) return;
         const activityEventPayload = {
-          organization_id: organizationId,
+          organization_id: activeOrganizationId,
           campaign_id: campaignId || activeCampaignId,
           campaignId: campaignId || activeCampaignId,
           videoId: video?.videoUrl,
@@ -77,7 +77,7 @@ export const VideoPlayer = memo(
 
         await eventSource.dispatchEvent(activityEvent);
       },
-      [eventSource, organizationId, campaignId, activeCampaignId, video?.videoUrl],
+      [eventSource, activeOrganizationId, campaignId, activeCampaignId, video?.videoUrl],
     );
 
     const onSegmentWatched = useCallback(

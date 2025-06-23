@@ -128,6 +128,7 @@ type DataContextType = {
   questData: any;
   leaderboardData: any;
   activeCampaignId: string | null;
+  activeOrganizationId: string | null;
   campaignConfig: Campaign | null;
   campaignConfigLoaded: boolean;
   campaignExpired: boolean;
@@ -194,6 +195,8 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const currentCampaignId = campaignId || activeCampaignId;
 
   const lastCampaignIdRef = useRef<string | null>(null);
+
+  const activeOrganizationId = organizationId || ((organization as any)?.appId as string);
 
   // Reset fetch flags only when campaign actually changes
   useEffect(() => {
@@ -279,7 +282,8 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         if (!organizationId && !activeCampaignId && !accountId) return;
 
         // Create a unique key for this fetch to prevent duplicates
-        const fetchKey = `${currentCampaignId}-${organizationId}-${accountId}`;
+        const organizationIdForFetch = organizationId || (organization as any)?.appId;
+        const fetchKey = `${currentCampaignId}-${organizationIdForFetch}-${accountId}`;
         if (lastLeaderboardFetchParams.current === fetchKey && !silent) {
           console.log('Skipping duplicate leaderboard fetch with same parameters');
           return; // Skip if same parameters and not a silent refetch
@@ -305,7 +309,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
         console.log('Fetching leaderboard with params:', {
           campaign_id: currentCampaignId,
-          organization_id: organizationId,
+          organization_id: organizationIdForFetch,
           account_id: accountId,
         });
 
@@ -319,7 +323,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
             body: JSON.stringify({
               params: {
                 campaign_id: currentCampaignId,
-                organization_id: organizationId,
+                organization_id: organizationIdForFetch,
                 account_id: accountId,
               },
             }),
@@ -345,7 +349,16 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
     },
-    [walletStatus, cereWallet, organizationId, currentCampaignId, updateLeaderboardDataIfChanged, saveCache],
+    [
+      walletStatus,
+      cereWallet,
+      organizationId,
+      activeCampaignId,
+      organization,
+      currentCampaignId,
+      updateLeaderboardDataIfChanged,
+      saveCache,
+    ],
   );
 
   const fetchQuests = useCallback(
@@ -426,7 +439,16 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
     },
-    [walletStatus, cereWallet, organizationId, currentCampaignId, organization, updateQuestDataIfChanged, saveCache],
+    [
+      walletStatus,
+      cereWallet,
+      organizationId,
+      activeCampaignId,
+      organization,
+      currentCampaignId,
+      updateQuestDataIfChanged,
+      saveCache,
+    ],
   );
 
   // Methods for tab-specific refetch - create a stable version
@@ -463,8 +485,8 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     const fetchCampaignKey = async () => {
       if (isMounted) {
         setCampaignKey(
-          organizationId
-            ? `campaign_${campaignId || activeCampaignId}_organization_${organizationId}`
+          activeOrganizationId
+            ? `campaign_${campaignId || activeCampaignId}_organization_${activeOrganizationId}`
             : `campaign_${campaignId}`,
         );
       }
@@ -475,7 +497,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       isMounted = false;
     };
-  }, [activeCampaignId, campaignId, organizationId]);
+  }, [activeCampaignId, campaignId, activeOrganizationId]);
 
   useEffect(() => {
     fetchCampaignConfig();
@@ -495,15 +517,15 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   }, [campaignConfig]);
 
   const fetchCampaignConfig = useCallback(async () => {
-    if (!organizationId && !campaignId) return;
+    if (!activeOrganizationId && !campaignId) return;
 
     // Prevent duplicate config fetches
     if (isConfigLoaded && campaignConfig) return;
 
     try {
       let campaignResponse: Campaign | undefined = undefined;
-      if (organizationId) {
-        campaignResponse = await rmsService.getCampaignByOrganizationId(organizationId);
+      if (activeOrganizationId) {
+        campaignResponse = await rmsService.getCampaignByOrganizationId(activeOrganizationId);
       } else if (campaignId) {
         campaignResponse = await rmsService.getCampaignById(campaignId);
       }
@@ -522,7 +544,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       console.error('Error fetching campaign config:', error);
       setIsConfigLoaded(true); // Set to true even on error to prevent infinite retries
     }
-  }, [organizationId, campaignId, isConfigLoaded, campaignConfig, rmsService]);
+  }, [activeOrganizationId, campaignId, isConfigLoaded, campaignConfig, rmsService]);
 
   useEffect(() => {
     if (!isConfigLoaded) {
@@ -685,6 +707,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         questData,
         leaderboardData,
         activeCampaignId,
+        activeOrganizationId,
         campaignConfig,
         campaignConfigLoaded: isConfigLoaded,
         campaignExpired: isCampaignExpired,
