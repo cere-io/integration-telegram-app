@@ -478,6 +478,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         hasFetchedLeaderboard.current = true;
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cereWallet, walletStatus, currentCampaignId]);
 
   useEffect(() => {
@@ -514,6 +515,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     if (campaignStatus === 'paused' || !questData) {
       prepareDataFromConfig();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaignConfig]);
 
   const fetchCampaignConfig = useCallback(async () => {
@@ -559,6 +561,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
     setQuestData(parsedData);
     saveCache();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaignConfig, saveCache]);
 
   const parseCampaignData = (response: Campaign) => {
