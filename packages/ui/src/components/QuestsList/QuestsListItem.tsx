@@ -4,7 +4,7 @@ import { ActivityEvent } from '@cere-activity-sdk/events';
 import { ActiveTab } from '@integration-telegram-app/viewer/src/App.tsx';
 import { useCereWallet } from '@integration-telegram-app/viewer/src/cere-wallet';
 import { TELEGRAM_APP_URL } from '@integration-telegram-app/viewer/src/constants.ts';
-import { useEvents, useStartParam } from '@integration-telegram-app/viewer/src/hooks';
+import { useEvents } from '@integration-telegram-app/viewer/src/hooks';
 import { useData } from '@integration-telegram-app/viewer/src/providers';
 import { ReferralTask, Task, VideoTask } from '@integration-telegram-app/viewer/src/types';
 import { Text } from '@telegram-apps/telegram-ui';
@@ -55,32 +55,13 @@ export type QuestsListItemProps = {
   campaignId?: number;
 };
 
-// eslint-disable-next-line @typescript-eslint/ban-types
-function useDebouncedCallback(callback: Function, delay: number) {
-  const [timer, setTimer] = useState<any>(null);
-
-  return useCallback(
-    (...args: any[]) => {
-      if (timer) clearTimeout(timer);
-      setTimer(setTimeout(() => callback(...args), delay));
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [callback, delay],
-  );
-}
-
 export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivElement, QuestsListItemProps>(
-  ({ quest, accountId, campaignId, remainingDays, setActiveTab }, ref) => {
+  ({ quest, accountId, campaignId, organizationId, remainingDays, setActiveTab }, ref) => {
     const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
 
     const cereWallet = useCereWallet();
     const { activeCampaignId } = useData();
-    const { organizationId } = useStartParam();
     const eventSource = useEvents();
-
-    const setSnackbarMessageIfChanged = useDebouncedCallback((newMessage: string) => {
-      setSnackbarMessage(newMessage);
-    }, 500);
 
     const handleClick = async () => {
       if (quest.type === 'dex') {
@@ -148,16 +129,23 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
     const handleOnReferralLinkClick = useCallback(async () => {
       const message = await getReferralProgramMessage();
       if (!message) return;
-      const tempInput = document.createElement('textarea');
-      tempInput.value = message;
-      document.body.appendChild(tempInput);
-      tempInput.select();
-      if (document.execCommand('copy')) {
-        setSnackbarMessageIfChanged('Invitation copied to clipboard successfully!');
-      } else {
-        setSnackbarMessageIfChanged('Failed to copy the invitation.');
+      // Copy a referral message to clipboard
+      try {
+        const tempInput = document.createElement('textarea');
+        tempInput.value = message;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        if (document.execCommand('copy')) {
+          setSnackbarMessage('Invitation copied to clipboard successfully!');
+        } else {
+          setSnackbarMessage('Failed to copy the invitation.');
+        }
+        document.body.removeChild(tempInput);
+      } catch (e) {
+        console.error('Failed to copy a referral message:', e);
+        setSnackbarMessage(`Clipboard is not supported.`);
       }
-    }, [getReferralProgramMessage, setSnackbarMessageIfChanged]);
+    }, [getReferralProgramMessage]);
 
     const TwitterIcon = () => (
       <div className="iconBase">
@@ -369,7 +357,7 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
           </>
         )}
         {snackbarMessage && (
-          <Snackbar onClose={() => setSnackbarMessage(null)} duration={5000}>
+          <Snackbar style={{ zIndex: 99999 }} onClose={() => setSnackbarMessage(null)} duration={5000}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Text style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <ClipboardCheck />
