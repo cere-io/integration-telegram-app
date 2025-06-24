@@ -1,8 +1,5 @@
 name: Release to dev
 on:
-  push:
-    branches:
-      - dev
   workflow_dispatch:
 
 permissions:

@@ -1,4 +1,4 @@
-name: Release to prod
+name: Release bullish to prod
 on:
   workflow_dispatch:
 
@@ -15,6 +15,6 @@ jobs:
       build_command: 'npm run build'
       path_to_static_files_to_upload: 'dist'
       aws_account_id: ${{ vars.PRD_NETWORK_AWS_ACCOUNT_ID }}
-      s3_bucket_name: 'telegram-miniapps.cere.io'
+      s3_bucket_name: 'bullish.cere.io'
     secrets:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN_READ }}

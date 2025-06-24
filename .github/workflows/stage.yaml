@@ -1,9 +1,5 @@
 name: Release to stage
 on:
-  push:
-    branches:
-      - 'release/**'
-      - 'hotfix/**'
   workflow_dispatch:
 
 permissions:
