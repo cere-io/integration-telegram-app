@@ -8,6 +8,8 @@ import { AppRoot, Button, LeaderboardIcon, MediaIcon, QuestsIcon, Tabbar, Text }
 import { useInitData, useThemeParams } from '@vkruglikov/react-telegram-web-app';
 import { useEffect, useState } from 'react';
 
+import { getDisplayName } from '~/helpers';
+
 import { useCereWallet } from './cere-wallet';
 import {
   applyPreviewCustomization,
@@ -19,7 +21,6 @@ import {
 import { useEvents, useStartParam } from './hooks';
 import { useData } from './providers';
 import { ActiveQuests, Leaderboard, Media, WelcomeScreen } from './screens';
-import { getDisplayName } from '~/helpers';
 
 const tabs = [
   {
@@ -193,7 +194,7 @@ export const App = () => {
       localStorage.setItem(campaignKey, 'true');
     };
     sendJoinCampaignEvent();
-  }, [cereWallet, eventSource, campaignId, referrerId, user.username, user, activeCampaignId, activeOrganizationId]);
+  }, [cereWallet, eventSource, campaignId, referrerId, user, activeCampaignId, activeOrganizationId]);
 
   const renderContent = () => {
     if (campaignExpired) {

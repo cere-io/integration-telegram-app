@@ -252,7 +252,7 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
                     </Text>
                   </div>
                 )}
-                {quest.type === 'referral' && quest?.percents && (
+                {quest.type === 'referral' && quest?.percents > 0 && (
                   <div className="points">
                     <Text as="span" style={{ whiteSpace: 'nowrap' }}>
                       {quest.percents} %
