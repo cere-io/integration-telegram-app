@@ -19,6 +19,7 @@ import {
 import { useEvents, useStartParam } from './hooks';
 import { useData } from './providers';
 import { ActiveQuests, Leaderboard, Media, WelcomeScreen } from './screens';
+import { getDisplayName } from '~/helpers';
 
 const tabs = [
   {
@@ -176,6 +177,8 @@ export const App = () => {
         return;
       }
 
+      const displayName = getDisplayName(user, userInfo?.name);
+
       const payload: any = {
         organization_id: activeOrganizationId,
         campaign_id: campaignId || activeCampaignId,
@@ -183,14 +186,14 @@ export const App = () => {
       if (referrerId) {
         payload.referrer_id = referrerId;
       }
-      if (userInfo?.name) {
-        payload.username = userInfo.name;
+      if (displayName) {
+        payload.username = displayName;
       }
       await eventSource.dispatchEvent(new ActivityEvent('JOIN_CAMPAIGN', payload));
       localStorage.setItem(campaignKey, 'true');
     };
     sendJoinCampaignEvent();
-  }, [cereWallet, eventSource, campaignId, referrerId, user?.username, activeCampaignId, activeOrganizationId]);
+  }, [cereWallet, eventSource, campaignId, referrerId, user.username, user, activeCampaignId, activeOrganizationId]);
 
   const renderContent = () => {
     if (campaignExpired) {
