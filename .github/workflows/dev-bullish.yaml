@@ -1,4 +1,4 @@
-name: Release to prod
+name: Release bullish to dev
 on:
   workflow_dispatch:
 
@@ -7,14 +7,14 @@ permissions:
   contents: read
 
 jobs:
-  build-and-deploy:
+  build_and_deploy:
     uses: cere-io/reusable-workflows/.github/workflows/deploy-to-cloudfront.yaml@master
     with:
       build_container: 'node:18-buster'
-      install_packages_command: 'cp .env.prod .env; npm ci'
+      install_packages_command: 'cp .env.dev .env; npm ci'
       build_command: 'npm run build'
       path_to_static_files_to_upload: 'dist'
-      aws_account_id: ${{ vars.PRD_NETWORK_AWS_ACCOUNT_ID }}
-      s3_bucket_name: 'telegram-miniapps.cere.io'
+      aws_account_id: ${{ vars.DEV_NETWORK_AWS_ACCOUNT_ID }}
+      s3_bucket_name: 'bullish.dev.cere.io'
     secrets:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN_READ }}
