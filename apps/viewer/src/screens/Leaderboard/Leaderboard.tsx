@@ -80,6 +80,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
     campaignConfig,
     activeCampaignId,
   } = useData();
+  console.log('leaderboardData', leaderboardData);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const [expandedRanges, setExpandedRanges] = useState<Record<string, boolean>>({});
   const [mounted, setMounted] = useState(false);
@@ -194,6 +195,10 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   // Process leaderboard data
   const users = useMemo(() => leaderboardData?.users || [], [leaderboardData?.users]);
 
+  const rewardsInfo = useMemo(() => leaderboardData?.rewards || [], [leaderboardData?.rewards]);
+
+  const areRewardsSet = useMemo(() => Boolean(rewardsInfo?.addressType), [rewardsInfo?.addressType]);
+
   // Sort users by points in descending order and assign ranks
   const sortedUsersWithRank = useMemo(() => {
     return [...users].sort((a, b) => b.points - a.points).map((user, idx) => ({ ...user, rank: idx + 1 }));
@@ -287,9 +292,8 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
         if (isExpanded) {
           const expandedItems = sortedUsersWithRank.slice(start - 1, end);
           const uniqueItems = expandedItems.filter(
-            // @TODO remove this filter
             ({ user: publicKey }) =>
-              !leaderboardData.some((existingItem: any) => 'user' in existingItem && existingItem.user === publicKey),
+              !leaderboardDisplayData.some((existingItem) => 'user' in existingItem && existingItem.user === publicKey),
           );
 
           uniqueItems.forEach(({ user: publicKey, points, rank, username }) => {
@@ -299,9 +303,9 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
                 className="leaderboardRow"
                 onClick={() => handleRowClick(publicKey, publicKey === userPublicKey)}
               >
-                <span>{rank}</span>
-                <span>{username ? username : publicKey}</span>
-                <span>{points}</span>
+                <Text>{rank}</Text>
+                <Text>{username ? username : publicKey}</Text>
+                <Text>{points}</Text>
               </div>,
             );
           });
@@ -339,15 +343,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
     });
 
     return items;
-  }, [
-    leaderboardDisplayData,
-    expandedRanges,
-    sortedUsersWithRank,
-    leaderboardData,
-    userPublicKey,
-    handleRowClick,
-    handleExpand,
-  ]);
+  }, [leaderboardDisplayData, expandedRanges, sortedUsersWithRank, userPublicKey, handleRowClick, handleExpand]);
 
   if (shouldShowLoader) {
     return (
@@ -369,15 +365,12 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
     <div className="leaderboardContainer">
       <TopWidget widgetImage={leaderboardConfig?.topWidgetImage} />
       <WalletAddressForm
-        enable={true}
-        // enable={enableRewards}
+        enable={areRewardsSet}
         userPublicKey={userPublicKey}
         theme={'theme' as 'light' | 'dark'}
         existedWalletAddress={currentUserData?.external_wallet_address}
-        addressType={undefined}
-        // addressType={(rewards as unknown as Rewards)?.addressType}
-        network={undefined}
-        // network={(rewards as unknown as Rewards)?.network}
+        addressType={rewardsInfo?.addressType}
+        network={rewardsInfo?.network}
       />
       <div className="leaderboardOverlay">
         <div className="leaderboardContent" data-theme={theme}>
