@@ -1,13 +1,12 @@
 import Analytics from '@tg-app/analytics';
 import { Loader, MediaList, MediaListItem, Text, Title } from '@tg-app/ui';
-import { useThemeParams } from '@vkruglikov/react-telegram-web-app';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useData } from '~/providers';
 
 import { VideoPlayer } from '../../components';
 import { ENGAGEMENT_TIMEOUT_DURATION } from '../../constants.ts';
-import { useEvents, useStartParam } from '../../hooks';
+import { useEvents, useStartParam, useTelegramTextColor } from '../../hooks';
 import { Video } from '../../types';
 
 export type MediaTypeProps = {
@@ -28,9 +27,7 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
   const [pendingUpdates, setPendingUpdates] = useState<Partial<Video>[]>([]);
   const eventSource = useEvents();
   const { campaignId } = useStartParam();
-  const [theme] = useThemeParams();
-
-  console.log('theme', theme);
+  const color = useTelegramTextColor();
 
   const mountTimeRef = useRef<number>(performance.now());
   const [isRendered, setIsRendered] = useState(false);
@@ -198,7 +195,7 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
 
   return (
     <div style={{ paddingBottom: 65 }}>
-      <Title weight="2" style={{ marginLeft: 16, marginTop: 16 }}>
+      <Title weight="2" style={{ marginLeft: 16, marginTop: 16, color }}>
         Library
       </Title>
       <Text Component="div" style={{ margin: '16px 16px 0 16px', color: 'rgb(113, 118, 132)' }}>

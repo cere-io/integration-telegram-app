@@ -10,7 +10,7 @@ import { ActiveTab } from '~/App.tsx';
 import { useData } from '~/providers';
 
 import { getPreviewCustomization } from '../../helpers';
-import { useStartParam } from '../../hooks';
+import { useStartParam, useTelegramTextColor } from '../../hooks';
 import { Quests, Task } from '../../types';
 
 type ActiveQuestsProps = {
@@ -40,6 +40,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
   // Get customization data
   const previewCustomization = getPreviewCustomization();
   const [bannerConfig, setBannerConfig] = useState<any>(null);
+  const color = useTelegramTextColor();
 
   // Load banner configuration from campaign config or preview
   useEffect(() => {
@@ -283,7 +284,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
         </div>
       )}
       <div className="active-quests-container">
-        <Title weight="1" level="1" className="active-quests-title" style={{ marginLeft: 16, marginTop: 16 }}>
+        <Title weight="1" level="1" className="active-quests-title" style={{ marginLeft: 16, marginTop: 16, color }}>
           Complete Quests to Earn!
         </Title>
         {campaignDescription && (
@@ -297,7 +298,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
         )}
         <div className="campaign-info">
           <div className="campaign-header">
-            <Text weight="1" className="campaign-title">
+            <Text weight="1" className="campaign-title" style={{ color }}>
               {campaignName}
             </Text>
             <Text className="campaign-time">

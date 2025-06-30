@@ -5,7 +5,7 @@ import { ActivityEvent } from '@cere-activity-sdk/events';
 import Analytics from '@tg-app/analytics';
 import Reporting from '@tg-app/reporting';
 import { AppRoot, Button, LeaderboardIcon, MediaIcon, QuestsIcon, Tabbar, Text } from '@tg-app/ui';
-import { useInitData } from '@vkruglikov/react-telegram-web-app';
+import { useInitData, useThemeParams } from '@vkruglikov/react-telegram-web-app';
 import { useEffect, useState } from 'react';
 
 import { getDisplayName } from '~/helpers';
@@ -18,7 +18,7 @@ import {
   getPreviewTab,
   isPreviewMode,
 } from './helpers';
-import { useEvents, useStartParam, useTheme } from './hooks';
+import { useEvents, useStartParam } from './hooks';
 import { useData } from './providers';
 import { ActiveQuests, Leaderboard, Media, WelcomeScreen } from './screens';
 
@@ -56,7 +56,7 @@ export const App = () => {
     refetchQuestsForTab,
     refetchLeaderboardForTab,
   } = useData();
-  const theme = useTheme();
+  const [theme] = useThemeParams();
   const { campaignId, referrerId } = useStartParam();
 
   const cereWallet = useCereWallet();
@@ -292,7 +292,7 @@ export const App = () => {
   };
 
   return (
-    <AppRoot appearance={theme.appearance} className="App-root" platform={theme.platform} id="app-root">
+    <AppRoot appearance={theme} className="App-root" platform="ios" id="app-root">
       <div
         style={{
           display: 'flex',
