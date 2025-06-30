@@ -5,4 +5,5 @@ export * from './use-rms-service.ts';
 export * from './use-video-segment-tracker';
 export * from './useEvents';
 export * from './useStartParam';
+export * from './useTheme';
 export * from './useWhiteLabel';

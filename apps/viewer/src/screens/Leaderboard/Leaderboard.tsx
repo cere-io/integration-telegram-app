@@ -332,7 +332,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
             className={`leaderboardRow ${isLoggedInUser ? 'rowLoggedInUser' : ''}`}
           >
             <Text>{rank}</Text>
-            <Text>
+            <Text wrap="nowrap">
               {username ? username : <Truncate maxLength={8} variant="address" text={publicKey} />}
               {isLoggedInUser && <img className="userIcon" src={userIcon} alt="" />}
             </Text>

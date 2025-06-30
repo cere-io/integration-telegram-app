@@ -1,5 +1,6 @@
 import Analytics from '@tg-app/analytics';
 import { Loader, MediaList, MediaListItem, Text, Title } from '@tg-app/ui';
+import { useThemeParams } from '@vkruglikov/react-telegram-web-app';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useData } from '~/providers';
@@ -27,6 +28,9 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
   const [pendingUpdates, setPendingUpdates] = useState<Partial<Video>[]>([]);
   const eventSource = useEvents();
   const { campaignId } = useStartParam();
+  const [theme] = useThemeParams();
+
+  console.log('theme', theme);
 
   const mountTimeRef = useRef<number>(performance.now());
   const [isRendered, setIsRendered] = useState(false);
