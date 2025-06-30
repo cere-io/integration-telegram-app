@@ -108,16 +108,14 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
     const getReferralProgramMessage = useCallback(async () => {
       if (!cereWallet) return;
       const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
-      const invitationLink = organizationId
-        ? `${TELEGRAM_APP_URL}?startapp=organizationId=${organizationId}`
-        : `${TELEGRAM_APP_URL}?startapp=${campaignId}_${accountId}`;
+      const invitationLink = `${TELEGRAM_APP_URL}?startapp=${campaignId}_${accountId}`;
 
       const messageText: string = (quest as ReferralTask).message || '';
       const decodedText = messageText.replace(/\\u[0-9A-Fa-f]{4,}/g, (match) =>
         String.fromCodePoint(parseInt(match.replace('\\u', ''), 16)),
       );
       return decodedText.replace('{link}', invitationLink);
-    }, [campaignId, cereWallet, organizationId, quest]);
+    }, [campaignId, cereWallet, quest]);
 
     const handleOnReferralButtonClick = useCallback(async () => {
       const message = await getReferralProgramMessage();
