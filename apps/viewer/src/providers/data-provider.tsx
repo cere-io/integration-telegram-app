@@ -640,43 +640,39 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     async (questId: string, taskType: string, newStatus: boolean, points: number) => {
       if (!questData || !leaderboardData) return;
 
-      const updatedQuestData = [
-        {
-          ...questData[0],
-          quests: {
-            ...questData[0].quests,
-            videoTasks: questData[0].quests?.[taskType].map((quest: any) => {
-              if (quest.videoUrl === questId) {
-                return { ...quest, completed: newStatus };
-              }
-              return quest;
-            }),
-          },
+      const updatedQuestData = {
+        ...questData,
+        quests: {
+          ...questData.quests,
+          videoTasks: questData.quests?.[taskType].map((quest: any) => {
+            if (quest.videoUrl === questId) {
+              return { ...quest, completed: newStatus };
+            }
+            return quest;
+          }),
         },
-      ];
+      };
 
-      const updatedLeaderboardData = [
-        {
-          ...leaderboardData[0],
-          users: [
-            ...leaderboardData[0].users.map((user: any) => {
-              if (Object.prototype.hasOwnProperty.call(user, 'quests')) {
-                return {
-                  ...user,
-                  points: points ? user.points + points : user.points,
-                  quests: {
-                    ...user.quests,
-                    [taskType]: user.quests[taskType].map((quest: any) =>
-                      quest.videoUrl === questId ? { ...quest, completed: newStatus } : quest,
-                    ),
-                  },
-                };
-              }
-              return user;
-            }),
-          ],
-        },
-      ];
+      const updatedLeaderboardData = {
+        ...leaderboardData,
+        users: [
+          ...leaderboardData.users.map((user: any) => {
+            if (Object.prototype.hasOwnProperty.call(user, 'quests')) {
+              return {
+                ...user,
+                points: points ? user.points + points : user.points,
+                quests: {
+                  ...user.quests,
+                  [taskType]: user.quests[taskType].map((quest: any) =>
+                    quest.videoUrl === questId ? { ...quest, completed: newStatus } : quest,
+                  ),
+                },
+              };
+            }
+            return user;
+          }),
+        ],
+      };
 
       setQuestData(updatedQuestData);
       setLeaderboardData(updatedLeaderboardData);
