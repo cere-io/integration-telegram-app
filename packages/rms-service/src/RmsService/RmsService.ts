@@ -5,14 +5,21 @@ type RequestOptions = RequestInit & {
 };
 
 export class RmsService {
-  readonly baseUrl: URL;
+  readonly baseUrl: string;
 
   constructor(baseUrl: string) {
-    this.baseUrl = new URL(baseUrl.endsWith('/') ? baseUrl : baseUrl + '/');
+    this.baseUrl = baseUrl.replace(/\/+$/, '');
   }
 
-  private async request(url: string, { allowStatus = [], ...options }: RequestOptions = {}) {
-    const response = await fetch(new URL(url, this.baseUrl), {
+  buildUrl(path: string) {
+    const normalizedPath = path.replace(/^\/+/, '');
+    return `${this.baseUrl}/${normalizedPath}`;
+  }
+
+  private async request(path: string, { allowStatus = [], ...options }: RequestOptions = {}) {
+    const url = this.buildUrl(path);
+
+    const response = await fetch(url, {
       ...options,
     });
 
