@@ -1,7 +1,5 @@
-import './Media.css';
-
 import Analytics from '@tg-app/analytics';
-import { Loader, MediaList, MediaListItem, Text, Title } from '@tg-app/ui';
+import { Loader, MediaList, MediaListItem, QuestDisabledOverlay, Text, Title } from '@tg-app/ui';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useData } from '~/providers';
@@ -206,10 +204,10 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
         closer to unlocking exclusive prizes!
       </Text>
 
-      <div className="videos-overlay" style={{ position: 'relative' }}>
-        <MediaList>
-          {sortedVideos.length > 0 ? (
-            sortedVideos.map((video, index) => (
+      <MediaList>
+        {sortedVideos.length > 0 ? (
+          sortedVideos.map((video, index) => (
+            <div key={`${index}_${video.videoUrl}`} style={{ position: 'relative' }}>
               <MediaListItem
                 key={index}
                 completed={video?.completed || false}
@@ -219,40 +217,15 @@ export const Media = ({ videoUrl }: MediaTypeProps) => {
                 onClick={() => setCurrentVideo(video)}
                 rewardPoints={video.points}
               />
-            ))
-          ) : (
-            <div style={{ margin: '16px 16px 0px' }}>
-              <Text style={{ color: '#333' }}>No videos available</Text>
+              {disableQuests && <QuestDisabledOverlay />}
             </div>
-          )}
-        </MediaList>
-        {disableQuests && (
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 100,
-              background: 'rgba(255, 255, 255, 0.8)',
-              backdropFilter: 'blur(4px)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '2rem',
-              textAlign: 'center',
-              borderRadius: '12px',
-            }}
-          >
-            <div>
-              <Title level="2" weight="2" style={{ marginBottom: 8 }}>
-                Quest completion is currently unavailable
-              </Title>
-            </div>
+          ))
+        ) : (
+          <div style={{ margin: '16px 16px 0px' }}>
+            <Text style={{ color: '#333' }}>No videos available</Text>
           </div>
         )}
-      </div>
+      </MediaList>
 
       {!!currentVideo && (
         <VideoPlayer open={!!currentVideo} video={currentVideo} onClose={() => setCurrentVideo(undefined)} />
