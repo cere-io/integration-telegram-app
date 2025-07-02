@@ -13,6 +13,7 @@ import { ClipboardCheck } from 'lucide-react';
 import Markdown from 'markdown-to-jsx';
 import React, { forwardRef, useCallback, useMemo, useState } from 'react';
 
+import { WalletQuest } from '../QuestsList/WalletQuest.tsx';
 import Picture from './assets/refer_a_friend.png';
 import { QuizQuest } from './QuizQuest';
 import { RepostButton } from './RepostButton';
@@ -69,6 +70,9 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
       } else if (quest.type === 'video') {
         handleOnQuestClick(quest.videoUrl);
       } else if (quest.type === 'custom') {
+        const customQuest = quest as any;
+        const subtype = customQuest.subtype || 'generic';
+
         if (!eventSource) return;
 
         const activityEventPayload = {
@@ -76,12 +80,47 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
           campaign_id: campaignId || activeCampaignId,
           campaignId: campaignId || activeCampaignId,
         };
-        const activityEvent = new ActivityEvent(quest.startEvent, activityEventPayload);
 
+        // Dispatch start event
+        const activityEvent = new ActivityEvent(quest.startEvent, activityEventPayload);
         await eventSource.dispatchEvent(activityEvent);
 
-        if (quest.link) {
-          window.open(quest.link, '_blank');
+        // Handle different subtypes
+        switch (subtype) {
+          case 'telegram_join':
+            // For telegram join, open the invite link or channel
+            // eslint-disable-next-line no-case-declarations
+            const telegramTarget = customQuest.target_secondary || customQuest.target_value;
+            if (telegramTarget) {
+              if (telegramTarget.startsWith('http')) {
+                // It's an invite link
+                window.open(telegramTarget, '_blank');
+              } else {
+                // It's a channel username, construct t.me link
+                const username = telegramTarget.startsWith('@') ? telegramTarget.slice(1) : telegramTarget;
+                window.open(`https://t.me/${username}`, '_blank');
+              }
+            }
+            break;
+
+          case 'x_connect':
+            // For X connect, we'd need to implement OAuth flow
+            // For now, just show a placeholder
+            console.log('X Connect quest clicked - OAuth flow not implemented yet');
+            // TODO: Implement X OAuth flow
+            break;
+
+          case 'wallet':
+            // Wallet quests are handled by WalletQuest component
+            break;
+
+          case 'generic':
+          default:
+            // For generic custom quests, open the link if available
+            if (customQuest.link) {
+              window.open(customQuest.link, '_blank');
+            }
+            break;
         }
       } else {
         handleOnReferralLinkClick();
@@ -213,6 +252,63 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
 
     const isDisabled = useMemo(() => !accountId || accountId === '0x', [accountId]);
 
+    // Handle different custom quest subtypes using the new universal structure
+    if (quest.type === 'custom') {
+      const customQuest = quest as any;
+      const subtype = customQuest.subtype || 'generic';
+
+      if (subtype === 'wallet') {
+        // Parse supported chains from target_value
+        let supportedChains: ('evm' | 'solana' | 'cere_svm')[] = ['evm'];
+        try {
+          if (customQuest.target_value) {
+            const parsed = JSON.parse(customQuest.target_value);
+            const chains = Array.isArray(parsed) ? parsed : [parsed];
+            // Filter to only valid chain types
+            supportedChains = chains.filter((chain: string) => ['evm', 'solana', 'cere_svm'].includes(chain)) as (
+              | 'evm'
+              | 'solana'
+              | 'cere_svm'
+            )[];
+            // Fallback to evm if no valid chains found
+            if (supportedChains.length === 0) {
+              supportedChains = ['evm'];
+            }
+          }
+        } catch {
+          // Fallback to default if JSON parsing fails
+          supportedChains = ['evm'];
+        }
+
+        // Convert to WalletQuestData format using new universal fields
+        const walletQuestData = {
+          id: customQuest.id || `wallet-${Date.now()}`,
+          type: 'wallet' as const,
+          title: quest.title,
+          description: quest.description || '',
+          points: quest.points || 0,
+          is_mandatory: customQuest.is_mandatory || false,
+          supported_chains: supportedChains,
+          validation_required: customQuest.validation_required !== false,
+          allow_address_switching: true, // Could add this to universal fields if needed
+          completed: quest.completed || false,
+        };
+
+        return (
+          <WalletQuest
+            quest={walletQuestData}
+            onComplete={(address: string, chainType: string) => {
+              console.log('Wallet quest completed:', address, chainType);
+              // TODO: Call API to mark quest as completed
+            }}
+          />
+        );
+      }
+
+      // For telegram_join and x_connect quests, we'll show special UI in the future
+      // For now, they fall through to the regular custom quest handling below
+    }
+
     return (
       <div
         ref={ref}
@@ -293,7 +389,24 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
                             {quest.type === 'video' && 'Watch & Earn →'}
                             {quest.type === 'dex' && 'Buy tokens →'}
                             {quest.type === 'referral' && 'Copy the invite'}
-                            {quest.type === 'custom' && 'Start Quest →'}
+                            {quest.type === 'custom' &&
+                              (() => {
+                                const subtype = (quest as any).subtype || 'generic';
+                                const buttonText = (quest as any).button_text;
+
+                                if (subtype === 'wallet') return ''; // Handled by WalletQuest component
+                                if (buttonText) return buttonText;
+
+                                // Default button text based on subtype
+                                switch (subtype) {
+                                  case 'telegram_join':
+                                    return 'Join Channel →';
+                                  case 'x_connect':
+                                    return 'Connect X Account →';
+                                  default:
+                                    return 'Start Quest →';
+                                }
+                              })()}
                           </button>
                         ) : (
                           <RepostButton
@@ -341,17 +454,62 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
                 </button>
               </div>
             )}
-            {quest.type === 'custom' && (
-              <div className="instructions">
-                <Text className="instructionsTitle">Instructions: </Text>
-                {quest.instructions && <Text className="instructionsText">{formatText(quest.instructions)}</Text>}
-                {quest.link && (
-                  <button className="button" onClick={handleClick} disabled={isDisabled}>
-                    Open Link
-                  </button>
-                )}
-              </div>
-            )}
+            {quest.type === 'custom' &&
+              (() => {
+                const customQuest = quest as any;
+                const subtype = customQuest.subtype || 'generic';
+
+                // Wallet quests are handled by WalletQuest component
+                if (subtype === 'wallet') return null;
+
+                const instructions = customQuest.instructions;
+                const welcomeMessage = customQuest.welcome_message;
+                const buttonText = customQuest.button_text || 'Start';
+                const link = customQuest.link;
+
+                return (
+                  <div className="instructions">
+                    <Text className="instructionsTitle">Instructions: </Text>
+
+                    {/* Show welcome message if available */}
+                    {welcomeMessage && <Text className="instructionsText">{formatText(welcomeMessage)}</Text>}
+
+                    {/* Show detailed instructions */}
+                    {instructions && <Text className="instructionsText">{formatText(instructions)}</Text>}
+
+                    {/* Subtype-specific content */}
+                    {subtype === 'telegram_join' && (
+                      <div className="quest-subtype-info">
+                        {customQuest.target_display_name && (
+                          <Text className="instructionsText">
+                            Join: <strong>{customQuest.target_display_name}</strong>
+                          </Text>
+                        )}
+                        {customQuest.privacy_notice && (
+                          <Text className="instructionsText privacy-notice">{customQuest.privacy_notice}</Text>
+                        )}
+                      </div>
+                    )}
+
+                    {subtype === 'x_connect' && (
+                      <div className="quest-subtype-info">
+                        {customQuest.privacy_notice && (
+                          <Text className="instructionsText privacy-notice">
+                            <strong>Privacy Notice:</strong> {customQuest.privacy_notice}
+                          </Text>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Action button - for telegram_join, x_connect, and generic quests */}
+                    {(subtype === 'telegram_join' || subtype === 'x_connect' || link) && (
+                      <button className="button" onClick={handleClick} disabled={isDisabled}>
+                        {buttonText}
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
           </>
         )}
         {snackbarMessage && (
