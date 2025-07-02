@@ -26,6 +26,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     activeCampaignId,
     activeOrganizationId,
     campaignConfig,
+    disableQuests,
   } = useData();
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0 });
@@ -309,25 +310,53 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
             <div className="progress-fill" style={{ width: `${campaignProgress}%` }} />
           </div>
         </div>
-        <QuestsList>
-          {sortedQuests.length > 0 ? (
-            <FlipMove>
-              {sortedQuests.map((quest, idx) => (
-                <QuestsListItem
-                  key={`${idx}_${quest.title}`}
-                  quest={quest}
-                  campaignId={Number(campaignId || activeCampaignId)}
-                  organizationId={Number(organizationId || activeOrganizationId)}
-                  accountId={accountId}
-                  remainingDays={remainingTime.days}
-                  setActiveTab={setActiveTab}
-                />
-              ))}
-            </FlipMove>
-          ) : (
-            <Text className="no-quests">{isQuestsLoading ? 'Loading quests...' : 'There are no quests yet.'}</Text>
+        <div className="quests-overlay" style={{ position: 'relative' }}>
+          <QuestsList>
+            {sortedQuests.length > 0 ? (
+              <FlipMove>
+                {sortedQuests.map((quest, idx) => (
+                  <QuestsListItem
+                    key={`${idx}_${quest.title}`}
+                    quest={quest}
+                    campaignId={Number(campaignId || activeCampaignId)}
+                    organizationId={Number(organizationId || activeOrganizationId)}
+                    accountId={accountId}
+                    remainingDays={remainingTime.days}
+                    setActiveTab={setActiveTab}
+                  />
+                ))}
+              </FlipMove>
+            ) : (
+              <Text className="no-quests">{isQuestsLoading ? 'Loading quests...' : 'There are no quests yet.'}</Text>
+            )}
+          </QuestsList>
+          {disableQuests && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 100,
+                background: 'rgba(255, 255, 255, 0.8)',
+                backdropFilter: 'blur(4px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '2rem',
+                textAlign: 'center',
+                borderRadius: '12px',
+              }}
+            >
+              <div>
+                <Title level="2" weight="2" style={{ marginBottom: 8 }}>
+                  Quest completion is currently unavailable
+                </Title>
+              </div>
+            </div>
           )}
-        </QuestsList>
+        </div>
         {snackbarMessage && (
           <Snackbar onClose={() => setSnackbarMessage(null)} duration={5000}>
             <Title style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
