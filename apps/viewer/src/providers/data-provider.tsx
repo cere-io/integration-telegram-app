@@ -143,6 +143,7 @@ type DataContextType = {
   refetchLeaderboardForTab: () => void;
   setQuestsData: (data: any) => void;
   debugMode: boolean;
+  disableQuests: boolean;
   walletStatus: WalletStatus | null;
 };
 
@@ -162,6 +163,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [organizationLoaded, setOrganizationLoaded] = useState(false);
   const [campaignConfig, setCampaignConfig] = useState<Campaign | null>(null);
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null);
+  const [disableQuests, setDisableQuests] = useState<boolean>(true);
   const [isConfigLoaded, setIsConfigLoaded] = useState(false);
   const [questData, setQuestData] = useState<any | null>(null);
   const [leaderboardData, setLeaderboardData] = useState<any | null>(null);
@@ -509,7 +511,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     if (!campaignConfig) return;
     const campaignStatus = JSON.parse(campaignConfig?.formData as unknown as string)?.campaign?.status;
     const debugMode = JSON.parse(campaignConfig?.formData as unknown as string)?.campaign?.debug || false;
+    const disableQuests = JSON.parse(campaignConfig?.formData as unknown as string)?.campaign?.disableQuests || false;
     setDebugMode(debugMode);
+    setDisableQuests(disableQuests);
 
     // Only prepare data from config if we don't have quest data yet or campaign was paused
     if (campaignStatus === 'paused' || !questData) {
@@ -715,6 +719,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         loadCache,
         updateQuestStatus,
         debugMode: isDebugMode,
+        disableQuests,
         isLeaderboardLoading,
         isQuestsLoading,
         error,
