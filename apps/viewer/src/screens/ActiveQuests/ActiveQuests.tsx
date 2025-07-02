@@ -1,7 +1,7 @@
 import './ActiveQuests.css';
 
 import Analytics from '@tg-app/analytics';
-import { Loader, QuestsList, QuestsListItem, Snackbar, Text, Title } from '@tg-app/ui';
+import { Loader, QuestDisabledOverlay, QuestsList, QuestsListItem, Snackbar, Text, Title } from '@tg-app/ui';
 import { ClipboardCheck } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import FlipMove from 'react-flip-move';
@@ -310,11 +310,11 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
             <div className="progress-fill" style={{ width: `${campaignProgress}%` }} />
           </div>
         </div>
-        <div className="quests-overlay" style={{ position: 'relative' }}>
-          <QuestsList>
-            {sortedQuests.length > 0 ? (
-              <FlipMove>
-                {sortedQuests.map((quest, idx) => (
+        <QuestsList>
+          {sortedQuests.length > 0 ? (
+            <FlipMove>
+              {sortedQuests.map((quest, idx) => (
+                <div key={`${idx}_${quest.title}`} style={{ position: 'relative' }}>
                   <QuestsListItem
                     key={`${idx}_${quest.title}`}
                     quest={quest}
@@ -324,39 +324,14 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
                     remainingDays={remainingTime.days}
                     setActiveTab={setActiveTab}
                   />
-                ))}
-              </FlipMove>
-            ) : (
-              <Text className="no-quests">{isQuestsLoading ? 'Loading quests...' : 'There are no quests yet.'}</Text>
-            )}
-          </QuestsList>
-          {disableQuests && (
-            <div
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                zIndex: 100,
-                background: 'rgba(255, 255, 255, 0.8)',
-                backdropFilter: 'blur(4px)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '2rem',
-                textAlign: 'center',
-                borderRadius: '12px',
-              }}
-            >
-              <div>
-                <Title level="2" weight="2" style={{ marginBottom: 8 }}>
-                  Quest completion is currently unavailable
-                </Title>
-              </div>
-            </div>
+                  {disableQuests && <QuestDisabledOverlay />}
+                </div>
+              ))}
+            </FlipMove>
+          ) : (
+            <Text className="no-quests">{isQuestsLoading ? 'Loading quests...' : 'There are no quests yet.'}</Text>
           )}
-        </div>
+        </QuestsList>
         {snackbarMessage && (
           <Snackbar onClose={() => setSnackbarMessage(null)} duration={5000}>
             <Title style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
