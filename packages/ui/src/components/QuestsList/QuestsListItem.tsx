@@ -286,7 +286,7 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
             <div className="questInfo">
               <div className="textContent">
                 <Text weight="1" className="questTitle">
-                  {formatText(quest.title)}
+                  {formatText(quest.title as string)}
                 </Text>
                 <Text className="questDescription">{formatText(quest.description ?? '')}</Text>
                 {quest.type === 'referral' && (

@@ -233,6 +233,7 @@ export const CustomWalletQuest = ({ quest, initialWallet, disableAll = false }: 
       organization_id: activeOrganizationId,
       walletAddress: wallet,
       completedEvent: quest.completedEvent,
+      subtype: quest.subtype,
     };
 
     const activityEvent = new ActivityEvent(quest.startEvent, payload);
@@ -400,7 +401,7 @@ export const CustomWalletQuest = ({ quest, initialWallet, disableAll = false }: 
               </div>
             )}
 
-            {!error && walletType && network && (
+            {!error && walletType && network && wallet !== (quest as WalletCustomTask).walletAddress && (
               <div
                 style={{
                   display: 'flex',
@@ -422,7 +423,7 @@ export const CustomWalletQuest = ({ quest, initialWallet, disableAll = false }: 
             mode="cta"
             size="l"
             onClick={handleSubmit}
-            disabled={!wallet || !!error || disableAll}
+            disabled={!wallet || !!error || disableAll || wallet === (quest as WalletCustomTask).walletAddress}
             style={{
               width: '100%',
               marginTop: '6px',

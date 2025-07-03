@@ -102,6 +102,8 @@ export type BaseCustomTask = {
   type: 'custom';
   startEvent: string;
   completedEvent: string;
+  title?: string;
+  description?: string;
   questImage?: string;
   link?: string;
   instructions?: string;
