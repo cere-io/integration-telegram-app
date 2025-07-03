@@ -98,12 +98,16 @@ export type ReferralTask = BaseTask & {
 };
 
 export type CustomTask = BaseTask & {
+  id: string;
   type: 'custom';
   startEvent: string;
   completedEvent: string;
   questImage?: string;
   link?: string;
   instructions?: string;
+  subtype?: 'default' | 'wallet';
+  is_mandatory?: boolean;
+  walletAddress?: string;
 };
 
 export type Task = VideoTask | SocialTask | DexTask | QuizTask | ReferralTask | CustomTask;

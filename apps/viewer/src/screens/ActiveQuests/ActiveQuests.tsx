@@ -11,7 +11,7 @@ import { useData } from '~/providers';
 
 import { getPreviewCustomization } from '../../helpers';
 import { useStartParam, useTelegramTextColor } from '../../hooks';
-import { Quests, Task } from '../../types';
+import { CustomTask, Quests, Task } from '../../types';
 
 type ActiveQuestsProps = {
   setActiveTab: (tab: ActiveTab) => void;
@@ -28,6 +28,8 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     campaignConfig,
     disableQuests,
   } = useData();
+  const [hasMondatoryQuest, setHasMondatoryQuest] = useState(false);
+  const [isMandatoryCompleted, setIsMandatoryCompleted] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0 });
   const [mounted, setMounted] = useState(false);
@@ -42,6 +44,19 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
   const previewCustomization = getPreviewCustomization();
   const [bannerConfig, setBannerConfig] = useState<any>(null);
   const color = useTelegramTextColor();
+
+  useEffect(() => {
+    if (mounted && Object.values(questsData?.quests || {}).length > 0) {
+      const mandatoryQuest: any = Object.values(questsData.quests)
+        .flatMap((questArray) => questArray || [])
+        .find((quest: any) => quest?.is_mandatory === true);
+
+      const hasMandatoryQuest = mandatoryQuest !== undefined;
+      const isMandatoryCompleted = mandatoryQuest ? Boolean(mandatoryQuest.completed) : false;
+      setHasMondatoryQuest(hasMandatoryQuest);
+      setIsMandatoryCompleted(isMandatoryCompleted);
+    }
+  }, [mounted, questsData?.quests]);
 
   // Load banner configuration from campaign config or preview
   useEffect(() => {
@@ -184,9 +199,15 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
       ...(customTasks.map((task, index) => ({ ...task, type: 'custom' as const, originalIndex: index })) || []),
     ];
 
-    const hasOrder = allTasks.some((task) => task.order !== undefined);
+    const walletQuest = allTasks.find(
+      (task): task is CustomTask => task.type === 'custom' && task.subtype === 'wallet',
+    );
 
-    return allTasks.sort((a, b) => {
+    const remainingTasks = allTasks.filter((task) => task !== walletQuest);
+
+    const hasOrder = remainingTasks.some((task) => task.order !== undefined);
+
+    const sorted = remainingTasks.sort((a, b) => {
       if (Boolean(a.completed) !== Boolean(b.completed)) {
         return a.completed ? 1 : -1;
       }
@@ -200,6 +221,8 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
         return typeOrder.indexOf(a.type) - typeOrder.indexOf(b.type);
       }
     });
+
+    return walletQuest ? [walletQuest, ...sorted] : sorted;
   }, [quests]);
 
   const campaignDuration = new Date(questsData?.endDate).getTime() - new Date(questsData?.startDate).getTime() || 0;
@@ -316,6 +339,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
               {sortedQuests.map((quest, idx) => (
                 <div key={`${idx}_${quest.title}`} style={{ position: 'relative' }}>
                   <QuestsListItem
+                    shouldLockOthers={hasMondatoryQuest && !isMandatoryCompleted}
                     key={`${idx}_${quest.title}`}
                     quest={quest}
                     campaignId={Number(campaignId || activeCampaignId)}
