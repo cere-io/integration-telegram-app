@@ -2,6 +2,7 @@ import './Leaderboard.css';
 
 import Analytics from '@tg-app/analytics';
 import {
+  Button,
   CustomModal,
   Loader,
   QuestsModalContent,
@@ -28,6 +29,7 @@ import userIcon from './user-icon.svg';
 
 type LeaderboardProps = {
   setActiveTab: (tab: ActiveTab) => void;
+  isResultsMode?: boolean;
 };
 
 type LeaderboardItem =
@@ -70,7 +72,7 @@ const getNonLinearLeaderboard = (
   return blocks;
 };
 
-export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
+export const Leaderboard = ({ setActiveTab, isResultsMode = false }: LeaderboardProps) => {
   const {
     walletStatus,
     leaderboardData,
@@ -79,6 +81,7 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
     refetchLeaderboardForTab,
     campaignConfig,
     activeCampaignId,
+    questData,
   } = useData();
   console.log('leaderboardData', leaderboardData);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
@@ -280,6 +283,25 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
   // Show loading state only if we're actually loading and don't have any cached data
   const shouldShowLoader = isLeaderboardLoading && !leaderboardData;
 
+  // Apply custom CSS variables
+  useEffect(() => {
+    if (leaderboardConfig) {
+      const root = document.documentElement;
+
+      if (leaderboardConfig.topBannerContent?.backgroundColor) {
+        root.style.setProperty('--campaign-banner-bg-color', leaderboardConfig.topBannerContent.backgroundColor);
+      }
+
+      if (leaderboardConfig.topBannerContent?.textColor) {
+        root.style.setProperty('--campaign-banner-text-color', leaderboardConfig.topBannerContent.textColor);
+      }
+
+      if (leaderboardConfig.colors?.primary) {
+        root.style.setProperty('--leaderboard-primary-color', leaderboardConfig.colors.primary);
+      }
+    }
+  }, [leaderboardConfig]);
+
   // Create flat array of elements for FlipMove
   const renderLeaderboardItems = useMemo(() => {
     const items: JSX.Element[] = [];
@@ -345,6 +367,116 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
     return items;
   }, [leaderboardDisplayData, expandedRanges, sortedUsersWithRank, userPublicKey, handleRowClick, handleExpand]);
 
+  // Get campaign name and description for results mode
+  const campaignName = questData?.campaignName || '';
+  const campaignDescription = questData?.campaignDescription || '';
+
+  // Get results configuration from campaign config
+  const resultsConfig = useMemo(() => {
+    if (!campaignConfig || !isResultsMode) return null;
+
+    try {
+      const formData = JSON.parse((campaignConfig?.formData as unknown as string) || '{}');
+      return formData.campaign?.configuration?.results || {};
+    } catch (error) {
+      console.error('Error parsing results config:', error);
+      return {};
+    }
+  }, [campaignConfig, isResultsMode]);
+
+  // Find current user's rank and points
+  const currentUserRank = useMemo(() => {
+    if (!userPublicKey || !sortedUsersWithRank.length) return null;
+
+    const userIndex = sortedUsersWithRank.findIndex(({ user }) => user === userPublicKey);
+    if (userIndex === -1) return null;
+
+    const user = sortedUsersWithRank[userIndex];
+    return {
+      rank: user.rank,
+      points: user.points,
+      participated: true,
+    };
+  }, [userPublicKey, sortedUsersWithRank]);
+
+  // Results screen banner
+  const ResultsBanner = () => {
+    if (!isResultsMode) return null;
+
+    return (
+      <div className="results-banner">
+        <div style={{ marginTop: '8px' }}>
+          <Text style={{ fontSize: '18px', fontWeight: 'bold' }}>{campaignName + ' '}</Text>
+          {campaignDescription && (
+            <Text style={{ fontSize: '14px', color: 'var(--tgui--subtitle_text_color)', marginTop: '4px' }}>
+              {campaignDescription}
+            </Text>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // User specific panel for results
+  const UserResultsPanel = () => {
+    if (!isResultsMode) return null;
+
+    return (
+      <div className="results-user-panel">
+        {currentUserRank ? (
+          <Text style={{ fontSize: '16px', fontWeight: 'bold' }}>
+            🎉 You finished #{currentUserRank.rank} with {currentUserRank.points} pts
+          </Text>
+        ) : (
+          <Text style={{ fontSize: '16px', color: 'var(--tgui--subtitle_text_color)' }}>
+            You didn't join this campaign
+          </Text>
+        )}
+      </div>
+    );
+  };
+
+  // Results message and buttons
+  const ResultsActions = () => {
+    if (!isResultsMode) return null;
+
+    // Default URLs if not configured
+    const defaultProjectChannelUrl = 'https://t.me/cereofficial';
+
+    return (
+      <div className="results-actions">
+        {/* Project-defined markdown message */}
+        {resultsConfig?.thanksMessage && (
+          <div style={{ marginBottom: '16px' }}>
+            <Text style={{ fontSize: '14px', lineHeight: '1.5' }}>{resultsConfig.thanksMessage}</Text>
+          </div>
+        )}
+
+        {/* Show default thank you message if no custom message */}
+        {!resultsConfig?.thanksMessage && (
+          <div style={{ marginBottom: '16px' }}>
+            <Text style={{ fontSize: '14px', lineHeight: '1.5' }}>
+              🎉 Thank you for participating in this campaign! 🎉
+              <br />
+              Stay tuned for more exciting campaigns and rewards.
+            </Text>
+          </div>
+        )}
+
+        {/* Action buttons */}
+        <div className="results-buttons">
+          <Button
+            size="l"
+            onClick={() => window.open(resultsConfig?.projectChannelUrl || defaultProjectChannelUrl, '_blank')}
+            className="results-button-primary"
+          >
+            Follow Project Channel
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   if (shouldShowLoader) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
@@ -353,16 +485,45 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
     );
   }
 
-  if (error && !leaderboardData) {
+  if (error && !leaderboardData && !isResultsMode) {
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
-        <p>Error loading leaderboard: {error}</p>
+        <Text>Error loading leaderboard: {error}</Text>
+      </div>
+    );
+  }
+
+  // For results mode, show results even if there's no leaderboard data
+  if (isResultsMode && !leaderboardData && !isLeaderboardLoading) {
+    return (
+      <div className="leaderboardContainer">
+        <ResultsBanner />
+        <UserResultsPanel />
+
+        <div
+          style={{
+            padding: '32px 16px',
+            textAlign: 'center',
+            background: 'var(--tgui--secondary_bg_color)',
+            borderRadius: '12px',
+            marginBottom: '16px',
+          }}
+        >
+          <Text style={{ fontSize: '16px', color: 'var(--tgui--subtitle_text_color)' }}>
+            Campaign results are being calculated. Please check back later.
+          </Text>
+        </div>
+
+        <ResultsActions />
       </div>
     );
   }
 
   return (
     <div className="leaderboardContainer">
+      {isResultsMode && <ResultsBanner />}
+      {isResultsMode && <UserResultsPanel />}
+
       <TopWidget widgetImage={leaderboardConfig?.topWidgetImage} />
       <WalletAddressForm
         enable={areRewardsSet}
@@ -390,6 +551,9 @@ export const Leaderboard = ({ setActiveTab }: LeaderboardProps) => {
           </div>
         </div>
       </div>
+
+      {isResultsMode && <ResultsActions />}
+
       <CustomModal
         isOpen={isModalOpen}
         onClose={() => setModalOpen(false)}
