@@ -97,7 +97,7 @@ export type ReferralTask = BaseTask & {
   message?: string;
 };
 
-export type CustomTask = BaseTask & {
+export type BaseCustomTask = {
   id: string;
   type: 'custom';
   startEvent: string;
@@ -105,10 +105,25 @@ export type CustomTask = BaseTask & {
   questImage?: string;
   link?: string;
   instructions?: string;
-  subtype?: 'default' | 'wallet';
   is_mandatory?: boolean;
+  points?: number;
+  order?: number;
+  completed?: boolean;
+};
+
+export type DefaultCustomTask = BaseCustomTask & {
+  subtype?: 'default'; // default по умолчанию
+  description?: string;
+};
+
+export type WalletCustomTask = BaseCustomTask & {
+  subtype: 'wallet';
+  walletType: 'EVM-compatible' | 'Substrate' | 'Solana' | 'Near' | 'Bitcoin' | 'Other';
+  walletNetwork: string;
   walletAddress?: string;
 };
+
+export type CustomTask = DefaultCustomTask | WalletCustomTask;
 
 export type Task = VideoTask | SocialTask | DexTask | QuizTask | ReferralTask | CustomTask;
 

@@ -3,17 +3,9 @@ import './CustomWalletQuest.css';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { useEvents, useStartParam } from '@integration-telegram-app/viewer/src/hooks';
 import { useData } from '@integration-telegram-app/viewer/src/providers';
-import { CustomTask } from '@integration-telegram-app/viewer/src/types';
-import { Badge, Banner, Card, IconButton, Section, Tooltip } from '@telegram-apps/telegram-ui';
-import {
-  Button,
-  Input,
-  isEthereumAddress,
-  isValidPolkadotAddress,
-  isValidSolanaAddress,
-  Text,
-  Title,
-} from '@tg-app/ui';
+import { CustomTask, WalletCustomTask } from '@integration-telegram-app/viewer/src/types';
+import { Badge, Card, IconButton, Section, Tooltip } from '@telegram-apps/telegram-ui';
+import { Button, Input, Text, Title } from '@tg-app/ui';
 import { CheckCircle, ClipboardList, Wallet, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -23,22 +15,137 @@ interface CustomWalletQuestProps {
   disableAll?: boolean;
 }
 
-function detectNetwork(address: string): string | null {
-  if (isEthereumAddress(address)) return 'EVM';
-  if (isValidSolanaAddress(address)) return 'Solana';
-  if (isValidPolkadotAddress(address)) return 'Cere';
-  return null;
-}
+// Full validation logic
+const addressPatterns = {
+  ethereum: /^0x[a-fA-F0-9]{40}$/,
+  binance: /^0x[a-fA-F0-9]{40}$/,
+  polygon: /^0x[a-fA-F0-9]{40}$/,
+  avalanche: /^0x[a-fA-F0-9]{40}$/,
+  arbitrum: /^0x[a-fA-F0-9]{40}$/,
+  optimism: /^0x[a-fA-F0-9]{40}$/,
+  fantom: /^0x[a-fA-F0-9]{40}$/,
+  solana: /^[1-9A-HJ-NP-Za-km-z]{32,44}$/,
+  polkadot: /^[1-9A-HJ-NP-Za-km-z]{46,48}$/,
+  kusama: /^[1-9A-HJ-NP-Za-km-z]{46,48}$/,
+  near: /^[a-z0-9_-]{2,64}\.[a-z0-9_-]{2,64}$|^[a-f0-9]{64}$/,
+  bitcoin: /^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,62}$/,
+};
 
-export function validateWalletAddress(address: string): { valid: boolean; type?: string; error?: string } {
-  if (isEthereumAddress(address)) return { valid: true, type: 'evm' };
-  if (isValidSolanaAddress(address)) return { valid: true, type: 'solana' };
-  if (isValidPolkadotAddress(address)) return { valid: true, type: 'cere' };
-  return { valid: false, error: 'Invalid wallet address (must be EVM, Solana, or Cere)' };
+const addressTypePatterns: Record<string, RegExp> = {
+  'EVM-compatible': /^0x[a-fA-F0-9]{40}$/,
+  Substrate: /^[1-9A-HJ-NP-Za-km-z]{46,48}$/,
+  Solana: /^[1-9A-HJ-NP-Za-km-z]{32,44}$/,
+  Near: /^[a-z0-9_-]{2,64}\.[a-z0-9_-]{2,64}$|^[a-f0-9]{64}$/,
+  Bitcoin: /^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,62}$/,
+  Other: /^[a-zA-Z0-9]{26,128}$/,
+};
+
+const networkToPatternKey = {
+  'Ethereum Mainnet': 'ethereum',
+  Polygon: 'polygon',
+  'BNB Chain': 'binance',
+  Avalanche: 'avalanche',
+  Arbitrum: 'arbitrum',
+  Optimism: 'optimism',
+  Fantom: 'fantom',
+  Polkadot: 'polkadot',
+  Kusama: 'kusama',
+  Solana: 'solana',
+  Near: 'near',
+  Bitcoin: 'bitcoin',
+};
+
+const resolveTypeFromPatternKey = (key: string): string => {
+  if (['ethereum', 'binance', 'polygon', 'avalanche', 'arbitrum', 'optimism', 'fantom'].includes(key))
+    return 'EVM-compatible';
+  if (['polkadot', 'kusama'].includes(key)) return 'Substrate';
+  if (key === 'solana') return 'Solana';
+  if (key === 'near') return 'Near';
+  if (key === 'bitcoin') return 'Bitcoin';
+  return 'Other';
+};
+
+const validateWalletAddress = (
+  address: string,
+  addressType?: string,
+  network?: string,
+): { valid: boolean; type?: string; network?: string; error?: string } => {
+  if (!address) {
+    return { valid: false, error: 'Address is empty' };
+  }
+
+  if (network && (networkToPatternKey as any)[network]) {
+    const patternKey = (networkToPatternKey as any)[network];
+    const pattern = (addressPatterns as any)[patternKey];
+    if (!pattern.test(address)) {
+      return {
+        valid: false,
+        error: `Address is invalid for required network: ${network}`,
+      };
+    }
+
+    const resolvedType = resolveTypeFromPatternKey(patternKey);
+
+    if (addressType && resolvedType !== addressType) {
+      return {
+        valid: false,
+        error: `Expected address type "${addressType}", but got "${resolvedType}"`,
+      };
+    }
+
+    return {
+      valid: true,
+      type: resolvedType,
+      network,
+    };
+  }
+
+  if (addressType && addressTypePatterns[addressType]) {
+    const pattern = addressTypePatterns[addressType];
+    if (!pattern.test(address)) {
+      return {
+        valid: false,
+        error: `Address is not valid for address type: ${addressType}`,
+      };
+    }
+
+    return {
+      valid: true,
+      type: addressType,
+      network: network || addressType,
+    };
+  }
+
+  for (const [net, pattern] of Object.entries(addressPatterns)) {
+    if (pattern.test(address)) {
+      return {
+        valid: true,
+        type: resolveTypeFromPatternKey(net),
+        network: net,
+      };
+    }
+  }
+
+  if (/^[a-zA-Z0-9]{26,128}$/.test(address)) {
+    return {
+      valid: true,
+      type: 'Other',
+      network: 'unknown',
+    };
+  }
+
+  return {
+    valid: false,
+    error: 'Invalid wallet address',
+  };
+};
+
+function isWalletTask(task: any): task is WalletCustomTask {
+  return task.subtype === 'wallet';
 }
 
 export const CustomWalletQuest = ({ quest, initialWallet, disableAll = false }: CustomWalletQuestProps) => {
-  const [wallet, setWallet] = useState(quest?.walletAddress || '');
+  const [wallet, setWallet] = useState(isWalletTask(quest) ? quest?.walletAddress : '');
   const [error, setError] = useState<string | null>(null);
   const [completed, setCompleted] = useState(false);
   const [walletType, setWalletType] = useState<string | null>(null);
@@ -52,42 +159,43 @@ export const CustomWalletQuest = ({ quest, initialWallet, disableAll = false }: 
   const buttonRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (wallet) {
-      const result = validateWalletAddress(wallet);
-      setWalletType(result.type || null);
-      setNetwork(detectNetwork(wallet));
-      if (result.valid && result.type) {
-        let newSelected = '';
-        switch (result.type) {
-          case 'evm':
-            newSelected = 'EVM';
-            break;
-          case 'solana':
-            newSelected = 'Solana';
-            break;
-          case 'cere':
-            newSelected = 'Cere SVM';
-            break;
-        }
-        if (newSelected && newSelected !== selectedBlockchain) {
-          setSelectedBlockchain(newSelected);
-        }
-      }
-    } else {
+    if (!wallet) {
+      setError(null);
       setWalletType(null);
       setNetwork(null);
-      setSelectedBlockchain('EVM');
+      return;
     }
-  }, [selectedBlockchain, wallet]);
+
+    const result = validateWalletAddress(
+      wallet,
+      (quest as WalletCustomTask).walletType,
+      (quest as WalletCustomTask).walletNetwork,
+    );
+
+    setWalletType(result.type || null);
+    setNetwork(result.network || null);
+    setError(result.error || null);
+
+    if (result.valid && result.type) {
+      const newSelected = result.type === 'Substrate' ? 'Cere SVM' : result.type;
+      if (newSelected !== selectedBlockchain) {
+        setSelectedBlockchain(newSelected);
+      }
+    }
+  }, [wallet, quest, selectedBlockchain]);
 
   useEffect(() => {
     if (initialWallet) {
       setCompleted(true);
-      const validation = validateWalletAddress(initialWallet);
-      setWalletType(validation.type || null);
-      setNetwork(detectNetwork(initialWallet));
+      const result = validateWalletAddress(
+        initialWallet,
+        (quest as WalletCustomTask).walletType,
+        (quest as WalletCustomTask).walletNetwork,
+      );
+      setWalletType(result.type || null);
+      setNetwork(result.network || null);
     }
-  }, [initialWallet]);
+  }, [initialWallet, quest]);
 
   const handleDetectClipboard = async () => {
     try {
@@ -108,13 +216,13 @@ export const CustomWalletQuest = ({ quest, initialWallet, disableAll = false }: 
     } else {
       setError(null);
       setWalletType(result.type || null);
-      setNetwork(detectNetwork(value));
+      setNetwork(result.network || null);
     }
     return { valid: result.valid, type: result.type };
   };
 
   const handleSubmit = async () => {
-    if (!validate(wallet)) return;
+    if (!validate(wallet as string).valid) return;
     if (!eventSource) return;
 
     const payload = {
@@ -126,8 +234,6 @@ export const CustomWalletQuest = ({ quest, initialWallet, disableAll = false }: 
       walletAddress: wallet,
       completedEvent: quest.completedEvent,
     };
-
-    console.log({ quest });
 
     const activityEvent = new ActivityEvent(quest.startEvent, payload);
 
@@ -185,7 +291,7 @@ export const CustomWalletQuest = ({ quest, initialWallet, disableAll = false }: 
             )}
           </div>
           {/* Header */}
-          <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
             <div
               style={{
                 display: 'inline-flex',
@@ -208,36 +314,17 @@ export const CustomWalletQuest = ({ quest, initialWallet, disableAll = false }: 
             )}
           </div>
 
-          {/* Warning Banner */}
-          <Banner
-            header="⚠️ Attention!"
-            subheader="This quest must be completed first. Without a connected wallet, you cannot continue."
-          />
-
           {/* Blockchain Selection */}
           <Section
             header={
               <div style={{ margin: '8px 0' }}>
                 <Text className="section-header-text" caps>
-                  Choose a blockchain
+                  Please enter a valid{' '}
+                  {(quest as WalletCustomTask).walletNetwork || (quest as WalletCustomTask).walletType} wallet address
                 </Text>
               </div>
             }
-          >
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-              {['EVM', 'Solana', 'Cere SVM'].map((blockchain) => (
-                <Button
-                  key={blockchain}
-                  mode={selectedBlockchain === blockchain ? 'filled' : 'bezeled'}
-                  size="s"
-                  onClick={() => setSelectedBlockchain(blockchain)}
-                  style={{ flex: 1 }}
-                >
-                  {blockchain === 'EVM' ? 'EVM (0x...)' : blockchain}
-                </Button>
-              ))}
-            </div>
-          </Section>
+          ></Section>
 
           {/* Wallet Input */}
           <div style={{ marginBottom: '10px' }}>
@@ -346,7 +433,7 @@ export const CustomWalletQuest = ({ quest, initialWallet, disableAll = false }: 
                 }),
             }}
           >
-            {quest.walletAddress ? 'Change wallet address' : 'Confirm wallet'}
+            {(quest as WalletCustomTask).walletAddress ? 'Change wallet address' : 'Confirm wallet'}
           </Button>
         </div>
       </Card>
