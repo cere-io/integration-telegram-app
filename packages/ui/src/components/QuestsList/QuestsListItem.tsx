@@ -14,6 +14,7 @@ import Markdown from 'markdown-to-jsx';
 import React, { forwardRef, useCallback, useMemo, useState } from 'react';
 
 import Picture from './assets/refer_a_friend.png';
+import { CustomWalletQuest } from './CustomWalletQuest';
 import { QuizQuest } from './QuizQuest';
 import { RepostButton } from './RepostButton';
 
@@ -53,17 +54,30 @@ export type QuestsListItemProps = {
   setActiveTab: (tab: ActiveTab) => void;
   accountId?: string;
   campaignId?: number;
+  shouldLockOthers?: boolean;
 };
 
 export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivElement, QuestsListItemProps>(
-  ({ quest, accountId, campaignId, organizationId, remainingDays, setActiveTab }, ref) => {
+  ({ quest, accountId, campaignId, organizationId, shouldLockOthers, remainingDays, setActiveTab }, ref) => {
     const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
+    const isMandatory = quest.type === 'custom' && quest.is_mandatory === true;
+    const isLocked = shouldLockOthers && !isMandatory;
 
     const cereWallet = useCereWallet();
     const { activeCampaignId } = useData();
     const eventSource = useEvents();
 
+    const lockedStyle: React.CSSProperties = isLocked
+      ? {
+          pointerEvents: 'none',
+          opacity: 0.5,
+          userSelect: 'none',
+          zIndex: 10,
+        }
+      : {};
+
     const handleClick = async () => {
+      if (isLocked) return;
       if (quest.type === 'dex') {
         handleOnDexClick();
       } else if (quest.type === 'video') {
@@ -95,6 +109,7 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
     }, [quest]);
 
     const handleOnQuestClick = (videoUrl: string | undefined) => {
+      if (isLocked) return;
       if (videoUrl && videoUrl !== '') {
         setActiveTab({
           index: 2,
@@ -213,147 +228,154 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
 
     const isDisabled = useMemo(() => !accountId || accountId === '0x', [accountId]);
 
+    if (quest.type === 'quiz') {
+      return (
+        <div style={lockedStyle}>
+          {quest?.completed && <div className="overlay" />}
+          <QuizQuest quizTask={quest} isDisabled={isDisabled} />
+        </div>
+      );
+    }
+
+    if (quest.type === 'custom' && quest.subtype === 'wallet') {
+      return <CustomWalletQuest quest={quest} />;
+    }
+
     return (
       <div
         ref={ref}
         className="questCard"
+        style={lockedStyle}
         onClick={() => {
           if (quest.type !== 'video' && quest.type !== 'referral') {
             handleClick();
           }
         }}
       >
-        {quest.type === 'quiz' ? (
-          <div>
-            {quest?.completed && <div className="overlay" />}
-            <QuizQuest quizTask={quest} isDisabled={isDisabled} />
-          </div>
-        ) : (
-          <>
-            {quest?.completed && <div className="overlay" />}
+        <>
+          {quest?.completed && <div className="overlay" />}
 
-            <div
-              className="questThumbnailBlock"
-              style={{ cursor: 'pointer' }}
-              onClick={() => {
-                if (quest.type === 'video') {
-                  handleOnQuestClick((quest as unknown as VideoTask).videoUrl);
-                }
-              }}
-            >
-              {renderThumbnail}
-              <div className="pointsBlock">
-                {quest?.points && quest.points > 0 && (
-                  <div className="points">
-                    <Text as="span" style={{ whiteSpace: 'nowrap' }}>
-                      {quest.points} Pts
-                    </Text>
-                  </div>
-                )}
-                {quest.type === 'referral' && quest?.percents > 0 && (
-                  <div className="points">
-                    <Text as="span" style={{ whiteSpace: 'nowrap' }}>
-                      {quest.percents} %
-                    </Text>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="questContent">
-              <div className="questInfo">
-                <div className="textContent">
-                  <Text weight="1" className="questTitle">
-                    {formatText(quest.title)}
+          <div
+            className="questThumbnailBlock"
+            style={{ cursor: 'pointer' }}
+            onClick={() => {
+              if (quest.type === 'video') {
+                handleOnQuestClick((quest as unknown as VideoTask).videoUrl);
+              }
+            }}
+          >
+            {renderThumbnail}
+            <div className="pointsBlock">
+              {quest?.points && quest.points > 0 && (
+                <div className="points">
+                  <Text as="span" style={{ whiteSpace: 'nowrap' }}>
+                    {quest.points} Pts
                   </Text>
-                  <Text className="questDescription">{formatText(quest.description ?? '')}</Text>
-                  {quest.type === 'referral' && (
-                    <Text className="questDescription">
-                      Your referrals:{' '}
-                      {isArrayOfInvitees(quest.invitees || [])
-                        ? (quest.invitees as string[])?.length || 0
-                        : quest.invitees || 0}
-                    </Text>
-                  )}
-                  <div className="questFooter">
-                    <Text className="timeRemaining">{remainingDays}d remaining</Text>
-                    <div className="questActions">
-                      {quest.completed && <Text style={{ color: '#0ee640' }}>Completed</Text>}
+                </div>
+              )}
+              {quest.type === 'referral' && quest?.percents > 0 && (
+                <div className="points">
+                  <Text as="span" style={{ whiteSpace: 'nowrap' }}>
+                    {quest.percents} %
+                  </Text>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="questContent">
+            <div className="questInfo">
+              <div className="textContent">
+                <Text weight="1" className="questTitle">
+                  {formatText(quest.title as string)}
+                </Text>
+                <Text className="questDescription">{formatText(quest.description ?? '')}</Text>
+                {quest.type === 'referral' && (
+                  <Text className="questDescription">
+                    Your referrals:{' '}
+                    {isArrayOfInvitees(quest.invitees || [])
+                      ? (quest.invitees as string[])?.length || 0
+                      : quest.invitees || 0}
+                  </Text>
+                )}
+                <div className="questFooter">
+                  <Text className="timeRemaining">{remainingDays}d remaining</Text>
+                  <div className="questActions">
+                    {quest.completed && <Text style={{ color: '#0ee640' }}>Completed</Text>}
 
-                      {!quest.completed &&
-                        (quest.type !== 'social' ? (
-                          <button
-                            className="startButton"
-                            disabled={isDisabled}
-                            onClick={() => {
-                              if (quest.type === 'video' || quest.type === 'referral') {
-                                handleClick();
-                              }
-                            }}
-                          >
-                            {quest.type === 'video' && 'Watch & Earn →'}
-                            {quest.type === 'dex' && 'Buy tokens →'}
-                            {quest.type === 'referral' && 'Copy the invite'}
-                            {quest.type === 'custom' && 'Start Quest →'}
-                          </button>
-                        ) : (
-                          <RepostButton
-                            card
-                            quest={quest}
-                            disabled={isDisabled}
-                            accountId={accountId}
-                            campaignId={campaignId}
-                          >
-                            <button className="startButton">Share now!</button>
-                          </RepostButton>
-                        ))}
-                    </div>
+                    {!quest.completed &&
+                      (quest.type !== 'social' ? (
+                        <button
+                          className="startButton"
+                          disabled={isDisabled}
+                          onClick={() => {
+                            if (quest.type === 'video' || quest.type === 'referral') {
+                              handleClick();
+                            }
+                          }}
+                        >
+                          {quest.type === 'video' && 'Watch & Earn →'}
+                          {quest.type === 'dex' && 'Buy tokens →'}
+                          {quest.type === 'referral' && 'Copy the invite'}
+                          {quest.type === 'custom' && 'Start Quest →'}
+                        </button>
+                      ) : (
+                        <RepostButton
+                          card
+                          quest={quest}
+                          disabled={isDisabled}
+                          accountId={accountId}
+                          campaignId={campaignId}
+                        >
+                          <button className="startButton">Share now!</button>
+                        </RepostButton>
+                      ))}
                   </div>
                 </div>
               </div>
             </div>
+          </div>
 
-            {quest.type === 'social' && (
-              <div className="instructions">
-                <Text className="instructionsTitle">Instructions: </Text>
-                <Text className="instructionsText">
-                  {quest.instructions
-                    ? formatText(quest.instructions)
-                    : "Click the 'Repost' button to share this tweet on your Twitter account. Make sure to keep the @cereofficial mention and hashtags for your entry to be valid."}
-                </Text>
-                <RepostButton quest={quest} accountId={accountId} disabled={isDisabled} campaignId={campaignId}>
-                  Repost
-                </RepostButton>
-              </div>
-            )}
-            {quest.type === 'dex' && (
-              <div className="instructions">
-                <button className="button" disabled={isDisabled}>
-                  Buy tokens
+          {quest.type === 'social' && (
+            <div className="instructions">
+              <Text className="instructionsTitle">Instructions: </Text>
+              <Text className="instructionsText">
+                {quest.instructions
+                  ? formatText(quest.instructions)
+                  : "Click the 'Repost' button to share this tweet on your Twitter account. Make sure to keep the @cereofficial mention and hashtags for your entry to be valid."}
+              </Text>
+              <RepostButton quest={quest} accountId={accountId} disabled={isDisabled} campaignId={campaignId}>
+                Repost
+              </RepostButton>
+            </div>
+          )}
+          {quest.type === 'dex' && (
+            <div className="instructions">
+              <button className="button" disabled={isDisabled}>
+                Buy tokens
+              </button>
+            </div>
+          )}
+          {quest.type === 'referral' && (
+            <div className="instructions">
+              <Text className="instructionsTitle">Instructions: </Text>
+              <Text className="instructionsText">{formatText(quest.instructions)}</Text>
+              <button className="button" onClick={handleOnReferralButtonClick} disabled={isDisabled}>
+                Refer-a-friend
+              </button>
+            </div>
+          )}
+          {quest.type === 'custom' && (
+            <div className="instructions">
+              <Text className="instructionsTitle">Instructions: </Text>
+              {quest.instructions && <Text className="instructionsText">{formatText(quest.instructions)}</Text>}
+              {quest.link && (
+                <button className="button" onClick={handleClick} disabled={isDisabled}>
+                  Open Link
                 </button>
-              </div>
-            )}
-            {quest.type === 'referral' && (
-              <div className="instructions">
-                <Text className="instructionsTitle">Instructions: </Text>
-                <Text className="instructionsText">{formatText(quest.instructions)}</Text>
-                <button className="button" onClick={handleOnReferralButtonClick} disabled={isDisabled}>
-                  Refer-a-friend
-                </button>
-              </div>
-            )}
-            {quest.type === 'custom' && (
-              <div className="instructions">
-                <Text className="instructionsTitle">Instructions: </Text>
-                {quest.instructions && <Text className="instructionsText">{formatText(quest.instructions)}</Text>}
-                {quest.link && (
-                  <button className="button" onClick={handleClick} disabled={isDisabled}>
-                    Open Link
-                  </button>
-                )}
-              </div>
-            )}
-          </>
-        )}
+              )}
+            </div>
+          )}
+        </>
         {snackbarMessage && (
           <Snackbar style={{ zIndex: 99999 }} onClose={() => setSnackbarMessage(null)} duration={5000}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

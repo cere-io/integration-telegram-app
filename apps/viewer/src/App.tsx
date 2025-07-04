@@ -139,7 +139,8 @@ export const App = () => {
       if (
         (event?.payload && event.payload.integrationScriptResults[0].data.eventType === 'SEGMENT_WATCHED') ||
         (event?.payload && event.payload.integrationScriptResults[0].data.eventType === 'X_REPOST') ||
-        (event?.payload && event.payload.integrationScriptResults[0].data.eventType === 'QUESTION_ANSWERED')
+        (event?.payload && event.payload.integrationScriptResults[0].data.eventType === 'QUESTION_ANSWERED') ||
+        (event?.payload && event.payload.integrationScriptResults[0].data.type === 'custom')
       ) {
         const results = event?.payload?.integrationScriptResults;
         const result = results[0];

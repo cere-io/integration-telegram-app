@@ -6,13 +6,14 @@ import { useData } from '@integration-telegram-app/viewer/src/providers';
 import { QuizTask } from '@integration-telegram-app/viewer/src/types';
 import { Text, Title } from '@telegram-apps/telegram-ui';
 import confetti from 'canvas-confetti';
-import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, CSSProperties, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { ProgressBar, ProgressFill } from '../ProgressBar';
 
 type QuizQuestProps = {
   quizTask: QuizTask;
   isDisabled?: boolean;
+  lockedStyle?: CSSProperties;
 };
 
 export const QuizQuest = ({ quizTask, isDisabled }: QuizQuestProps) => {
