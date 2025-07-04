@@ -133,6 +133,7 @@ type DataContextType = {
   campaignConfigLoaded: boolean;
   campaignExpired: boolean;
   campaignPaused: boolean;
+  campaignCompleted: boolean;
   isLeaderboardLoading: boolean;
   isQuestsLoading: boolean;
   error: string | null;
@@ -169,6 +170,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [leaderboardData, setLeaderboardData] = useState<any | null>(null);
   const [isCampaignExpired, setIsCampaignExpired] = useState(false);
   const [isCampaignPaused, setIsCampaignPaused] = useState(false);
+  const [isCampaignCompleted, setIsCampaignCompleted] = useState(false);
   const [isDebugMode, setDebugMode] = useState(false);
   const [walletStatus, setWalletStatus] = useState(null);
 
@@ -515,6 +517,11 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     setDebugMode(debugMode);
     setDisableQuests(disableQuests);
 
+    // Check if campaign is completed
+    if (campaignStatus === 'completed') {
+      setIsCampaignCompleted(true);
+    }
+
     // Only prepare data from config if we don't have quest data yet or campaign was paused
     if (campaignStatus === 'paused' || !questData) {
       prepareDataFromConfig();
@@ -579,6 +586,17 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         setIsCampaignPaused(true);
       }
 
+      // Check if campaign is completed by status or if end time has passed
+      if (
+        formDataCampaign.status === 'completed' ||
+        (remainingTime.days === 0 &&
+          remainingTime.hours === 0 &&
+          remainingTime.minutes === 0 &&
+          remainingTime.seconds === 0)
+      ) {
+        setIsCampaignCompleted(true);
+      }
+
       return {
         quests,
         campaignId: response.campaignId,
@@ -606,6 +624,8 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
     if (remainingMilliseconds <= 0) {
       setIsCampaignExpired(true);
+      // Also mark as completed if time has expired
+      setIsCampaignCompleted(true);
     }
 
     return {
@@ -715,6 +735,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
         campaignConfigLoaded: isConfigLoaded,
         campaignExpired: isCampaignExpired,
         campaignPaused: isCampaignPaused,
+        campaignCompleted: isCampaignCompleted,
         updateData,
         loadCache,
         updateQuestStatus,

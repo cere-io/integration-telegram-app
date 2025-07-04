@@ -80,3 +80,84 @@
 .userIcon {
   margin-left: 4px;
 }
+
+/* Results screen specific styles */
+.results-banner {
+  position: relative;
+  background: var(--tgui--bg_color);
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  border: 2px solid #6864f4;
+  text-align: center;
+}
+
+.results-banner::before {
+  content: "Campaign Ended";
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ef4444;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: bold;
+  font-family: sans-serif;
+}
+
+.results-user-panel {
+  background: var(--tgui--secondary_bg_color);
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.results-actions {
+  background: var(--tgui--secondary_bg_color);
+  padding: 16px;
+  border-radius: 12px;
+  margin-top: 16px;
+  text-align: center;
+}
+
+.results-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.results-button-primary {
+  background: var(--tgui--button_color) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 12px 24px !important;
+  font-size: 16px !important;
+  font-weight: bold !important;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.results-button-primary:hover {
+  opacity: 0.9;
+}
+
+.results-button-secondary {
+  background: transparent !important;
+  color: var(--tgui--button_color) !important;
+  border: 2px solid var(--tgui--button_color) !important;
+  border-radius: 8px !important;
+  padding: 12px 24px !important;
+  font-size: 16px !important;
+  font-weight: bold !important;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.results-button-secondary:hover {
+  background: var(--tgui--button_color) !important;
+  color: white !important;
+}
