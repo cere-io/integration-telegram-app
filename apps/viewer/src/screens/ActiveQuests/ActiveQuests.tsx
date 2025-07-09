@@ -51,7 +51,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
         .flatMap((questArray) => questArray || [])
         .filter((quest: any) => quest?.is_mandatory === true);
 
-      const hasMandatoryQuest = mandatoryQuests.length > 0 !== undefined;
+      const hasMandatoryQuest = mandatoryQuests.length > 0;
       const isMandatoryCompleted =
         mandatoryQuests.length > 0 ? mandatoryQuests.every((q: any) => Boolean(q.completed)) : false;
       setHasMondatoryQuest(hasMandatoryQuest);
