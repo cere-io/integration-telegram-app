@@ -47,12 +47,13 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
 
   useEffect(() => {
     if (mounted && Object.values(questsData?.quests || {}).length > 0) {
-      const mandatoryQuest: any = Object.values(questsData.quests)
+      const mandatoryQuests: any = Object.values(questsData.quests)
         .flatMap((questArray) => questArray || [])
-        .find((quest: any) => quest?.is_mandatory === true);
+        .filter((quest: any) => quest?.is_mandatory === true);
 
-      const hasMandatoryQuest = mandatoryQuest !== undefined;
-      const isMandatoryCompleted = mandatoryQuest ? Boolean(mandatoryQuest.completed) : false;
+      const hasMandatoryQuest = mandatoryQuests.length > 0 !== undefined;
+      const isMandatoryCompleted =
+        mandatoryQuests.length > 0 ? mandatoryQuests.every((q: any) => Boolean(q.completed)) : false;
       setHasMondatoryQuest(hasMandatoryQuest);
       setIsMandatoryCompleted(isMandatoryCompleted);
     }
