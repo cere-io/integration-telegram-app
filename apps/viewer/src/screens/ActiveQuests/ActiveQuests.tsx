@@ -203,7 +203,11 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
       (task): task is CustomTask => task.type === 'custom' && task.subtype === 'wallet',
     );
 
-    const remainingTasks = allTasks.filter((task) => task !== walletQuest);
+    const connectXQuest = allTasks.find(
+      (task): task is CustomTask => task.type === 'custom' && task.subtype === 'x_connect',
+    );
+
+    const remainingTasks = allTasks.filter((task) => task !== walletQuest && task !== connectXQuest);
 
     const hasOrder = remainingTasks.some((task) => task.order !== undefined);
 
@@ -222,7 +226,11 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
       }
     });
 
-    return walletQuest ? [walletQuest, ...sorted] : sorted;
+    const result = [];
+    if (walletQuest) result.push(walletQuest);
+    if (connectXQuest) result.push(connectXQuest);
+    result.push(...sorted);
+    return result;
   }, [quests]);
 
   const campaignDuration = new Date(questsData?.endDate).getTime() - new Date(questsData?.startDate).getTime() || 0;
@@ -337,10 +345,10 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
           {sortedQuests.length > 0 ? (
             <FlipMove>
               {sortedQuests.map((quest, idx) => (
-                <div key={`${idx}_${quest.title}`} style={{ position: 'relative' }}>
+                <div key={`${idx}_${quest?.title}`} style={{ position: 'relative' }}>
                   <QuestsListItem
                     shouldLockOthers={hasMondatoryQuest && !isMandatoryCompleted}
-                    key={`${idx}_${quest.title}`}
+                    key={`${idx}_${quest?.title}`}
                     quest={quest}
                     campaignId={Number(campaignId || activeCampaignId)}
                     organizationId={Number(organizationId || activeOrganizationId)}

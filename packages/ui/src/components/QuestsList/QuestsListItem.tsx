@@ -94,7 +94,10 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
 
         await eventSource.dispatchEvent(activityEvent);
 
-        if (quest.link) {
+        // Special handling for X Connect subtype
+        if (quest.subtype === 'x_connect') {
+          handleOnXConnectClick();
+        } else if (quest.link) {
           window.open(quest.link, '_blank');
         }
       } else {
@@ -160,6 +163,21 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
       }
     }, [getReferralProgramMessage]);
 
+    const handleOnXConnectClick = useCallback(() => {
+      if (quest.type !== 'custom' || quest.subtype !== 'x_connect') return;
+      const oauthUrl = 'https://twitter.com/i/oauth2/authorize';
+      const params = new URLSearchParams({
+        response_type: 'code',
+        client_id: process.env.REACT_APP_X_CLIENT_ID || 'YOUR_CLIENT_ID',
+        scope: 'tweet.read tweet.write users.read offline.access',
+        state: 'state_' + Math.random().toString(36).substring(2, 15),
+        code_challenge: 'challenge_' + Math.random().toString(36).substring(2, 15),
+        code_challenge_method: 'S256',
+      });
+
+      window.open(`${oauthUrl}?${params.toString()}`, '_blank');
+    }, [quest]);
+
     const TwitterIcon = () => (
       <div className="iconBase">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 450 450" fill="none">
@@ -212,8 +230,13 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
         return <DexIcon />;
       }
       if (quest.type === 'quiz') return;
-      if (quest.type === 'custom' && quest.questImage) {
-        return <img className="questThumbnail" src={quest.questImage} alt={quest.title} />;
+      if (quest.type === 'custom') {
+        if (quest.subtype === 'x_connect') {
+          return <TwitterIcon />;
+        }
+        if (quest.questImage) {
+          return <img className="questThumbnail" src={quest.questImage} alt={quest.title} />;
+        }
       }
       if (quest.type === 'referral') {
         return (
@@ -316,7 +339,8 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
                           {quest.type === 'video' && 'Watch & Earn →'}
                           {quest.type === 'dex' && 'Buy tokens →'}
                           {quest.type === 'referral' && 'Copy the invite'}
-                          {quest.type === 'custom' && 'Start Quest →'}
+                          {quest.type === 'custom' && quest.subtype === 'x_connect' && 'Connect X Account →'}
+                          {quest.type === 'custom' && quest.subtype !== 'x_connect' && 'Start Quest →'}
                         </button>
                       ) : (
                         <RepostButton
@@ -364,7 +388,20 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
               </button>
             </div>
           )}
-          {quest.type === 'custom' && (
+          {quest.type === 'custom' && quest.subtype === 'x_connect' && (
+            <div className="instructions">
+              <Text className="instructionsTitle">Instructions: </Text>
+              {quest.instructions && <Text className="instructionsText">{formatText(quest.instructions)}</Text>}
+              <Text className="instructionsText">
+                By connecting your X account, you authorize the app to read your public tweets and profile information.
+                This data is used to verify quest completion and enhance your experience.
+              </Text>
+              <button className="button" onClick={handleClick} disabled={isDisabled}>
+                Connect X Account
+              </button>
+            </div>
+          )}
+          {quest.type === 'custom' && quest.subtype !== 'x_connect' && (
             <div className="instructions">
               <Text className="instructionsTitle">Instructions: </Text>
               {quest.instructions && <Text className="instructionsText">{formatText(quest.instructions)}</Text>}

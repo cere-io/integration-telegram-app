@@ -114,7 +114,7 @@ export type BaseCustomTask = {
 };
 
 export type DefaultCustomTask = BaseCustomTask & {
-  subtype?: 'default'; // default по умолчанию
+  subtype?: 'default';
   description?: string;
 };
 
@@ -125,7 +125,11 @@ export type WalletCustomTask = BaseCustomTask & {
   walletAddress?: string;
 };
 
-export type CustomTask = DefaultCustomTask | WalletCustomTask;
+export type XConnectCustomTask = BaseCustomTask & {
+  subtype: 'x_connect';
+};
+
+export type CustomTask = DefaultCustomTask | WalletCustomTask | XConnectCustomTask;
 
 export type Task = VideoTask | SocialTask | DexTask | QuizTask | ReferralTask | CustomTask;
 
