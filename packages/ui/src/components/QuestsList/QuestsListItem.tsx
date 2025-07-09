@@ -3,7 +3,7 @@ import './QuestsListItem.css';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { ActiveTab } from '@integration-telegram-app/viewer/src/App.tsx';
 import { useCereWallet } from '@integration-telegram-app/viewer/src/cere-wallet';
-import { TELEGRAM_APP_URL } from '@integration-telegram-app/viewer/src/constants.ts';
+import { APP_X_CLIENT_ID, TELEGRAM_APP_URL } from '@integration-telegram-app/viewer/src/constants.ts';
 import { useEvents } from '@integration-telegram-app/viewer/src/hooks';
 import { useData } from '@integration-telegram-app/viewer/src/providers';
 import { ReferralTask, Task, VideoTask } from '@integration-telegram-app/viewer/src/types';
@@ -167,7 +167,7 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
       const oauthUrl = 'https://twitter.com/i/oauth2/authorize';
       const params = new URLSearchParams({
         response_type: 'code',
-        client_id: process.env.REACT_APP_X_CLIENT_ID || 'YOUR_CLIENT_ID',
+        client_id: APP_X_CLIENT_ID,
         scope: 'tweet.read tweet.write users.read offline.access',
         state: 'state_' + Math.random().toString(36).substring(2, 15),
         code_challenge: 'challenge_' + Math.random().toString(36).substring(2, 15),

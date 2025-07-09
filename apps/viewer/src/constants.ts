@@ -19,3 +19,5 @@ export const RMS_URL = import.meta.env.VITE_RMS_URL;
 export const RULE_SERVICE_URL = import.meta.env.VITE_RULE_SERVICE_URL;
 
 export const VIDEO_SEGMENT_LENGTH = import.meta.env.VITE_APP_VIDEO_SEGMENT_LENGTH || 10;
+
+export const APP_X_CLIENT_ID = import.meta.env.VITE_APP_X_CLIENT_ID;
