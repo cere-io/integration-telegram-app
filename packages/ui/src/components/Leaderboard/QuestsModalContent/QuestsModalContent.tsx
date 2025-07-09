@@ -65,7 +65,6 @@ export const QuestsModalContent = ({ currentUser, onRowClick, widgetImage, setAc
     ...(quests?.quizTasks.map((task, index) => ({ ...task, type: 'quiz' as const, originalIndex: index })) || []),
     ...(quests?.referralTask ? [{ ...quests?.referralTask, type: 'referral' as const }] : []),
     ...(quests?.customTasks?.map((task) => ({ ...task, type: 'custom' as const })) || []),
-
   ];
 
   const completedCount = allTasks.filter((task) => task.completed).length;
