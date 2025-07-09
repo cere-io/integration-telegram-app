@@ -94,7 +94,6 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
 
         await eventSource.dispatchEvent(activityEvent);
 
-        // Special handling for X Connect subtype
         if (quest.subtype === 'x_connect') {
           handleOnXConnectClick();
         } else if (quest.link) {
@@ -232,7 +231,11 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
       if (quest.type === 'quiz') return;
       if (quest.type === 'custom') {
         if (quest.subtype === 'x_connect') {
-          return <TwitterIcon />;
+          return quest?.questImage ? (
+            <img className="questThumbnail" src={quest.questImage} alt={quest.title} />
+          ) : (
+            <TwitterIcon />
+          );
         }
         if (quest.questImage) {
           return <img className="questThumbnail" src={quest.questImage} alt={quest.title} />;
@@ -383,7 +386,14 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
             <div className="instructions">
               <Text className="instructionsTitle">Instructions: </Text>
               <Text className="instructionsText">{formatText(quest.instructions)}</Text>
-              <button className="button" onClick={handleOnReferralButtonClick} disabled={isDisabled}>
+              <button
+                className="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOnReferralButtonClick();
+                }}
+                disabled={isDisabled}
+              >
                 Refer-a-friend
               </button>
             </div>
@@ -392,11 +402,14 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
             <div className="instructions">
               <Text className="instructionsTitle">Instructions: </Text>
               {quest.instructions && <Text className="instructionsText">{formatText(quest.instructions)}</Text>}
-              <Text className="instructionsText">
-                By connecting your X account, you authorize the app to read your public tweets and profile information.
-                This data is used to verify quest completion and enhance your experience.
-              </Text>
-              <button className="button" onClick={handleClick} disabled={isDisabled}>
+              <button
+                className="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleClick();
+                }}
+                disabled={isDisabled}
+              >
                 Connect X Account
               </button>
             </div>
@@ -406,7 +419,14 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
               <Text className="instructionsTitle">Instructions: </Text>
               {quest.instructions && <Text className="instructionsText">{formatText(quest.instructions)}</Text>}
               {quest.link && (
-                <button className="button" onClick={handleClick} disabled={isDisabled}>
+                <button
+                  className="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleClick();
+                  }}
+                  disabled={isDisabled}
+                >
                   Open Link
                 </button>
               )}
