@@ -3,12 +3,13 @@ import './QuestsListItem.css';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { ActiveTab } from '@integration-telegram-app/viewer/src/App.tsx';
 import { useCereWallet } from '@integration-telegram-app/viewer/src/cere-wallet';
-import { TELEGRAM_APP_URL } from '@integration-telegram-app/viewer/src/constants.ts';
+import { TELEGRAM_APP_URL, X_CLIENT_ID, X_REDIRECT_URI } from '@integration-telegram-app/viewer/src/constants.ts';
 import { useEvents } from '@integration-telegram-app/viewer/src/hooks';
 import { useData } from '@integration-telegram-app/viewer/src/providers';
-import { ReferralTask, Task, VideoTask } from '@integration-telegram-app/viewer/src/types';
+import { CustomTask, ReferralTask, Task, VideoTask } from '@integration-telegram-app/viewer/src/types';
 import { Text } from '@telegram-apps/telegram-ui';
 import { Snackbar } from '@tg-app/ui';
+import { sha256, toUtf8Bytes } from 'ethers';
 import { ClipboardCheck } from 'lucide-react';
 import Markdown from 'markdown-to-jsx';
 import React, { forwardRef, useCallback, useMemo, useState } from 'react';
@@ -17,6 +18,20 @@ import Picture from './assets/refer_a_friend.png';
 import { CustomWalletQuest } from './CustomWalletQuest';
 import { QuizQuest } from './QuizQuest';
 import { RepostButton } from './RepostButton';
+import { XConnectQuest } from './XConnectQuest';
+
+// Type guard functions
+function isXConnectCustomTask(
+  task: any,
+): task is { subtype: 'x_connect'; instructions?: string; questImage?: string; title?: string } {
+  return task && task.subtype === 'x_connect';
+}
+
+function isDefaultCustomTask(
+  task: any,
+): task is { subtype?: 'default'; instructions?: string; link?: string; questImage?: string; title?: string } {
+  return !task.subtype || task.subtype === 'default';
+}
 
 function isArrayOfInvitees(val: string[] | number): val is string[] {
   if (!val) return false;
@@ -64,7 +79,7 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
     const isLocked = shouldLockOthers && !isMandatory;
 
     const cereWallet = useCereWallet();
-    const { activeCampaignId } = useData();
+    const { activeCampaignId, activeOrganizationId } = useData();
     const eventSource = useEvents();
 
     const lockedStyle: React.CSSProperties = isLocked
@@ -86,15 +101,20 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
         if (!eventSource) return;
 
         const activityEventPayload = {
-          organization_id: organizationId,
+          quest_id: quest.id,
+          custom_quest: true,
+          timestamp: new Date().toISOString(),
+          organization_id: organizationId || activeOrganizationId,
           campaign_id: campaignId || activeCampaignId,
           campaignId: campaignId || activeCampaignId,
         };
-        const activityEvent = new ActivityEvent(quest.startEvent, activityEventPayload);
+        const activityEvent = new ActivityEvent(quest.completedEvent, activityEventPayload);
 
         await eventSource.dispatchEvent(activityEvent);
 
-        if (quest.link) {
+        if (quest.subtype === 'x_connect') {
+          handleOnXConnectClick();
+        } else if (quest.link) {
           window.open(quest.link, '_blank');
         }
       } else {
@@ -160,6 +180,55 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
       }
     }, [getReferralProgramMessage]);
 
+    const handleOnXConnectClick = useCallback(async () => {
+      if (quest.type !== 'custom' || quest.subtype !== 'x_connect') return;
+      const account = await cereWallet.getSigner({ type: 'ed25519' }).getAccount();
+      const publicKey = account.publicKey;
+      const signer = cereWallet.getSigner({ type: 'ed25519' });
+
+      // Create JWT header
+      const header = {
+        alg: 'ed25519',
+        typ: 'JWT',
+      };
+
+      // Create JWT payload
+      const now = Math.floor(Date.now() / 1000);
+      const payload = {
+        publicKey: `0x${publicKey}`,
+        iat: now,
+        exp: now + 600, // 10 minutes expiration
+      };
+
+      // Base64URL encode header and payload
+      const headerEncoded = btoa(JSON.stringify(header)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+      const payloadEncoded = btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+      // Sign header.payload with wallet's private key
+      const message = `${headerEncoded}.${payloadEncoded}`;
+      const signatureText = await signer.signMessage(message);
+
+      // Base64URL encode signature
+      const signatureEncoded = btoa(signatureText).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+      // Construct final JWT token
+      const jwtToken = `${headerEncoded}.${payloadEncoded}.${signatureEncoded}`;
+
+      // Create OAuth URL with JWT token as state
+      const oauthUrl = 'https://twitter.com/i/oauth2/authorize';
+      const params = new URLSearchParams({
+        response_type: 'code',
+        client_id: X_CLIENT_ID,
+        redirect_uri: X_REDIRECT_URI,
+        scope: 'tweet.read users.read offline.access',
+        state: jwtToken,
+        code_challenge: sha256(toUtf8Bytes('temporary_code_verifier')),
+        code_challenge_method: 'S256',
+      });
+      window.open(`${oauthUrl}?${params.toString()}`, '_blank');
+    }, [quest, cereWallet]);
+
     const TwitterIcon = () => (
       <div className="iconBase">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 450 450" fill="none">
@@ -212,8 +281,19 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
         return <DexIcon />;
       }
       if (quest.type === 'quiz') return;
-      if (quest.type === 'custom' && quest.questImage) {
-        return <img className="questThumbnail" src={quest.questImage} alt={quest.title} />;
+      if (quest.type === 'custom') {
+        if (isXConnectCustomTask(quest)) {
+          return quest?.questImage ? (
+            <img className="questThumbnail" src={quest.questImage} alt={quest.title} />
+          ) : (
+            <TwitterIcon />
+          );
+        }
+        if (isDefaultCustomTask(quest)) {
+          if (quest.questImage) {
+            return <img className="questThumbnail" src={quest.questImage} alt={quest.title} />;
+          }
+        }
       }
       if (quest.type === 'referral') {
         return (
@@ -239,6 +319,19 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
 
     if (quest.type === 'custom' && quest.subtype === 'wallet') {
       return <CustomWalletQuest quest={quest} />;
+    }
+
+    if (quest.type === 'custom' && isXConnectCustomTask(quest)) {
+      return (
+        <XConnectQuest
+          quest={quest}
+          remainingDays={remainingDays}
+          accountId={accountId}
+          campaignId={campaignId}
+          organizationId={organizationId}
+          isDisabled={isDisabled}
+        />
+      );
     }
 
     return (
@@ -316,7 +409,8 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
                           {quest.type === 'video' && 'Watch & Earn →'}
                           {quest.type === 'dex' && 'Buy tokens →'}
                           {quest.type === 'referral' && 'Copy the invite'}
-                          {quest.type === 'custom' && 'Start Quest →'}
+                          {quest.type === 'custom' && isXConnectCustomTask(quest) && 'Connect X Account →'}
+                          {quest.type === 'custom' && isDefaultCustomTask(quest) && 'Start Quest →'}
                         </button>
                       ) : (
                         <RepostButton
@@ -359,17 +453,51 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
             <div className="instructions">
               <Text className="instructionsTitle">Instructions: </Text>
               <Text className="instructionsText">{formatText(quest.instructions)}</Text>
-              <button className="button" onClick={handleOnReferralButtonClick} disabled={isDisabled}>
+              <button
+                className="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOnReferralButtonClick();
+                }}
+                disabled={isDisabled}
+              >
                 Refer-a-friend
               </button>
             </div>
           )}
-          {quest.type === 'custom' && (
+          {quest.type === 'custom' && isXConnectCustomTask(quest) && (
             <div className="instructions">
               <Text className="instructionsTitle">Instructions: </Text>
-              {quest.instructions && <Text className="instructionsText">{formatText(quest.instructions)}</Text>}
-              {quest.link && (
-                <button className="button" onClick={handleClick} disabled={isDisabled}>
+              {(quest as CustomTask).instructions && (
+                <Text className="instructionsText">{formatText((quest as CustomTask)?.instructions || '')}</Text>
+              )}
+              <button
+                className="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleClick();
+                }}
+                disabled={isDisabled}
+              >
+                Connect X Account
+              </button>
+            </div>
+          )}
+          {quest.type === 'custom' && isDefaultCustomTask(quest) && (
+            <div className="instructions">
+              <Text className="instructionsTitle">Instructions: </Text>
+              {(quest as CustomTask)?.instructions && (
+                <Text className="instructionsText">{formatText((quest as any).instructions)}</Text>
+              )}
+              {(quest as CustomTask)?.link && (
+                <button
+                  className="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleClick();
+                  }}
+                  disabled={isDisabled}
+                >
                   Open Link
                 </button>
               )}

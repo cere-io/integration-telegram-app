@@ -110,7 +110,22 @@ const MOCK_QUESTS_DATA: QuestsResponse = {
       completed: false,
       type: 'referral',
     },
-    customTasks: [],
+    customTasks: [
+      {
+        id: 'x_connect-1',
+        title: 'Connect your X account',
+        description: 'Connect your X (Twitter) account to unlock exclusive features and rewards',
+        startEvent: 'x_oauth_start',
+        completedEvent: 'x_oauth_success',
+        points: 100,
+        completed: false,
+        type: 'custom',
+        subtype: 'x_connect',
+        instructions:
+          'Click the button below to connect your X account. You will be redirected to X to authorize access.',
+        is_mandatory: true,
+      },
+    ],
   },
   accountId: '0x1234567890abcdef1234567890abcdef12345678',
   campaignId: '115',
