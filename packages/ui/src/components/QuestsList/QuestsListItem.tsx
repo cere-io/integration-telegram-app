@@ -9,6 +9,7 @@ import { useData } from '@integration-telegram-app/viewer/src/providers';
 import { CustomTask, ReferralTask, Task, VideoTask } from '@integration-telegram-app/viewer/src/types';
 import { Text } from '@telegram-apps/telegram-ui';
 import { Snackbar } from '@tg-app/ui';
+import { sha256 } from 'ethers';
 import { ClipboardCheck } from 'lucide-react';
 import Markdown from 'markdown-to-jsx';
 import React, { forwardRef, useCallback, useMemo, useState } from 'react';
@@ -18,7 +19,6 @@ import { CustomWalletQuest } from './CustomWalletQuest';
 import { QuizQuest } from './QuizQuest';
 import { RepostButton } from './RepostButton';
 import { XConnectQuest } from './XConnectQuest';
-import {sha256} from "ethers/lib.esm";
 
 // Type guard functions
 function isXConnectCustomTask(
