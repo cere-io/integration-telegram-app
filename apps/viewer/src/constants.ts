@@ -20,4 +20,5 @@ export const RULE_SERVICE_URL = import.meta.env.VITE_RULE_SERVICE_URL;
 
 export const VIDEO_SEGMENT_LENGTH = import.meta.env.VITE_APP_VIDEO_SEGMENT_LENGTH || 10;
 
-export const APP_X_CLIENT_ID = import.meta.env.VITE_APP_X_CLIENT_ID;
+export const X_CLIENT_ID = import.meta.env.VITE_X_CLIENT_ID;
+export const X_REDIRECT_URI = import.meta.env.VITE_X_REDIRECT_URI;
