@@ -119,7 +119,7 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
         }
 
         setSnackbarMessage('X account connected successfully!');
-      } else if (response.status === 404) {
+      } else if (response.status === 400 && (await response.json()).details == 404) {
         // X is not connected yet - this is normal, not an error
         setConnectionStatus('connecting');
         setErrorMessage(null); // Clear any previous error
@@ -211,6 +211,22 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
       // Construct final JWT token
       const jwtToken = `${headerEncoded}.${payloadEncoded}.${signatureEncoded}`;
 
+      const codeVerifier = 'temporary_code_verifier';
+
+      // 1. Get raw bytes from verifier
+      const input = toUtf8Bytes(codeVerifier);
+
+      // 2. Get sha256 hash (hex string)
+      const hashHex = sha256(input); // returns hex string like '0xabc123...'
+
+      // 3. Convert hex → bytes → base64url
+      const base64UrlEncode = (hex: string): string => {
+        const bytes = Buffer.from(hex.slice(2), 'hex'); // strip 0x
+        return Buffer.from(bytes).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      };
+
+      const codeChallenge = base64UrlEncode(hashHex);
+
       // Create OAuth URL with JWT token as state
       const oauthUrl = 'https://twitter.com/i/oauth2/authorize';
       const params = new URLSearchParams({
@@ -219,7 +235,7 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
         redirect_uri: X_REDIRECT_URI, // Use staging redirect URI
         scope: 'tweet.read users.read offline.access',
         state: jwtToken,
-        code_challenge: sha256(toUtf8Bytes('temporary_code_verifier')),
+        code_challenge: codeChallenge,
         code_challenge_method: 'S256',
       });
 
