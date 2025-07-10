@@ -119,7 +119,7 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
         }
 
         setSnackbarMessage('X account connected successfully!');
-      } else if (response.status === 404) {
+      } else if (response.status === 400 && (await response.json()).details == 404) {
         // X is not connected yet - this is normal, not an error
         setConnectionStatus('connecting');
         setErrorMessage(null); // Clear any previous error
