@@ -11,7 +11,7 @@ import { useData } from '~/providers';
 
 import { getPreviewCustomization } from '../../helpers';
 import { useStartParam, useTelegramTextColor } from '../../hooks';
-import { CustomTask, Quests, Task } from '../../types';
+import { CustomTask, Quests, ReferralTask, Task } from '../../types';
 
 type ActiveQuestsProps = {
   setActiveTab: (tab: ActiveTab) => void;
@@ -193,9 +193,16 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
       ...(socialTasks.map((task, index) => ({ ...task, type: 'social' as const, originalIndex: index })) || []),
       ...(dexTasks.map((task, index) => ({ ...task, type: 'dex' as const, originalIndex: index })) || []),
       ...(quizTasks.map((task, index) => ({ ...task, type: 'quiz' as const, originalIndex: index })) || []),
-      ...(referralTask
-        ? [{ ...referralTask, type: 'referral' as const, originalIndex: 0, completed: referralTask.completed ?? false }]
-        : []),
+      ...(referralTask && Object.keys(referralTask).every((key) => key === 'invitees')
+        ? []
+        : [
+            {
+              ...referralTask,
+              type: 'referral' as const,
+              originalIndex: 0,
+              completed: referralTask?.completed ?? false,
+            } as ReferralTask,
+          ]),
       ...(customTasks.map((task, index) => ({ ...task, type: 'custom' as const, originalIndex: index })) || []),
     ];
 
