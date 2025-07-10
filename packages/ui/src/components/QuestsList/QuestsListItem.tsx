@@ -209,7 +209,7 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
         code_challenge_method: 'S256',
       });
       window.open(`${oauthUrl}?${params.toString()}`, '_blank');
-    }, [quest]);
+    }, [quest, cereWallet]);
 
     const TwitterIcon = () => (
       <div className="iconBase">
