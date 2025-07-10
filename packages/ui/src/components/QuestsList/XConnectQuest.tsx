@@ -216,8 +216,6 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
         redirect_uri: X_REDIRECT_URI, // Use staging redirect URI
         scope: 'tweet.read users.read offline.access',
         state: jwtToken,
-        code_challenge: 'challenge_' + Math.random().toString(36).substring(2, 15),
-        code_challenge_method: 'S256',
       });
 
       window.open(`${oauthUrl}?${params.toString()}`, '_blank');
