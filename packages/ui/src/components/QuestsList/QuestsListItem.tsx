@@ -64,7 +64,7 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
     const isLocked = shouldLockOthers && !isMandatory;
 
     const cereWallet = useCereWallet();
-    const { activeCampaignId } = useData();
+    const { activeCampaignId, activeOrganizationId } = useData();
     const eventSource = useEvents();
 
     const lockedStyle: React.CSSProperties = isLocked
@@ -86,11 +86,14 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
         if (!eventSource) return;
 
         const activityEventPayload = {
-          organization_id: organizationId,
+          quest_id: quest.id,
+          custom_quest: true,
+          timestamp: new Date().toISOString(),
+          organization_id: organizationId || activeOrganizationId,
           campaign_id: campaignId || activeCampaignId,
           campaignId: campaignId || activeCampaignId,
         };
-        const activityEvent = new ActivityEvent(quest.startEvent, activityEventPayload);
+        const activityEvent = new ActivityEvent(quest.completedEvent, activityEventPayload);
 
         await eventSource.dispatchEvent(activityEvent);
 
