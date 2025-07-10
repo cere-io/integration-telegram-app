@@ -43,41 +43,40 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
       const signer = cereWallet.getSigner({ type: 'ed25519' });
       const account = await signer.getAccount();
       const publicKey = account.publicKey;
-      const userInfo = await cereWallet.getUserInfo();
-
       if (!publicKey) {
         throw new Error('Failed to get public key from wallet');
       }
 
-      const now = Date.now();
-      const expirationTime = now + 15 * 60 * 1000; // 15 minutes
-
-      const tokenData = {
-        header: {
-          alg: 'ed25519',
-          typ: 'JWT',
-        },
-        payload: {
-          email: userInfo.email,
-          publicKey: publicKey,
-          iat: now,
-          exp: expirationTime,
-        },
-        signature: '', // Will be filled after signing
+      // Create JWT header
+      const header = {
+        alg: 'ed25519',
+        typ: 'JWT',
       };
 
-      // Create the string to sign (base64 encoded header and payload)
-      const headerStr = btoa(JSON.stringify(tokenData.header));
-      const payloadStr = btoa(JSON.stringify(tokenData.payload));
-      const dataToSign = `${headerStr}.${payloadStr}`;
+      // Create JWT payload
+      const now = Math.floor(Date.now() / 1000);
+      const payload = {
+        publicKey: `0x${publicKey}`,
+        iat: now,
+        exp: now + 600, // 10 minutes expiration
+      };
 
-      // Sign the data
-      const signature = await signer.signMessage(dataToSign);
+      // Base64URL encode header and payload
+      const headerEncoded = btoa(JSON.stringify(header)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 
-      // Create the complete token
-      const token = `${dataToSign}.${signature}`;
+      const payloadEncoded = btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 
-      return token;
+      // Sign header.payload with wallet's private key
+      const message = `${headerEncoded}.${payloadEncoded}`;
+      const signatureText = await signer.signMessage(message);
+
+      // Base64URL encode signature
+      const signatureEncoded = btoa(signatureText).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+      // Construct final JWT token
+      const jwtToken = `${headerEncoded}.${payloadEncoded}.${signatureEncoded}`;
+
+      return jwtToken;
     } catch (error) {
       console.error('Failed to generate wallet token:', error);
       return null;
