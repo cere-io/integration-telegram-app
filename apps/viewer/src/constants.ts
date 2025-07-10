@@ -22,3 +22,4 @@ export const VIDEO_SEGMENT_LENGTH = import.meta.env.VITE_APP_VIDEO_SEGMENT_LENGT
 
 export const X_CLIENT_ID = import.meta.env.VITE_X_CLIENT_ID;
 export const X_REDIRECT_URI = import.meta.env.VITE_X_REDIRECT_URI;
+export const WALLET_API_URL = import.meta.env.VITE_WALLET_API_URL;

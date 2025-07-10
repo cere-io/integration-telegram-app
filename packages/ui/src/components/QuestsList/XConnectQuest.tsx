@@ -1,6 +1,6 @@
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { useCereWallet } from '@integration-telegram-app/viewer/src/cere-wallet';
-import { X_CLIENT_ID, X_REDIRECT_URI } from '@integration-telegram-app/viewer/src/constants.ts';
+import { WALLET_API_URL, X_CLIENT_ID, X_REDIRECT_URI } from '@integration-telegram-app/viewer/src/constants.ts';
 import { useEvents } from '@integration-telegram-app/viewer/src/hooks';
 import { useData } from '@integration-telegram-app/viewer/src/providers';
 import { CustomTask } from '@integration-telegram-app/viewer/src/types';
@@ -97,7 +97,7 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
       }
 
       // Use the correct API URL
-      const response = await fetch(`https://api.wallet.stage.cere.io/auth/x/data?token=${encodeURIComponent(token)}`);
+      const response = await fetch(`${WALLET_API_URL}/auth/x/data?token=${encodeURIComponent(token)}`);
 
       if (response.status === 200) {
         // X is connected - show success status
