@@ -6,7 +6,7 @@ import { useCereWallet } from '@integration-telegram-app/viewer/src/cere-wallet'
 import { TELEGRAM_APP_URL, X_CLIENT_ID, X_REDIRECT_URI } from '@integration-telegram-app/viewer/src/constants.ts';
 import { useEvents } from '@integration-telegram-app/viewer/src/hooks';
 import { useData } from '@integration-telegram-app/viewer/src/providers';
-import { ReferralTask, Task, VideoTask } from '@integration-telegram-app/viewer/src/types';
+import { CustomTask, ReferralTask, Task, VideoTask } from '@integration-telegram-app/viewer/src/types';
 import { Text } from '@telegram-apps/telegram-ui';
 import { Snackbar } from '@tg-app/ui';
 import { ClipboardCheck } from 'lucide-react';
@@ -17,6 +17,20 @@ import Picture from './assets/refer_a_friend.png';
 import { CustomWalletQuest } from './CustomWalletQuest';
 import { QuizQuest } from './QuizQuest';
 import { RepostButton } from './RepostButton';
+import { XConnectQuest } from './XConnectQuest';
+
+// Type guard functions
+function isXConnectCustomTask(
+  task: any,
+): task is { subtype: 'x_connect'; instructions?: string; questImage?: string; title?: string } {
+  return task && task.subtype === 'x_connect';
+}
+
+function isDefaultCustomTask(
+  task: any,
+): task is { subtype?: 'default'; instructions?: string; link?: string; questImage?: string; title?: string } {
+  return !task.subtype || task.subtype === 'default';
+}
 
 function isArrayOfInvitees(val: string[] | number): val is string[] {
   if (!val) return false;
@@ -267,15 +281,17 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
       }
       if (quest.type === 'quiz') return;
       if (quest.type === 'custom') {
-        if (quest.subtype === 'x_connect') {
+        if (isXConnectCustomTask(quest)) {
           return quest?.questImage ? (
             <img className="questThumbnail" src={quest.questImage} alt={quest.title} />
           ) : (
             <TwitterIcon />
           );
         }
-        if (quest.questImage) {
-          return <img className="questThumbnail" src={quest.questImage} alt={quest.title} />;
+        if (isDefaultCustomTask(quest)) {
+          if (quest.questImage) {
+            return <img className="questThumbnail" src={quest.questImage} alt={quest.title} />;
+          }
         }
       }
       if (quest.type === 'referral') {
@@ -302,6 +318,19 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
 
     if (quest.type === 'custom' && quest.subtype === 'wallet') {
       return <CustomWalletQuest quest={quest} />;
+    }
+
+    if (quest.type === 'custom' && isXConnectCustomTask(quest)) {
+      return (
+        <XConnectQuest
+          quest={quest}
+          remainingDays={remainingDays}
+          accountId={accountId}
+          campaignId={campaignId}
+          organizationId={organizationId}
+          isDisabled={isDisabled}
+        />
+      );
     }
 
     return (
@@ -379,8 +408,8 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
                           {quest.type === 'video' && 'Watch & Earn →'}
                           {quest.type === 'dex' && 'Buy tokens →'}
                           {quest.type === 'referral' && 'Copy the invite'}
-                          {quest.type === 'custom' && quest.subtype === 'x_connect' && 'Connect X Account →'}
-                          {quest.type === 'custom' && quest.subtype !== 'x_connect' && 'Start Quest →'}
+                          {quest.type === 'custom' && isXConnectCustomTask(quest) && 'Connect X Account →'}
+                          {quest.type === 'custom' && isDefaultCustomTask(quest) && 'Start Quest →'}
                         </button>
                       ) : (
                         <RepostButton
@@ -435,10 +464,12 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
               </button>
             </div>
           )}
-          {quest.type === 'custom' && quest.subtype === 'x_connect' && (
+          {quest.type === 'custom' && isXConnectCustomTask(quest) && (
             <div className="instructions">
               <Text className="instructionsTitle">Instructions: </Text>
-              {quest.instructions && <Text className="instructionsText">{formatText(quest.instructions)}</Text>}
+              {(quest as CustomTask).instructions && (
+                <Text className="instructionsText">{formatText((quest as CustomTask)?.instructions || '')}</Text>
+              )}
               <button
                 className="button"
                 onClick={(e) => {
@@ -451,11 +482,13 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
               </button>
             </div>
           )}
-          {quest.type === 'custom' && quest.subtype !== 'x_connect' && (
+          {quest.type === 'custom' && isDefaultCustomTask(quest) && (
             <div className="instructions">
               <Text className="instructionsTitle">Instructions: </Text>
-              {quest.instructions && <Text className="instructionsText">{formatText(quest.instructions)}</Text>}
-              {quest.link && (
+              {(quest as CustomTask)?.instructions && (
+                <Text className="instructionsText">{formatText((quest as any).instructions)}</Text>
+              )}
+              {(quest as CustomTask)?.link && (
                 <button
                   className="button"
                   onClick={(e) => {
