@@ -1,6 +1,6 @@
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { useCereWallet } from '@integration-telegram-app/viewer/src/cere-wallet';
-import {X_CLIENT_ID, X_REDIRECT_URI} from '@integration-telegram-app/viewer/src/constants.ts';
+import { X_CLIENT_ID, X_REDIRECT_URI } from '@integration-telegram-app/viewer/src/constants.ts';
 import { useEvents } from '@integration-telegram-app/viewer/src/hooks';
 import { useData } from '@integration-telegram-app/viewer/src/providers';
 import { CustomTask } from '@integration-telegram-app/viewer/src/types';
