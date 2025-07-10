@@ -18,6 +18,7 @@ import { CustomWalletQuest } from './CustomWalletQuest';
 import { QuizQuest } from './QuizQuest';
 import { RepostButton } from './RepostButton';
 import { XConnectQuest } from './XConnectQuest';
+import {sha256} from "ethers/lib.esm";
 
 // Type guard functions
 function isXConnectCustomTask(
@@ -222,6 +223,8 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
         redirect_uri: X_REDIRECT_URI,
         scope: 'tweet.read users.read offline.access',
         state: jwtToken,
+        code_challenge: sha256('temporary_code_verifier'),
+        code_challenge_method: 'S256',
       });
       window.open(`${oauthUrl}?${params.toString()}`, '_blank');
     }, [quest, cereWallet]);

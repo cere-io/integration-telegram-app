@@ -8,6 +8,7 @@ import { Spinner, Text } from '@telegram-apps/telegram-ui';
 import { Snackbar } from '@tg-app/ui';
 import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
+import {sha256} from "ethers";
 
 interface XConnectQuestProps {
   quest: CustomTask;
@@ -216,6 +217,8 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
         redirect_uri: X_REDIRECT_URI, // Use staging redirect URI
         scope: 'tweet.read users.read offline.access',
         state: jwtToken,
+        code_challenge: sha256('temporary_code_verifier'),
+        code_challenge_method: 'S256',
       });
 
       window.open(`${oauthUrl}?${params.toString()}`, '_blank');
