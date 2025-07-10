@@ -99,7 +99,7 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
       const response = await fetch(`https://api.wallet.stage.cere.io/auth/x/data?token=${encodeURIComponent(token)}`);
 
       if (response.status === 200) {
-        // X is connected
+        // X is connected - show success status
         setConnectionStatus('connected');
         setIsConnecting(false);
 
@@ -119,9 +119,11 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
 
         setSnackbarMessage('X account connected successfully!');
       } else if (response.status === 404) {
-        // X is not connected yet
+        // X is not connected yet - this is normal, not an error
         setConnectionStatus('connecting');
+        setErrorMessage(null); // Clear any previous error
       } else {
+        // Real error - show error status
         throw new Error(`Unexpected response: ${response.status}`);
       }
     } catch (error) {
@@ -241,6 +243,11 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
   );
 
   const getStatusContent = () => {
+    // Only show status when actively checking or connecting
+    if (!isCheckingConnection && connectionStatus === 'idle') {
+      return null;
+    }
+
     if (isCheckingConnection) {
       return (
         <div className="status-overlay">
