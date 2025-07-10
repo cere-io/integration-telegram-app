@@ -3,7 +3,7 @@ import './QuestsListItem.css';
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { ActiveTab } from '@integration-telegram-app/viewer/src/App.tsx';
 import { useCereWallet } from '@integration-telegram-app/viewer/src/cere-wallet';
-import { APP_X_CLIENT_ID, TELEGRAM_APP_URL } from '@integration-telegram-app/viewer/src/constants.ts';
+import { TELEGRAM_APP_URL, X_CLIENT_ID, X_REDIRECT_URI } from '@integration-telegram-app/viewer/src/constants.ts';
 import { useEvents } from '@integration-telegram-app/viewer/src/hooks';
 import { useData } from '@integration-telegram-app/viewer/src/providers';
 import { ReferralTask, Task, VideoTask } from '@integration-telegram-app/viewer/src/types';
@@ -165,20 +165,54 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
       }
     }, [getReferralProgramMessage]);
 
-    const handleOnXConnectClick = useCallback(() => {
+    const handleOnXConnectClick = useCallback(async () => {
       if (quest.type !== 'custom' || quest.subtype !== 'x_connect') return;
+      const account = await cereWallet.getSigner({ type: 'ed25519' }).getAccount();
+      const publicKey = account.publicKey;
+      const signer = cereWallet.getSigner({ type: 'ed25519' });
+
+      // Create JWT header
+      const header = {
+        alg: 'ed25519',
+        typ: 'JWT',
+      };
+
+      // Create JWT payload
+      const now = Math.floor(Date.now() / 1000);
+      const payload = {
+        publicKey: publicKey,
+        iat: now,
+        exp: now + 600, // 10 minutes expiration
+      };
+
+      // Base64URL encode header and payload
+      const headerEncoded = btoa(JSON.stringify(header)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+      const payloadEncoded = btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+      // Sign header.payload with wallet's private key
+      const message = `${headerEncoded}.${payloadEncoded}`;
+      const signatureText = await signer.signMessage(message);
+
+      // Base64URL encode signature
+      const signatureEncoded = btoa(signatureText).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+      // Construct final JWT token
+      const jwtToken = `${headerEncoded}.${payloadEncoded}.${signatureEncoded}`;
+
+      // Create OAuth URL with JWT token as state
       const oauthUrl = 'https://twitter.com/i/oauth2/authorize';
       const params = new URLSearchParams({
         response_type: 'code',
-        client_id: APP_X_CLIENT_ID,
-        scope: 'tweet.read tweet.write users.read offline.access',
-        state: 'state_' + Math.random().toString(36).substring(2, 15),
+        client_id: X_CLIENT_ID,
+        redirect_uri: X_REDIRECT_URI,
+        scope: 'tweet.read users.read offline.access',
+        state: jwtToken,
         code_challenge: 'challenge_' + Math.random().toString(36).substring(2, 15),
         code_challenge_method: 'S256',
       });
-
       window.open(`${oauthUrl}?${params.toString()}`, '_blank');
-    }, [quest]);
+    }, [quest, cereWallet]);
 
     const TwitterIcon = () => (
       <div className="iconBase">
