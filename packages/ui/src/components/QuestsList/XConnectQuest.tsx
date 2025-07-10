@@ -1,6 +1,6 @@
 import { ActivityEvent } from '@cere-activity-sdk/events';
 import { useCereWallet } from '@integration-telegram-app/viewer/src/cere-wallet';
-import { X_CLIENT_ID } from '@integration-telegram-app/viewer/src/constants.ts';
+import {X_CLIENT_ID, X_REDIRECT_URI} from '@integration-telegram-app/viewer/src/constants.ts';
 import { useEvents } from '@integration-telegram-app/viewer/src/hooks';
 import { useData } from '@integration-telegram-app/viewer/src/providers';
 import { CustomTask } from '@integration-telegram-app/viewer/src/types';
@@ -189,7 +189,7 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
       // Create JWT payload
       const now = Math.floor(Date.now() / 1000);
       const payload = {
-        publicKey: publicKey,
+        publicKey: `0x${publicKey}`,
         iat: now,
         exp: now + 600, // 10 minutes expiration
       };
@@ -213,7 +213,7 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
       const params = new URLSearchParams({
         response_type: 'code',
         client_id: X_CLIENT_ID,
-        redirect_uri: 'https://api.wallet.stage.cere.io/auth/x/oauth/callback', // Use staging redirect URI
+        redirect_uri: X_REDIRECT_URI, // Use staging redirect URI
         scope: 'tweet.read users.read offline.access',
         state: jwtToken,
         code_challenge: 'challenge_' + Math.random().toString(36).substring(2, 15),
