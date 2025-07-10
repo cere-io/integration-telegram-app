@@ -194,7 +194,7 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
       // Create JWT payload
       const now = Math.floor(Date.now() / 1000);
       const payload = {
-        publicKey: publicKey,
+        publicKey: `0x${publicKey}`,
         iat: now,
         exp: now + 600, // 10 minutes expiration
       };
