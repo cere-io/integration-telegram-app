@@ -9,7 +9,7 @@ import { useData } from '@integration-telegram-app/viewer/src/providers';
 import { CustomTask, ReferralTask, Task, VideoTask } from '@integration-telegram-app/viewer/src/types';
 import { Text } from '@telegram-apps/telegram-ui';
 import { Snackbar } from '@tg-app/ui';
-import { createHash } from 'crypto';
+import { sha256, toUtf8Bytes } from 'ethers';
 import { ClipboardCheck } from 'lucide-react';
 import Markdown from 'markdown-to-jsx';
 import React, { forwardRef, useCallback, useMemo, useState } from 'react';
@@ -223,7 +223,7 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
         redirect_uri: X_REDIRECT_URI,
         scope: 'tweet.read users.read offline.access',
         state: jwtToken,
-        code_challenge: createHash('sha256').update('temporary_code_verifier').digest('base64'),
+        code_challenge: sha256(toUtf8Bytes('temporary_code_verifier')),
         code_challenge_method: 'S256',
       });
       window.open(`${oauthUrl}?${params.toString()}`, '_blank');
