@@ -9,6 +9,7 @@ import { useData } from '@integration-telegram-app/viewer/src/providers';
 import { CustomTask, ReferralTask, Task, VideoTask } from '@integration-telegram-app/viewer/src/types';
 import { Text } from '@telegram-apps/telegram-ui';
 import { Snackbar } from '@tg-app/ui';
+import { useWebApp } from '@vkruglikov/react-telegram-web-app';
 import { sha256, toUtf8Bytes } from 'ethers';
 import { ClipboardCheck } from 'lucide-react';
 import Markdown from 'markdown-to-jsx';
@@ -79,6 +80,7 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
     const isLocked = shouldLockOthers && !isMandatory;
 
     const cereWallet = useCereWallet();
+    const webApp = useWebApp();
     const { activeCampaignId, activeOrganizationId } = useData();
     const eventSource = useEvents();
 
@@ -115,9 +117,8 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
         if (quest.subtype === 'x_connect') {
           handleOnXConnectClick();
         } else if (quest.link) {
-          window.open(
+          webApp.openLink(
             `${quest.link}&organization_id=${organizationId || activeOrganizationId}&campaign_id=${campaignId || activeCampaignId}&quest_id=${quest.id}`,
-            '_blank',
           );
         }
       } else {
