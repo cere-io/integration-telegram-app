@@ -7,8 +7,8 @@ import { CustomTask } from '@integration-telegram-app/viewer/src/types';
 import { Spinner, Text } from '@telegram-apps/telegram-ui';
 import { Snackbar } from '@tg-app/ui';
 import { sha256, toUtf8Bytes } from 'ethers';
-import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
-import React, { useCallback, useEffect, useState } from 'react';
+import { AlertCircle, CheckCircle } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 interface XConnectQuestProps {
   quest: CustomTask;
@@ -93,7 +93,7 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
 
       const token = await generateWalletToken();
       if (!token) {
-        throw new Error('No authentication token available');
+        return;
       }
 
       // Use the correct API URL
@@ -105,7 +105,7 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
         setIsConnecting(false);
 
         // Send X_CONNECTED event
-        if (eventSource) {
+        if (eventSource && !quest.completed) {
           const activityEventPayload = {
             quest_id: quest.id,
             custom_quest: true,
@@ -118,10 +118,11 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
           await eventSource.dispatchEvent(activityEvent);
         }
 
-        setSnackbarMessage('X account connected successfully!');
-      } else if (response.status === 400 && (await response.json()).details == 404) {
-        // X is not connected yet - this is normal, not an error
-        setConnectionStatus('connecting');
+        if (!quest.completed) {
+          setSnackbarMessage('X account connected successfully!');
+        }
+      } else if (response.status === 400) {
+        setConnectionStatus('idle');
         setErrorMessage(null); // Clear any previous error
       } else {
         // Real error - show error status
@@ -240,13 +241,38 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
       });
 
       window.open(`${oauthUrl}?${params.toString()}`, '_blank');
+      if (!eventSource) return;
+      const eventPayload = {
+        custom_quest: true,
+        quest_id: quest.id,
+        timestamp: new Date().toISOString(),
+        campaign_id: campaignId || activeCampaignId,
+        organization_id: organizationId || activeOrganizationId,
+        completedEvent: quest.completedEvent,
+        subtype: quest.subtype,
+      };
+      const activityEvent = new ActivityEvent(quest.startEvent, eventPayload);
+
+      await eventSource.dispatchEvent(activityEvent);
     } catch (error) {
       console.error('Error initiating X connection:', error);
       setConnectionStatus('error');
       setErrorMessage(error instanceof Error ? error.message : 'Failed to initiate X connection');
       setIsConnecting(false);
     }
-  }, [cereWallet, isDisabled]);
+  }, [
+    activeCampaignId,
+    activeOrganizationId,
+    campaignId,
+    cereWallet,
+    eventSource,
+    isDisabled,
+    organizationId,
+    quest.completedEvent,
+    quest.id,
+    quest.startEvent,
+    quest.subtype,
+  ]);
 
   const TwitterIcon = () => (
     <div className="iconBase">
@@ -311,6 +337,8 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
     }
   };
 
+  const isConnected = useMemo(() => connectionStatus === 'connected', [connectionStatus]);
+
   return (
     <div className="questCard">
       {quest?.completed && <div className="overlay" />}
@@ -349,12 +377,12 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
                 {!quest.completed && (
                   <button
                     className="startButton"
-                    disabled={isDisabled || isConnecting || isCheckingConnection}
+                    disabled={isDisabled || isConnecting || isCheckingConnection || isConnected}
                     onClick={handleXConnect}
                   >
                     {isConnecting || isCheckingConnection ? (
                       <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        <Spinner size="s" />
                         {isCheckingConnection ? 'Checking...' : 'Connecting...'}
                       </>
                     ) : (
@@ -368,27 +396,20 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
         </div>
       </div>
 
-      {connectionStatus === 'connecting' && (
-        <div className="instructions">
-          <Text className="instructionsTitle">Instructions: </Text>
-          <Text className="instructionsText">✅ Close the X tab when you're done.</Text>
-        </div>
-      )}
-
-      {quest.instructions && connectionStatus !== 'connecting' && (
+      {quest.instructions && (
         <div className="instructions">
           <Text className="instructionsTitle">Instructions: </Text>
           <Text className="instructionsText">{quest.instructions}</Text>
           <button
             className="button"
             onClick={handleXConnect}
-            disabled={isDisabled || isConnecting || isCheckingConnection}
+            disabled={isDisabled || isConnecting || isCheckingConnection || isConnected}
           >
             {isConnecting || isCheckingConnection ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <Spinner size="s" />
                 {isCheckingConnection ? 'Checking...' : 'Connecting...'}
-              </>
+              </div>
             ) : (
               'Connect X Account'
             )}

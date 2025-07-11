@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from 'react';
 
 interface CustomWalletQuestProps {
   quest: CustomTask;
+  organizationId?: number;
   initialWallet?: string;
   disableAll?: boolean;
 }
@@ -144,8 +145,13 @@ function isWalletTask(task: any): task is WalletCustomTask {
   return task.subtype === 'wallet';
 }
 
-export const CustomWalletQuest = ({ quest, initialWallet, disableAll = false }: CustomWalletQuestProps) => {
-  const [wallet, setWallet] = useState(isWalletTask(quest) ? quest?.walletAddress : '');
+export const CustomWalletQuest = ({
+  quest,
+  organizationId,
+  initialWallet,
+  disableAll = false,
+}: CustomWalletQuestProps) => {
+  const [wallet, setWallet] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [completed, setCompleted] = useState(false);
   const [walletType, setWalletType] = useState<string | null>(null);
@@ -157,6 +163,14 @@ export const CustomWalletQuest = ({ quest, initialWallet, disableAll = false }: 
   const { activeCampaignId, activeOrganizationId } = useData();
 
   const buttonRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isWalletTask(quest)) {
+      if (quest?.walletAddress) {
+        setWallet(quest.walletAddress);
+      }
+    }
+  }, [quest]);
 
   useEffect(() => {
     if (!wallet) {
@@ -230,7 +244,7 @@ export const CustomWalletQuest = ({ quest, initialWallet, disableAll = false }: 
       quest_id: quest.id,
       timestamp: new Date().toISOString(),
       campaign_id: campaignId || activeCampaignId,
-      organization_id: activeOrganizationId,
+      organization_id: organizationId || activeOrganizationId,
       walletAddress: wallet,
       completedEvent: quest.completedEvent,
       subtype: quest.subtype,

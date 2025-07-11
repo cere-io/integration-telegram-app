@@ -108,14 +108,17 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
           campaign_id: campaignId || activeCampaignId,
           campaignId: campaignId || activeCampaignId,
         };
-        const activityEvent = new ActivityEvent(quest.completedEvent, activityEventPayload);
+        const activityEvent = new ActivityEvent(quest.startEvent, activityEventPayload);
 
         await eventSource.dispatchEvent(activityEvent);
 
         if (quest.subtype === 'x_connect') {
           handleOnXConnectClick();
         } else if (quest.link) {
-          window.open(quest.link, '_blank');
+          window.open(
+            `${quest.link}&organization_id=${organizationId || activeOrganizationId}&campaign_id=${campaignId || activeCampaignId}&quest_id=${quest.id}`,
+            '_blank',
+          );
         }
       } else {
         handleOnReferralLinkClick();
@@ -318,7 +321,7 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
     }
 
     if (quest.type === 'custom' && quest.subtype === 'wallet') {
-      return <CustomWalletQuest quest={quest} />;
+      return <CustomWalletQuest quest={quest} organizationId={organizationId} />;
     }
 
     if (quest.type === 'custom' && isXConnectCustomTask(quest)) {
