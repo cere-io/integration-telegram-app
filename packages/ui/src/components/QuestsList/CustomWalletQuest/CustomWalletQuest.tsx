@@ -269,10 +269,10 @@ export const CustomWalletQuest = ({
           marginBottom: '16px',
         }}
       >
-        <Title level="3" weight="2" style={{ marginBottom: 8 }}>
+        <Title level="3" weight="2" style={{ marginBottom: 8, color: '#000' }}>
           ✅ Wallet Linked
         </Title>
-        <Text>Your wallet is saved for this campaign.</Text>
+        <Text style={{ color: '#000' }}>Your wallet is saved for this campaign.</Text>
       </div>
     );
   }
