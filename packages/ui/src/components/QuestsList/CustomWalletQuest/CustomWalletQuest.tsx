@@ -285,6 +285,7 @@ export const CustomWalletQuest = ({
           opacity: disableAll ? 0.6 : 1,
           pointerEvents: disableAll ? 'none' : 'auto',
           boxShadow: '0 2px 8px rgba(0, 0, 0, 0.35)',
+          backgroundColor: '#f4f4f7',
           marginBottom: '16px',
         }}
       >
@@ -333,7 +334,7 @@ export const CustomWalletQuest = ({
           <Section
             header={
               <div style={{ margin: '8px 0' }}>
-                <Text className="section-header-text" caps>
+                <Text className="section-header-text" caps style={{ color: '#707579' }}>
                   Please enter a valid{' '}
                   {(quest as WalletCustomTask).walletNetwork || (quest as WalletCustomTask).walletType} wallet address
                 </Text>
