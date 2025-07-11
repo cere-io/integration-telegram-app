@@ -95,6 +95,7 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
 
     const handleClick = async () => {
       if (isLocked) return;
+
       if (quest.type === 'dex') {
         handleOnDexClick();
       } else if (quest.type === 'video') {
@@ -110,16 +111,32 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
           campaign_id: campaignId || activeCampaignId,
           campaignId: campaignId || activeCampaignId,
         };
-        const activityEvent = new ActivityEvent(quest.startEvent, activityEventPayload);
 
+        const activityEvent = new ActivityEvent(quest.startEvent, activityEventPayload);
         await eventSource.dispatchEvent(activityEvent);
 
         if (quest.subtype === 'x_connect') {
           handleOnXConnectClick();
         } else if (quest.link) {
-          webApp.openLink(
-            `${quest.link}&organization_id=${organizationId || activeOrganizationId}&campaign_id=${campaignId || activeCampaignId}&quest_id=${quest.id}`,
-          );
+          const url = `${quest.link}&organization_id=${organizationId || activeOrganizationId}&campaign_id=${campaignId || activeCampaignId}&quest_id=${quest.id}`;
+
+          if (!/^https:\/\//.test(url)) {
+            console.warn('Invalid quest link, must start with https://', url);
+            return;
+          }
+
+          try {
+            if (webApp?.openLink) {
+              console.log('Opening link via webApp.openLink:', url);
+              webApp.openLink(url);
+            } else {
+              console.warn('webApp.openLink not available, fallback to window.open');
+              window.open(url, '_blank');
+            }
+          } catch (err) {
+            console.error('Failed to open link, fallback to window.open:', err);
+            window.open(url, '_blank');
+          }
         }
       } else {
         handleOnReferralLinkClick();
