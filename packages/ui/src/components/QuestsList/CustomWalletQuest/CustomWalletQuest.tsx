@@ -362,12 +362,10 @@ export const CustomWalletQuest = ({
                     flex: 1,
                     ...(error && {
                       borderColor: '#ef4444',
-                      backgroundColor: '#fef2f2',
                     }),
                     ...(wallet &&
                       !error && {
                         borderColor: '#10b981',
-                        backgroundColor: '#f0fdf4',
                       }),
                   }}
                 />

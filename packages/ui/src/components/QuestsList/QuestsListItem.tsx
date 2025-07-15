@@ -81,7 +81,7 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
 
     const cereWallet = useCereWallet();
     const webApp = useWebApp();
-    const { activeCampaignId, activeOrganizationId } = useData();
+    const { activeCampaignId, activeOrganizationId, walletStatus } = useData();
     const eventSource = useEvents();
 
     const lockedStyle: React.CSSProperties = isLocked
@@ -327,7 +327,12 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
       }
     }, [quest]);
 
-    const isDisabled = useMemo(() => !accountId || accountId === '0x', [accountId]);
+    const isDisabled = useMemo(() => {
+      // If wallet is not connected, disable all quests
+      if (walletStatus !== 'connected') return true;
+      // If accountId is missing or invalid, disable
+      return !accountId || accountId === '0x';
+    }, [accountId, walletStatus]);
 
     if (quest.type === 'quiz') {
       return (

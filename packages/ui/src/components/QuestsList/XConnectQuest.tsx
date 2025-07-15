@@ -159,7 +159,7 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
-    if (isConnecting && connectionStatus === 'connecting') {
+    if (isConnecting && connectionStatus === 'connecting' && !quest.completed) {
       interval = setInterval(() => {
         checkXConnection();
       }, 3000); // Check every 3 seconds
@@ -170,7 +170,7 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
         clearInterval(interval);
       }
     };
-  }, [isConnecting, connectionStatus, checkXConnection]);
+  }, [isConnecting, connectionStatus, checkXConnection, quest.completed]);
 
   const handleXConnect = useCallback(async () => {
     if (!cereWallet || isDisabled) return;
