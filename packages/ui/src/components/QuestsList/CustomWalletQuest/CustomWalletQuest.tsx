@@ -160,7 +160,7 @@ export const CustomWalletQuest = ({
 
   const eventSource = useEvents();
   const { campaignId } = useStartParam();
-  const { activeCampaignId, activeOrganizationId } = useData();
+  const { activeCampaignId, activeOrganizationId, refetchQuestsForTab } = useData();
 
   const buttonRef = useRef<HTMLDivElement>(null);
 
@@ -253,6 +253,7 @@ export const CustomWalletQuest = ({
     const activityEvent = new ActivityEvent(quest.startEvent, payload);
 
     await eventSource.dispatchEvent(activityEvent);
+    setTimeout(() => refetchQuestsForTab(), 3000);
     setCompleted(true);
   };
 
@@ -362,12 +363,10 @@ export const CustomWalletQuest = ({
                     flex: 1,
                     ...(error && {
                       borderColor: '#ef4444',
-                      backgroundColor: '#fef2f2',
                     }),
                     ...(wallet &&
                       !error && {
                         borderColor: '#10b981',
-                        backgroundColor: '#f0fdf4',
                       }),
                   }}
                 />

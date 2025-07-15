@@ -13,7 +13,7 @@ import { useWebApp } from '@vkruglikov/react-telegram-web-app';
 import { sha256, toUtf8Bytes } from 'ethers';
 import { ClipboardCheck } from 'lucide-react';
 import Markdown from 'markdown-to-jsx';
-import React, { forwardRef, useCallback, useMemo, useState } from 'react';
+import React, { forwardRef, useCallback, useEffect, useMemo, useState } from 'react';
 
 import Picture from './assets/refer_a_friend.png';
 import { CustomWalletQuest } from './CustomWalletQuest';
@@ -76,13 +76,33 @@ export type QuestsListItemProps = {
 export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivElement, QuestsListItemProps>(
   ({ quest, accountId, campaignId, organizationId, shouldLockOthers, remainingDays, setActiveTab }, ref) => {
     const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
-    const isMandatory = quest.type === 'custom' && quest.is_mandatory === true;
+    const [fallbackAccountId, setFallbackAccountId] = useState<string | null>(null);
+    const isMandatory = quest.type === 'custom' && (quest as any).is_mandatory === true;
     const isLocked = shouldLockOthers && !isMandatory;
 
     const cereWallet = useCereWallet();
     const webApp = useWebApp();
-    const { activeCampaignId, activeOrganizationId } = useData();
+    const { activeCampaignId, activeOrganizationId, walletStatus } = useData();
     const eventSource = useEvents();
+
+    useEffect(() => {
+      if ((!accountId || accountId === '0x') && walletStatus === 'connected' && cereWallet) {
+        const getAccountIdFromWallet = async () => {
+          try {
+            const walletAccountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
+            setFallbackAccountId(walletAccountId);
+          } catch (error) {
+            console.error('QuestsListItem: Failed to get accountId from wallet:', error);
+            setFallbackAccountId(null);
+          }
+        };
+        getAccountIdFromWallet();
+      } else {
+        setFallbackAccountId(null);
+      }
+    }, [accountId, walletStatus, cereWallet]);
+
+    const effectiveAccountId = accountId && accountId !== '0x' ? accountId : fallbackAccountId;
 
     const lockedStyle: React.CSSProperties = isLocked
       ? {
@@ -327,7 +347,30 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
       }
     }, [quest]);
 
-    const isDisabled = useMemo(() => !accountId || accountId === '0x', [accountId]);
+    const isDisabled = useMemo(() => {
+      // If wallet is not connected, disable all quests
+      if (walletStatus !== 'connected') {
+        console.log(`QuestsListItem [${quest.title}]: Disabled - wallet not connected`);
+        return true;
+      }
+
+      // If accountId is missing or invalid, disable
+      if (!effectiveAccountId || effectiveAccountId === '0x') {
+        console.log(`QuestsListItem [${quest.title}]: Disabled - no valid accountId`);
+        return true;
+      }
+
+      // If quest is locked due to mandatory quest requirements, disable
+      if (isLocked) {
+        console.log(
+          `QuestsListItem [${quest.title}]: Disabled - locked (isMandatory: ${isMandatory}, shouldLockOthers: ${shouldLockOthers})`,
+        );
+        return true;
+      }
+
+      console.log(`QuestsListItem [${quest.title}]: Enabled (isMandatory: ${isMandatory}, isLocked: ${isLocked})`);
+      return false;
+    }, [effectiveAccountId, walletStatus, isLocked, quest.title, isMandatory, shouldLockOthers]);
 
     if (quest.type === 'quiz') {
       return (
@@ -347,7 +390,7 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
         <XConnectQuest
           quest={quest}
           remainingDays={remainingDays}
-          accountId={accountId}
+          accountId={effectiveAccountId || undefined}
           campaignId={campaignId}
           organizationId={organizationId}
           isDisabled={isDisabled}
@@ -438,7 +481,7 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
                           card
                           quest={quest}
                           disabled={isDisabled}
-                          accountId={accountId}
+                          accountId={effectiveAccountId || undefined}
                           campaignId={campaignId}
                         >
                           <button className="startButton">Share now!</button>
@@ -458,7 +501,12 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
                   ? formatText(quest.instructions)
                   : "Click the 'Repost' button to share this tweet on your Twitter account. Make sure to keep the @cereofficial mention and hashtags for your entry to be valid."}
               </Text>
-              <RepostButton quest={quest} accountId={accountId} disabled={isDisabled} campaignId={campaignId}>
+              <RepostButton
+                quest={quest}
+                accountId={effectiveAccountId || undefined}
+                disabled={isDisabled}
+                campaignId={campaignId}
+              >
                 Repost
               </RepostButton>
             </div>

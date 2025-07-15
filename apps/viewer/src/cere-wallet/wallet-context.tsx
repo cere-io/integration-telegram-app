@@ -1,5 +1,6 @@
 import { EmbedWallet, WalletEnvironment } from '@cere/embed-wallet';
 import Analytics from '@tg-app/analytics';
+import Reporting from '@tg-app/reporting';
 import { createContext, PropsWithChildren, useContext, useMemo } from 'react';
 
 import { APP_ENV, TELEGRAM_BOT_ID } from '../constants.ts';
@@ -64,47 +65,87 @@ export const CereWalletProvider = ({ children }: PropsWithChildren<NonNullable<u
 
     const startTime = performance.now();
 
-    wallet
-      .init(
-        initDataRaw
-          ? {
-              appId: 'telegram-mini-app',
-              env: APP_ENV as WalletEnvironment,
-              authMethod: { type: 'telegram-mini-app', token: `${TELEGRAM_BOT_ID}:${initDataRaw}` },
-              mode: 'light',
-            }
-          : {
-              appId: 'qa',
-              env: APP_ENV as WalletEnvironment,
-              connectOptions: {
-                permissions: {
-                  ed25519_signRaw: {
-                    title: 'Activity signing activity',
-                    description: 'Allow the application to sign your activity before storing it into your data wallet.',
+    const initWallet = async () => {
+      try {
+        Analytics.transaction('WALLET_INIT_STARTED', 0, { environment: APP_ENV });
+
+        await wallet.init(
+          initDataRaw
+            ? {
+                appId: 'telegram-mini-app',
+                env: APP_ENV as WalletEnvironment,
+                authMethod: { type: 'telegram-mini-app', token: `${TELEGRAM_BOT_ID}:${initDataRaw}` },
+                mode: 'light',
+              }
+            : {
+                appId: 'qa',
+                env: APP_ENV as WalletEnvironment,
+                connectOptions: {
+                  permissions: {
+                    ed25519_signRaw: {
+                      title: 'Activity signing activity',
+                      description:
+                        'Allow the application to sign your activity before storing it into your data wallet.',
+                    },
                   },
                 },
+                mode: 'light',
               },
-              mode: 'light',
-            },
-      )
-      .then(() => {
-        wallet.isReady.then(() => {
-          console.log('Cere Wallet initialised');
-          wallet.connect().then(() => {
-            console.log('Cere Wallet connected');
+        );
 
-            const walletIframe = document.getElementById('torusIframe');
-            if (walletIframe) {
-              walletIframe.style.height = '0px';
-            }
+        await wallet.isReady;
+        console.log('Cere Wallet initialised');
 
-            const endTime = performance.now();
-            const initialisationTime = endTime - startTime;
-            console.log(`Cere Wallet initialisation time: ${initialisationTime.toFixed(2)} ms`);
-            Analytics.transaction('WALLET_INITIALISED', initialisationTime);
-          });
+        await wallet.connect();
+        console.log('Cere Wallet connected');
+
+        // Hide Torus iframe
+        const walletIframe = document.getElementById('torusIframe');
+        if (walletIframe) {
+          walletIframe.style.height = '0px';
+        }
+
+        const endTime = performance.now();
+        const initialisationTime = endTime - startTime;
+        console.log(`Cere Wallet initialisation time: ${initialisationTime.toFixed(2)} ms`);
+
+        Analytics.transaction('WALLET_INITIALISED', initialisationTime, {
+          environment: APP_ENV,
+          hasInitData: !!initDataRaw,
         });
-      });
+      } catch (error) {
+        const endTime = performance.now();
+        const failedInitTime = endTime - startTime;
+
+        console.error('Cere Wallet initialization failed:', error);
+
+        Analytics.exception('WALLET_INIT_FAILED', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          environment: APP_ENV,
+          hasInitData: !!initDataRaw,
+          failedAfter: failedInitTime,
+        });
+
+        Reporting.error(error, {
+          captureContext: {
+            extra: {
+              hasInitData: !!initDataRaw,
+              failedAfter: failedInitTime,
+            },
+            tags: {
+              component: 'CereWalletProvider',
+              phase: 'initialization',
+              environment: APP_ENV,
+            },
+          },
+        });
+
+        throw error;
+      }
+    };
+
+    initWallet();
+
     return wallet;
   }, [initDataRaw]);
 

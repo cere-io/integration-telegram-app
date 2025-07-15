@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import FlipMove from 'react-flip-move';
 
 import { ActiveTab } from '~/App.tsx';
+import { useCereWallet } from '~/cere-wallet';
 import { useData } from '~/providers';
 
 import { getPreviewCustomization } from '../../helpers';
@@ -27,12 +28,16 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     activeOrganizationId,
     campaignConfig,
     disableQuests,
+    walletStatus,
   } = useData();
-  const [hasMondatoryQuest, setHasMondatoryQuest] = useState(false);
+  const [hasMandatoryQuest, setHasMandatoryQuest] = useState(false);
   const [isMandatoryCompleted, setIsMandatoryCompleted] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0 });
   const [mounted, setMounted] = useState(false);
+  const [fallbackAccountId, setFallbackAccountId] = useState<string | null>(null);
+
+  const cereWallet = useCereWallet();
 
   // Add refs to prevent unnecessary refetches
   const hasInitiallyFetched = useRef(false);
@@ -46,15 +51,40 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
   const color = useTelegramTextColor();
 
   useEffect(() => {
-    if (mounted && Object.values(questsData?.quests || {}).length > 0) {
-      const mandatoryQuests: any = Object.values(questsData.quests)
-        .flatMap((questArray) => questArray || [])
-        .filter((quest: any) => quest?.is_mandatory === true);
+    if (mounted && questsData?.quests) {
+      const {
+        videoTasks = [],
+        socialTasks = [],
+        dexTasks = [],
+        quizTasks = [],
+        referralTask = undefined,
+        customTasks = [],
+      } = questsData.quests;
+
+      const allTasks: any[] = [...videoTasks, ...socialTasks, ...dexTasks, ...quizTasks, ...customTasks];
+
+      if (referralTask) {
+        allTasks.push(referralTask);
+      }
+
+      console.log('ActiveQuests: All tasks for mandatory check:', allTasks);
+
+      const mandatoryQuests = allTasks.filter((quest: any) => quest?.is_mandatory === true);
+
+      console.log('ActiveQuests: Found mandatory quests:', mandatoryQuests);
 
       const hasMandatoryQuest = mandatoryQuests.length > 0;
       const isMandatoryCompleted =
         mandatoryQuests.length > 0 ? mandatoryQuests.every((q: any) => Boolean(q.completed)) : false;
-      setHasMondatoryQuest(hasMandatoryQuest);
+
+      console.log('ActiveQuests: Mandatory quest status:', {
+        hasMandatoryQuest,
+        isMandatoryCompleted,
+        mandatoryCount: mandatoryQuests.length,
+        completedCount: mandatoryQuests.filter((q: any) => Boolean(q.completed)).length,
+      });
+
+      setHasMandatoryQuest(hasMandatoryQuest);
       setIsMandatoryCompleted(isMandatoryCompleted);
     }
   }, [mounted, questsData?.quests]);
@@ -81,6 +111,25 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Get fallback accountId from wallet when wallet is connected
+  useEffect(() => {
+    if (walletStatus === 'connected' && cereWallet) {
+      const getFallbackAccountId = async () => {
+        try {
+          const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
+          setFallbackAccountId(accountId);
+          console.log('ActiveQuests: Got fallback accountId from wallet:', accountId);
+        } catch (error) {
+          console.error('ActiveQuests: Error getting fallback accountId:', error);
+          setFallbackAccountId(null);
+        }
+      };
+      getFallbackAccountId();
+    } else {
+      setFallbackAccountId(null);
+    }
+  }, [walletStatus, cereWallet]);
 
   // Stable refetch function to prevent dependency changes
   const stableRefetch = useCallback(() => {
@@ -147,7 +196,20 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
 
   const campaignName = questsData?.campaignName || '';
   const campaignDescription = questsData?.campaignDescription || '';
-  const accountId = questsData?.accountId || '';
+
+  const accountId = useMemo(() => {
+    const dataAccountId = questsData?.accountId;
+
+    if (dataAccountId && dataAccountId !== '') {
+      return dataAccountId;
+    }
+
+    if (walletStatus === 'connected' && fallbackAccountId) {
+      return fallbackAccountId;
+    }
+
+    return '';
+  }, [questsData?.accountId, fallbackAccountId, walletStatus]);
 
   const remainingTime = useMemo(
     () => questsData?.remainingTime || { days: 0, hours: 0, minutes: 0 },
@@ -208,7 +270,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
       (task): task is CustomTask => task.type === 'custom' && task.subtype === 'x_connect',
     );
 
-    const remainingTasks = allTasks.filter((task) => task !== walletQuest && task !== connectXQuest);
+    const remainingTasks = allTasks.filter((task) => task !== walletQuest);
 
     const hasOrder = remainingTasks.some((task) => task.order !== undefined);
 
@@ -343,12 +405,26 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
           </div>
         </div>
         <QuestsList>
+          {(() => {
+            console.log(
+              'ActiveQuests: Rendering quests with shouldLockOthers =',
+              hasMandatoryQuest && !isMandatoryCompleted,
+              {
+                hasMandatoryQuest,
+                isMandatoryCompleted,
+                accountId,
+                walletStatus,
+                sortedQuestsCount: sortedQuests.length,
+              },
+            );
+            return null;
+          })()}
           {sortedQuests.length > 0 ? (
             <FlipMove>
               {sortedQuests.map((quest, idx) => (
                 <div key={`${idx}_${quest?.title}`} style={{ position: 'relative' }}>
                   <QuestsListItem
-                    shouldLockOthers={hasMondatoryQuest && !isMandatoryCompleted}
+                    shouldLockOthers={hasMandatoryQuest && !isMandatoryCompleted}
                     key={`${idx}_${quest?.title}`}
                     quest={quest}
                     campaignId={Number(campaignId || activeCampaignId)}
