@@ -270,7 +270,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
       (task): task is CustomTask => task.type === 'custom' && task.subtype === 'x_connect',
     );
 
-    const remainingTasks = allTasks.filter((task) => task !== walletQuest);
+    const remainingTasks = allTasks.filter((task) => task !== walletQuest && task !== connectXQuest);
 
     const hasOrder = remainingTasks.some((task) => task.order !== undefined);
 
