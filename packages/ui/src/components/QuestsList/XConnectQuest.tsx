@@ -5,7 +5,6 @@ import { useEvents } from '@integration-telegram-app/viewer/src/hooks';
 import { useData } from '@integration-telegram-app/viewer/src/providers';
 import { CustomTask } from '@integration-telegram-app/viewer/src/types';
 import { Spinner, Text } from '@telegram-apps/telegram-ui';
-import { Snackbar } from '@tg-app/ui';
 import { sha256, toUtf8Bytes } from 'ethers';
 import { AlertCircle, CheckCircle } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -31,7 +30,6 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
   const [isCheckingConnection, setIsCheckingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'connecting' | 'connected' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
 
   const cereWallet = useCereWallet();
   const { activeCampaignId, activeOrganizationId } = useData();
@@ -113,13 +111,10 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
             organization_id: organizationId || activeOrganizationId,
             campaign_id: campaignId || activeCampaignId,
             campaignId: campaignId || activeCampaignId,
+            completedEvent: quest.completedEvent,
           };
           const activityEvent = new ActivityEvent(quest.completedEvent.toUpperCase(), activityEventPayload);
           await eventSource.dispatchEvent(activityEvent);
-        }
-
-        if (!quest.completed) {
-          setSnackbarMessage('X account connected successfully!');
         }
       } else if (response.status === 400) {
         setConnectionStatus('idle');
@@ -415,14 +410,6 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
             )}
           </button>
         </div>
-      )}
-
-      {snackbarMessage && (
-        <Snackbar style={{ zIndex: 99999 }} onClose={() => setSnackbarMessage(null)} duration={5000}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Text>{snackbarMessage}</Text>
-          </div>
-        </Snackbar>
       )}
     </div>
   );
