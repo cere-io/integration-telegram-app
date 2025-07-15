@@ -348,16 +348,23 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
     }, [quest]);
 
     const isDisabled = useMemo(() => {
+      // If wallet is not connected, disable all quests
       if (walletStatus !== 'connected') {
         return true;
       }
 
+      // If accountId is missing or invalid, disable
       if (!effectiveAccountId || effectiveAccountId === '0x') {
         return true;
       }
 
+      // If quest is locked due to mandatory quest requirements, disable
+      if (isLocked) {
+        return true;
+      }
+
       return false;
-    }, [effectiveAccountId, walletStatus, quest.title, accountId, fallbackAccountId]);
+    }, [effectiveAccountId, walletStatus, isLocked]);
 
     if (quest.type === 'quiz') {
       return (

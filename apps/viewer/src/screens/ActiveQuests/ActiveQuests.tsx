@@ -30,7 +30,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     disableQuests,
     walletStatus,
   } = useData();
-  const [hasMondatoryQuest, setHasMondatoryQuest] = useState(false);
+  const [hasMandatoryQuest, setHasMandatoryQuest] = useState(false);
   const [isMandatoryCompleted, setIsMandatoryCompleted] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0 });
@@ -51,15 +51,40 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
   const color = useTelegramTextColor();
 
   useEffect(() => {
-    if (mounted && Object.values(questsData?.quests || {}).length > 0) {
-      const mandatoryQuests: any = Object.values(questsData.quests)
-        .flatMap((questArray) => questArray || [])
-        .filter((quest: any) => quest?.is_mandatory === true);
+    if (mounted && questsData?.quests) {
+      const {
+        videoTasks = [],
+        socialTasks = [],
+        dexTasks = [],
+        quizTasks = [],
+        referralTask = undefined,
+        customTasks = [],
+      } = questsData.quests;
+
+      const allTasks: any[] = [...videoTasks, ...socialTasks, ...dexTasks, ...quizTasks, ...customTasks];
+
+      if (referralTask) {
+        allTasks.push(referralTask);
+      }
+
+      console.log('ActiveQuests: All tasks for mandatory check:', allTasks);
+
+      const mandatoryQuests = allTasks.filter((quest: any) => quest?.is_mandatory === true);
+
+      console.log('ActiveQuests: Found mandatory quests:', mandatoryQuests);
 
       const hasMandatoryQuest = mandatoryQuests.length > 0;
       const isMandatoryCompleted =
         mandatoryQuests.length > 0 ? mandatoryQuests.every((q: any) => Boolean(q.completed)) : false;
-      setHasMondatoryQuest(hasMandatoryQuest);
+
+      console.log('ActiveQuests: Mandatory quest status:', {
+        hasMandatoryQuest,
+        isMandatoryCompleted,
+        mandatoryCount: mandatoryQuests.length,
+        completedCount: mandatoryQuests.filter((q: any) => Boolean(q.completed)).length,
+      });
+
+      setHasMandatoryQuest(hasMandatoryQuest);
       setIsMandatoryCompleted(isMandatoryCompleted);
     }
   }, [mounted, questsData?.quests]);
@@ -241,11 +266,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
       (task): task is CustomTask => task.type === 'custom' && task.subtype === 'wallet',
     );
 
-    const connectXQuest = allTasks.find(
-      (task): task is CustomTask => task.type === 'custom' && task.subtype === 'x_connect',
-    );
-
-    const remainingTasks = allTasks.filter((task) => task !== walletQuest && task !== connectXQuest);
+    const remainingTasks = allTasks.filter((task) => task !== walletQuest);
 
     const hasOrder = remainingTasks.some((task) => task.order !== undefined);
 
@@ -266,7 +287,6 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
 
     const result = [];
     if (walletQuest) result.push(walletQuest);
-    if (connectXQuest) result.push(connectXQuest);
     result.push(...sorted);
     return result;
   }, [quests]);
@@ -385,7 +405,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
               {sortedQuests.map((quest, idx) => (
                 <div key={`${idx}_${quest?.title}`} style={{ position: 'relative' }}>
                   <QuestsListItem
-                    shouldLockOthers={hasMondatoryQuest && !isMandatoryCompleted}
+                    shouldLockOthers={hasMandatoryQuest && !isMandatoryCompleted}
                     key={`${idx}_${quest?.title}`}
                     quest={quest}
                     campaignId={Number(campaignId || activeCampaignId)}
