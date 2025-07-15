@@ -106,6 +106,8 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
         if (eventSource && !quest.completed) {
           const activityEventPayload = {
             quest_id: quest.id,
+            subtype: quest.subtype,
+            event_type: quest.type,
             custom_quest: true,
             timestamp: new Date().toISOString(),
             organization_id: organizationId || activeOrganizationId,
@@ -249,6 +251,7 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
         organization_id: organizationId || activeOrganizationId,
         completedEvent: quest.completedEvent,
         subtype: quest.subtype,
+        event_type: quest.type,
       };
       const activityEvent = new ActivityEvent(quest.startEvent, eventPayload);
 

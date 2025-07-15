@@ -248,6 +248,7 @@ export const CustomWalletQuest = ({
       walletAddress: wallet,
       completedEvent: quest.completedEvent,
       subtype: quest.subtype,
+      event_type: quest.type,
     };
 
     const activityEvent = new ActivityEvent(quest.startEvent, payload);

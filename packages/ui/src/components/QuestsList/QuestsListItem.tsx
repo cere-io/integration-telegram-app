@@ -130,6 +130,8 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
           organization_id: organizationId || activeOrganizationId,
           campaign_id: campaignId || activeCampaignId,
           campaignId: campaignId || activeCampaignId,
+          subtype: quest.subtype,
+          event_type: quest.type,
         };
 
         const activityEvent = new ActivityEvent(quest.startEvent, activityEventPayload);
