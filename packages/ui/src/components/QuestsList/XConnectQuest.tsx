@@ -141,6 +141,8 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
     eventSource,
     quest.completed,
     quest.id,
+    quest.subtype,
+    quest.type,
     quest.completedEvent,
     organizationId,
     activeOrganizationId,
@@ -274,6 +276,7 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
     quest.id,
     quest.startEvent,
     quest.subtype,
+    quest.type,
   ]);
 
   const TwitterIcon = () => (
