@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import FlipMove from 'react-flip-move';
 
 import { ActiveTab } from '~/App.tsx';
+import { useCereWallet } from '~/cere-wallet';
 import { useData } from '~/providers';
 
 import { getPreviewCustomization } from '../../helpers';
@@ -27,12 +28,16 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
     activeOrganizationId,
     campaignConfig,
     disableQuests,
+    walletStatus,
   } = useData();
   const [hasMondatoryQuest, setHasMondatoryQuest] = useState(false);
   const [isMandatoryCompleted, setIsMandatoryCompleted] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0 });
   const [mounted, setMounted] = useState(false);
+  const [fallbackAccountId, setFallbackAccountId] = useState<string | null>(null);
+
+  const cereWallet = useCereWallet();
 
   // Add refs to prevent unnecessary refetches
   const hasInitiallyFetched = useRef(false);
@@ -81,6 +86,25 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Get fallback accountId from wallet when wallet is connected
+  useEffect(() => {
+    if (walletStatus === 'connected' && cereWallet) {
+      const getFallbackAccountId = async () => {
+        try {
+          const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
+          setFallbackAccountId(accountId);
+          console.log('ActiveQuests: Got fallback accountId from wallet:', accountId);
+        } catch (error) {
+          console.error('ActiveQuests: Error getting fallback accountId:', error);
+          setFallbackAccountId(null);
+        }
+      };
+      getFallbackAccountId();
+    } else {
+      setFallbackAccountId(null);
+    }
+  }, [walletStatus, cereWallet]);
 
   // Stable refetch function to prevent dependency changes
   const stableRefetch = useCallback(() => {
@@ -147,7 +171,20 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
 
   const campaignName = questsData?.campaignName || '';
   const campaignDescription = questsData?.campaignDescription || '';
-  const accountId = questsData?.accountId || '';
+
+  const accountId = useMemo(() => {
+    const dataAccountId = questsData?.accountId;
+
+    if (dataAccountId && dataAccountId !== '') {
+      return dataAccountId;
+    }
+
+    if (walletStatus === 'connected' && fallbackAccountId) {
+      return fallbackAccountId;
+    }
+
+    return '';
+  }, [questsData?.accountId, fallbackAccountId, walletStatus]);
 
   const remainingTime = useMemo(
     () => questsData?.remainingTime || { days: 0, hours: 0, minutes: 0 },
