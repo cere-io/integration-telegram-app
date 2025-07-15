@@ -32,7 +32,7 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const cereWallet = useCereWallet();
-  const { activeCampaignId, activeOrganizationId } = useData();
+  const { activeCampaignId, activeOrganizationId, refetchQuestsForTab } = useData();
   const eventSource = useEvents();
 
   const generateWalletToken = useCallback(async () => {
@@ -115,6 +115,7 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
           };
           const activityEvent = new ActivityEvent(quest.completedEvent.toUpperCase(), activityEventPayload);
           await eventSource.dispatchEvent(activityEvent);
+          setTimeout(() => refetchQuestsForTab(), 3000);
         }
       } else if (response.status === 400) {
         setConnectionStatus('idle');
@@ -134,13 +135,16 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
   }, [
     cereWallet,
     accountId,
+    generateWalletToken,
     eventSource,
-    quest,
+    quest.completed,
+    quest.id,
+    quest.completedEvent,
     organizationId,
     activeOrganizationId,
     campaignId,
     activeCampaignId,
-    generateWalletToken,
+    refetchQuestsForTab,
   ]);
 
   // Check if X is already connected on component mount

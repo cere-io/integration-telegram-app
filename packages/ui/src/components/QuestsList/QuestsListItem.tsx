@@ -77,7 +77,7 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
   ({ quest, accountId, campaignId, organizationId, shouldLockOthers, remainingDays, setActiveTab }, ref) => {
     const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
     const [fallbackAccountId, setFallbackAccountId] = useState<string | null>(null);
-    const isMandatory = quest.type === 'custom' && quest.is_mandatory === true;
+    const isMandatory = quest.type === 'custom' && (quest as any).is_mandatory === true;
     const isLocked = shouldLockOthers && !isMandatory;
 
     const cereWallet = useCereWallet();
@@ -350,21 +350,27 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
     const isDisabled = useMemo(() => {
       // If wallet is not connected, disable all quests
       if (walletStatus !== 'connected') {
+        console.log(`QuestsListItem [${quest.title}]: Disabled - wallet not connected`);
         return true;
       }
 
       // If accountId is missing or invalid, disable
       if (!effectiveAccountId || effectiveAccountId === '0x') {
+        console.log(`QuestsListItem [${quest.title}]: Disabled - no valid accountId`);
         return true;
       }
 
       // If quest is locked due to mandatory quest requirements, disable
       if (isLocked) {
+        console.log(
+          `QuestsListItem [${quest.title}]: Disabled - locked (isMandatory: ${isMandatory}, shouldLockOthers: ${shouldLockOthers})`,
+        );
         return true;
       }
 
+      console.log(`QuestsListItem [${quest.title}]: Enabled (isMandatory: ${isMandatory}, isLocked: ${isLocked})`);
       return false;
-    }, [effectiveAccountId, walletStatus, isLocked]);
+    }, [effectiveAccountId, walletStatus, isLocked, quest.title, isMandatory, shouldLockOthers]);
 
     if (quest.type === 'quiz') {
       return (

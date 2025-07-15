@@ -266,6 +266,10 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
       (task): task is CustomTask => task.type === 'custom' && task.subtype === 'wallet',
     );
 
+    const connectXQuest = allTasks.find(
+      (task): task is CustomTask => task.type === 'custom' && task.subtype === 'x_connect',
+    );
+
     const remainingTasks = allTasks.filter((task) => task !== walletQuest);
 
     const hasOrder = remainingTasks.some((task) => task.order !== undefined);
@@ -287,6 +291,7 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
 
     const result = [];
     if (walletQuest) result.push(walletQuest);
+    if (connectXQuest) result.push(connectXQuest);
     result.push(...sorted);
     return result;
   }, [quests]);
@@ -400,6 +405,20 @@ export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
           </div>
         </div>
         <QuestsList>
+          {(() => {
+            console.log(
+              'ActiveQuests: Rendering quests with shouldLockOthers =',
+              hasMandatoryQuest && !isMandatoryCompleted,
+              {
+                hasMandatoryQuest,
+                isMandatoryCompleted,
+                accountId,
+                walletStatus,
+                sortedQuestsCount: sortedQuests.length,
+              },
+            );
+            return null;
+          })()}
           {sortedQuests.length > 0 ? (
             <FlipMove>
               {sortedQuests.map((quest, idx) => (

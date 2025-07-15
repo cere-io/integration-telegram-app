@@ -160,7 +160,7 @@ export const CustomWalletQuest = ({
 
   const eventSource = useEvents();
   const { campaignId } = useStartParam();
-  const { activeCampaignId, activeOrganizationId } = useData();
+  const { activeCampaignId, activeOrganizationId, refetchQuestsForTab } = useData();
 
   const buttonRef = useRef<HTMLDivElement>(null);
 
@@ -253,6 +253,7 @@ export const CustomWalletQuest = ({
     const activityEvent = new ActivityEvent(quest.startEvent, payload);
 
     await eventSource.dispatchEvent(activityEvent);
+    setTimeout(() => refetchQuestsForTab(), 3000);
     setCompleted(true);
   };
 
