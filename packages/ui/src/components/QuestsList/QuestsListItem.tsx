@@ -374,7 +374,17 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
 
     if (quest.type === 'quiz') {
       return (
-        <div style={lockedStyle}>
+        <div
+          style={{
+            ...lockedStyle,
+            position: 'relative',
+            background: 'white',
+            borderRadius: '16px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.35)',
+            overflow: 'hidden',
+            marginBottom: '16px',
+          }}
+        >
           {quest?.completed && <div className="overlay" />}
           <QuizQuest quizTask={quest} isDisabled={isDisabled} />
         </div>
