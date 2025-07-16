@@ -31,7 +31,7 @@ function isXConnectCustomTask(
 function isDefaultCustomTask(
   task: any,
 ): task is { subtype?: 'default'; instructions?: string; link?: string; questImage?: string; title?: string } {
-  return !task.subtype || task.subtype === 'default';
+  return !task.subtype || task.subtype === 'default' || task.subtype === 'dex';
 }
 
 function isArrayOfInvitees(val: string[] | number): val is string[] {
