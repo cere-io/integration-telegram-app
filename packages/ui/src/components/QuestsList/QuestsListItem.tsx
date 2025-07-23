@@ -18,7 +18,7 @@ import React, { forwardRef, useCallback, useEffect, useMemo, useState } from 're
 import Picture from './assets/refer_a_friend.png';
 import { CustomWalletQuest } from './CustomWalletQuest';
 import { QuizQuest } from './QuizQuest';
-import { RepostButton } from './RepostButton';
+import { SocialQuest } from './SocialQuest.tsx';
 import { XConnectQuest } from './XConnectQuest';
 
 // Type guard functions
@@ -314,10 +314,6 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
       if (quest.type === 'video') {
         return <img className="questThumbnail" src={quest.thumbnailUrl} alt="" />;
       }
-      if (quest.type === 'social') {
-        const questImage = quest?.questImage;
-        return questImage ? <img className="questThumbnail" src={questImage} alt={quest.title} /> : <TwitterIcon />;
-      }
       if (quest.type === 'dex') {
         return <DexIcon />;
       }
@@ -408,6 +404,18 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
       );
     }
 
+    if (quest.type === 'social') {
+      return (
+        <SocialQuest
+          quest={quest}
+          remainingDays={remainingDays}
+          accountId={effectiveAccountId}
+          isDisabled={isDisabled}
+          campaignId={campaignId}
+        />
+      );
+    }
+
     return (
       <div
         ref={ref}
@@ -469,58 +477,28 @@ export const QuestsListItem: React.FC<QuestsListItemProps> = forwardRef<HTMLDivE
                   <div className="questActions">
                     {quest.completed && <Text style={{ color: '#0ee640' }}>Completed</Text>}
 
-                    {!quest.completed &&
-                      (quest.type !== 'social' ? (
-                        <button
-                          className="startButton"
-                          disabled={isDisabled}
-                          onClick={() => {
-                            if (quest.type === 'video' || quest.type === 'referral') {
-                              handleClick();
-                            }
-                          }}
-                        >
-                          {quest.type === 'video' && 'Watch & Earn →'}
-                          {quest.type === 'dex' && 'Buy tokens →'}
-                          {quest.type === 'referral' && 'Copy the invite'}
-                          {quest.type === 'custom' && isXConnectCustomTask(quest) && 'Connect X Account →'}
-                          {quest.type === 'custom' && isDefaultCustomTask(quest) && 'Start Quest →'}
-                        </button>
-                      ) : (
-                        <RepostButton
-                          card
-                          quest={quest}
-                          disabled={isDisabled}
-                          accountId={effectiveAccountId || undefined}
-                          campaignId={campaignId}
-                        >
-                          <button className="startButton">Share now!</button>
-                        </RepostButton>
-                      ))}
+                    {!quest.completed && (
+                      <button
+                        className="startButton"
+                        disabled={isDisabled}
+                        onClick={() => {
+                          if (quest.type === 'video' || quest.type === 'referral') {
+                            handleClick();
+                          }
+                        }}
+                      >
+                        {quest.type === 'video' && 'Watch & Earn →'}
+                        {quest.type === 'dex' && 'Buy tokens →'}
+                        {quest.type === 'referral' && 'Copy the invite'}
+                        {quest.type === 'custom' && isXConnectCustomTask(quest) && 'Connect X Account →'}
+                        {quest.type === 'custom' && isDefaultCustomTask(quest) && 'Start Quest →'}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
           </div>
-
-          {quest.type === 'social' && (
-            <div className="instructions">
-              <Text className="instructionsTitle">Instructions: </Text>
-              <Text className="instructionsText">
-                {quest.instructions
-                  ? formatText(quest.instructions)
-                  : "Click the 'Repost' button to share this tweet on your Twitter account. Make sure to keep the @cereofficial mention and hashtags for your entry to be valid."}
-              </Text>
-              <RepostButton
-                quest={quest}
-                accountId={effectiveAccountId || undefined}
-                disabled={isDisabled}
-                campaignId={campaignId}
-              >
-                Repost
-              </RepostButton>
-            </div>
-          )}
           {quest.type === 'dex' && (
             <div className="instructions">
               <button className="button" disabled={isDisabled}>
