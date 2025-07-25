@@ -3,7 +3,7 @@ import { Text } from '@telegram-apps/telegram-ui';
 import Markdown from 'markdown-to-jsx';
 import React from 'react';
 
-import { RepostButton } from './RepostButton';
+import { RepostButton } from './RepostButton.tsx';
 
 // Helper function for default instructions
 const getDefaultInstructions = (action: string): string => {

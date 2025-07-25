@@ -96,6 +96,13 @@ export class XVerificationServiceImpl implements XVerificationService {
       console.log('WalletApi response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
+        if (response.status === 401) {
+          console.log('Access token expired, trying to refresh via cere-wallet-api...');
+          const refreshedTokens = await this.refreshTokens();
+          if (refreshedTokens) {
+            return refreshedTokens;
+          }
+        }
         const errorText = await response.text();
         console.error('Failed to get X tokens from walletApi:', response.status, errorText);
         return null;
@@ -135,7 +142,7 @@ export class XVerificationServiceImpl implements XVerificationService {
       if (!response.ok) {
         if (response.status === 401) {
           console.log('Access token expired, trying to refresh...');
-          const refreshedTokens = await this.refreshTokens(xTokens.refreshToken);
+          const refreshedTokens = await this.refreshTokens();
           if (refreshedTokens) {
             const retryResponse = await fetch(this.getTwitterApiUrl('/2/users/me'), {
               method: 'GET',
@@ -190,40 +197,41 @@ export class XVerificationServiceImpl implements XVerificationService {
     return followingData.data.some((user: any) => user.username === username);
   }
 
-  private async refreshTokens(refreshToken: string): Promise<{ accessToken: string; refreshToken: string } | null> {
+  private async refreshTokens(): Promise<{ accessToken: string; refreshToken: string } | null> {
     try {
-      console.log('Refreshing X tokens...');
+      console.log('Refreshing X tokens via cere-wallet-api...');
 
-      const refreshUrl = this.isDev
-        ? '/auth/x/proxy/twitter/2/oauth2/token' // Vite proxy
-        : 'https://api.twitter.com/2/oauth2/token';
+      // Generate wallet token for authentication
+      const walletToken = await this.generateWalletToken();
+      if (!walletToken) {
+        console.error('Failed to generate wallet token for refresh');
+        return null;
+      }
 
-      const response = await fetch(refreshUrl, {
+      const response = await fetch('/auth/x/refresh', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Authorization: `Basic ${btoa(`${import.meta.env.VITE_X_CLIENT_ID}:${import.meta.env.VITE_X_CLIENT_SECRET}`)}`,
+          'Content-Type': 'application/json',
         },
-        body: new URLSearchParams({
-          grant_type: 'refresh_token',
-          refresh_token: refreshToken,
-        }).toString(),
+        body: JSON.stringify({
+          token: walletToken,
+        }),
       });
 
       if (!response.ok) {
-        console.error('Failed to refresh tokens:', response.status);
+        console.error('Failed to refresh tokens via cere-wallet-api:', response.status);
         return null;
       }
 
       const data = await response.json();
-      console.log('Refreshed tokens:', data);
+      console.log('Refreshed tokens via cere-wallet-api:', data);
 
       return {
-        accessToken: data.access_token,
-        refreshToken: data.refresh_token,
+        accessToken: data.data.accessToken,
+        refreshToken: data.data.refreshToken,
       };
     } catch (error) {
-      console.error('Error refreshing tokens:', error);
+      console.error('Error refreshing tokens via cere-wallet-api:', error);
       return null;
     }
   }
@@ -248,7 +256,7 @@ export class XVerificationServiceImpl implements XVerificationService {
       if (!meResponse.ok) {
         if (meResponse.status === 401) {
           console.log('Access token expired, trying to refresh...');
-          const refreshedTokens = await this.refreshTokens(xTokens.refreshToken);
+          const refreshedTokens = await this.refreshTokens();
           if (refreshedTokens) {
             return await this.checkLikedTweet(extractedTweetId, refreshedTokens.accessToken);
           }
@@ -331,7 +339,7 @@ export class XVerificationServiceImpl implements XVerificationService {
       if (!meResponse.ok) {
         if (meResponse.status === 401) {
           console.log('Access token expired, trying to refresh...');
-          const refreshedTokens = await this.refreshTokens(xTokens.refreshToken);
+          const refreshedTokens = await this.refreshTokens();
           if (refreshedTokens) {
             return await this.checkUserTweets(keywords, requiredUrls, refreshedTokens.accessToken);
           }

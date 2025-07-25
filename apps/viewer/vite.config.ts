@@ -45,6 +45,12 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: true,
         },
+        '/auth/x/refresh': {
+          target: 'http://localhost:3002',
+          // target: 'https://api.wallet.stage.cere.io',
+          changeOrigin: true,
+          secure: true,
+        },
         '/auth/x/proxy/twitter': {
           target: 'https://api.twitter.com',
           changeOrigin: true,

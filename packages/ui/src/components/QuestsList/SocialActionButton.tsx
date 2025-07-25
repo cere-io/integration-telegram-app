@@ -1,18 +1,27 @@
 import { ActivityEvent } from '@cere-activity-sdk/events';
-import { useCereWallet } from '@integration-telegram-app/viewer/src/cere-wallet';
-import { useEvents } from '@integration-telegram-app/viewer/src/hooks';
-import { useData } from '@integration-telegram-app/viewer/src/providers';
-import {
-  createXVerificationService,
-  XVerificationService,
-} from '@integration-telegram-app/viewer/src/services/xVerificationService.ts';
-import { SocialTask } from '@integration-telegram-app/viewer/src/types';
 import clsx from 'clsx';
 import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { tweet } from 'twitter-intent';
 
+import { useCereWallet } from '../../../../../apps/viewer/src/cere-wallet';
+import { useEvents } from '../../../../../apps/viewer/src/hooks';
+import { useData } from '../../../../../apps/viewer/src/providers';
+import {
+  createXVerificationService,
+  XVerificationService,
+} from '../../../../../apps/viewer/src/services/xVerificationService';
 import { Text } from '../../index.ts';
 import styles from './Button.module.css';
+
+type SocialActionButtonProps = {
+  quest: any;
+  accountId?: string;
+  disabled?: boolean;
+  campaignId?: number;
+  organizationId?: string | number;
+  card?: boolean;
+  children: ReactNode;
+};
 
 // Global verification state to avoid duplicate requests
 const verificationState = new Map<
@@ -27,25 +36,15 @@ const verificationState = new Map<
 const VERIFICATION_COOLDOWN = 30000; // 30 seconds
 const MAX_VERIFICATIONS_PER_HOUR = 10; // Limit API calls
 
-type RepostButtonType = {
-  quest: SocialTask;
-  accountId?: string;
-  disabled?: boolean;
-  campaignId?: number;
-  organizationId?: number;
-  card?: boolean;
-  children?: ReactNode;
-};
-
-export const RepostButton = ({
+export const SocialActionButton = ({
   quest,
   accountId,
   disabled,
-  organizationId,
   campaignId,
+  organizationId,
   card = false,
   children,
-}: RepostButtonType) => {
+}: SocialActionButtonProps) => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -53,8 +52,10 @@ export const RepostButton = ({
   const cereWallet = useCereWallet();
   const eventSource = useEvents();
   const { activeCampaignId, activeOrganizationId, refetchQuestsForTab } = useData();
+
   const xVerificationService: XVerificationService = createXVerificationService(cereWallet);
 
+  // Reset verification status when quest completion changes
   useEffect(() => {
     if (quest.completed) {
       setVerificationStatus('success');
@@ -63,6 +64,7 @@ export const RepostButton = ({
     }
   }, [quest.completed]);
 
+  // Initial verification on mount (only for non-completed quests)
   useEffect(() => {
     if (!quest.completed && !disabled && cereWallet) {
       const questKey = `${quest.id}-${accountId}`;
@@ -79,29 +81,6 @@ export const RepostButton = ({
     }
   }, [quest.completed, disabled, cereWallet]);
 
-  const getButtonText = () => {
-    // if (isVerifying) {
-    //   return 'Verifying...';
-    // }
-    //
-    // if (verificationStatus === 'success') {
-    //   return 'Completed ✓';
-    // }
-
-    switch (quest.requirements.action) {
-      case 'retweet':
-        return 'Repost';
-      case 'follow':
-        return 'Follow';
-      case 'like':
-        return 'Like';
-      case 'tweet_and_share':
-        return 'Tweet';
-      default:
-        return children;
-    }
-  };
-
   const url = useMemo(() => {
     if (quest.requirements.action === 'retweet') {
       const hashtags = ['#CereMedia', ...quest.hashtags.filter(Boolean).map((tag: any) => `#${tag}`)];
@@ -116,14 +95,6 @@ export const RepostButton = ({
     }
     return {};
   }, [accountId, campaignId, quest.hashtags, quest.requirements.action, quest.tweetLink, quest.tweetText]);
-
-  const handleLike = useCallback(() => {
-    if (!quest.targetTweetId) return;
-
-    const tweetId = xVerificationService.extractTweetId(quest.targetTweetId);
-
-    window.open(`https://twitter.com/intent/like?tweet_id=${tweetId}`, '_blank');
-  }, [quest.targetTweetId, xVerificationService]);
 
   const verifyQuestCompletion = useCallback(async () => {
     if (!cereWallet || isVerifying || disabled) return;
@@ -143,6 +114,7 @@ export const RepostButton = ({
       return;
     }
 
+    // Update state
     state.isVerifying = true;
     verificationState.set(questKey, state);
     setIsVerifying(true);
@@ -177,14 +149,20 @@ export const RepostButton = ({
           );
           break;
 
-        default:
+        case 'retweet':
+          // For retweet, we don't auto-verify as it requires manual verification
           setErrorMessage('This quest type requires manual verification');
+          return;
+
+        default:
+          setErrorMessage('Unknown quest action type');
           return;
       }
 
       if (isCompleted) {
         setVerificationStatus('success');
 
+        // Send completion event
         if (eventSource && !quest.completed) {
           const activityEventPayload = {
             quest_id: quest.id,
@@ -210,6 +188,7 @@ export const RepostButton = ({
         );
       }
 
+      // Update verification state
       state.lastVerified = Date.now();
       state.verificationCount++;
       verificationState.set(questKey, state);
@@ -226,88 +205,132 @@ export const RepostButton = ({
     cereWallet,
     isVerifying,
     disabled,
-    quest.id,
-    quest.requirements.action,
-    quest.followAccount,
-    quest.targetTweetId,
-    quest.keywords,
-    quest.requiredUrls,
-    quest.completed,
-    quest.platform,
-    accountId,
     xVerificationService,
+    quest,
     eventSource,
     organizationId,
     activeOrganizationId,
     campaignId,
     activeCampaignId,
     refetchQuestsForTab,
+    accountId,
   ]);
 
+  const getButtonText = () => {
+    if (quest.completed) {
+      return 'Completed ✓';
+    }
+
+    if (isVerifying) {
+      return 'Verifying...';
+    }
+
+    if (verificationStatus === 'success') {
+      return 'Completed ✓';
+    }
+
+    switch (quest.requirements.action) {
+      case 'retweet':
+        return 'Repost';
+      case 'follow':
+        return 'Follow';
+      case 'like':
+        return 'Like';
+      case 'tweet_and_share':
+        return 'Tweet';
+      default:
+        return children;
+    }
+  };
+
   const handleClick = useCallback(() => {
-    if (disabled) return;
-    if (quest.completed) return;
-    const action = quest.requirements.action;
-    if (action === 'retweet') return;
-    if (action === 'like') {
-      handleLike();
-      // Auto-verify follow after a delay to allow time for the action
-      setTimeout(() => verifyQuestCompletion(), 10000);
-    }
-    if (action === 'tweet_and_share') {
-      const hashtags = quest.hashtags || [];
-      const keywords = quest.keywords || [];
-      const urls = quest.requiredUrls || [];
+    if (disabled || quest.completed) return;
 
-      let tweetText = 'Check this out! ';
-      if (keywords.length > 0) {
-        tweetText += keywords[0] + ' ';
-      }
-      if (urls.length > 0) {
-        tweetText += urls[0] + ' ';
-      }
-      if (hashtags.length > 0) {
-        tweetText += hashtags.map((tag: string) => `#${tag}`).join(' ') + ' ';
-      }
-      tweetText += `\n\nRef: ${accountId}:${campaignId}`;
-
-      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText.trim())}`, '_blank');
-      // Verify after 15 seconds for tweets
-      setTimeout(() => verifyQuestCompletion(), 15000);
+    // For retweet, just open the retweet URL
+    if (quest.requirements.action === 'retweet') {
+      return; // Let the link handle it
     }
-    if (action === 'follow') {
-      window.open(`https://twitter.com/intent/follow?screen_name=${quest.followAccount}`, '_blank');
-      // Verify after 10 seconds to allow time for the action
-      setTimeout(() => verifyQuestCompletion(), 10000);
+
+    // For other actions, open the appropriate intent and verify after delay
+    switch (quest.requirements.action) {
+      case 'follow':
+        if (quest.followAccount) {
+          window.open(`https://twitter.com/intent/follow?screen_name=${quest.followAccount}`, '_blank');
+          // Verify after 10 seconds to allow time for the action
+          setTimeout(() => verifyQuestCompletion(), 10000);
+        }
+        break;
+      case 'like':
+        if (quest.targetTweetId) {
+          const tweetId = xVerificationService.extractTweetId(quest.targetTweetId);
+          window.open(`https://twitter.com/intent/like?tweet_id=${tweetId}`, '_blank');
+          // Verify after 10 seconds
+          setTimeout(() => verifyQuestCompletion(), 10000);
+        }
+        break;
+      case 'tweet_and_share':
+        const hashtags = quest.hashtags || [];
+        const keywords = quest.keywords || [];
+        const urls = quest.requiredUrls || [];
+
+        let tweetText = 'Check this out! ';
+        if (keywords.length > 0) {
+          tweetText += keywords[0] + ' ';
+        }
+        if (urls.length > 0) {
+          tweetText += urls[0] + ' ';
+        }
+        if (hashtags.length > 0) {
+          tweetText += hashtags.map((tag: string) => `#${tag}`).join(' ') + ' ';
+        }
+        tweetText += `\n\nRef: ${accountId}:${campaignId}`;
+
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText.trim())}`, '_blank');
+        // Verify after 15 seconds for tweets
+        setTimeout(() => verifyQuestCompletion(), 15000);
+        break;
     }
   }, [
-    accountId,
-    campaignId,
     disabled,
-    handleLike,
     quest.completed,
+    quest.requirements.action,
     quest.followAccount,
+    quest.targetTweetId,
     quest.hashtags,
     quest.keywords,
     quest.requiredUrls,
-    quest.requirements.action,
+    quest.tweetText,
+    quest.tweetLink,
+    accountId,
+    campaignId,
+    xVerificationService,
     verifyQuestCompletion,
   ]);
 
+  // For retweet, use anchor tag like original RepostButton
   if (quest.requirements.action === 'retweet') {
-    <>
-      <a
-        className={clsx(styles.button, card ? styles.card : '')}
-        href={tweet.url(url)}
-        data-disabled={disabled}
-        target="_blank"
-        rel="noreferrer"
-      >
-        <Text>{children ? children : getButtonText()}</Text>
-      </a>
-    </>;
+    return (
+      <>
+        <a
+          className={clsx(styles.button, card ? styles.card : '')}
+          href={tweet.url(url)}
+          onClick={handleClick}
+          data-disabled={disabled}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <Text>{children ? children : getButtonText()}</Text>
+        </a>
+        {verificationStatus === 'error' && errorMessage && (
+          <div className="error-message" style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
+            <Text>{errorMessage}</Text>
+          </div>
+        )}
+      </>
+    );
   }
 
+  // For other actions, use button
   return (
     <>
       <button
@@ -316,14 +339,14 @@ export const RepostButton = ({
         disabled={disabled || isVerifying || quest.completed}
         data-disabled={disabled || quest.completed}
       >
-        {children ? (
-          <button className="startButton">
-            <Text>{`${getButtonText()} now!`}</Text>
-          </button>
-        ) : (
-          getButtonText()
-        )}
+        <Text>{children ? children : getButtonText()}</Text>
       </button>
+
+      {verificationStatus === 'error' && errorMessage && (
+        <div className="error-message" style={{ color: 'red', fontSize: '12px', marginTop: '4px' }}>
+          <Text>{errorMessage}</Text>
+        </div>
+      )}
     </>
   );
 };
