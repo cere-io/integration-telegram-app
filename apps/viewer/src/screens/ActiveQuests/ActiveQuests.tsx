@@ -1,207 +1,455 @@
-import { Loader, Snackbar } from '@tg-app/ui';
-import { useEngagementData, useEvents, useStartParam } from '../../hooks';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityEvent } from '@cere-activity-sdk/events';
-import { TELEGRAM_APP_URL } from '../../constants.ts';
-import { ActiveTab } from '~/App.tsx';
-import { useThemeParams } from '@vkruglikov/react-telegram-web-app';
-import { ClipboardCheck } from 'lucide-react';
-import { useCereWallet } from '../../cere-wallet';
-import { useData } from '../../providers';
-import { IframeRenderer } from '../../components/IframeRenderer';
+import './ActiveQuests.css';
+
 import Analytics from '@tg-app/analytics';
+import { Loader, QuestDisabledOverlay, QuestsList, QuestsListItem, Snackbar, Text, Title } from '@tg-app/ui';
+import { ClipboardCheck } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import FlipMove from 'react-flip-move';
 
-// eslint-disable-next-line @typescript-eslint/ban-types
-function useDebouncedCallback(callback: Function, delay: number) {
-  const [timer, setTimer] = useState<any>(null);
+import { ActiveTab } from '~/App.tsx';
+import { useCereWallet } from '~/cere-wallet';
+import { useData } from '~/providers';
 
-  return useCallback(
-    (...args: any[]) => {
-      if (timer) clearTimeout(timer);
-      setTimer(setTimeout(() => callback(...args), delay));
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [callback, delay],
-  );
-}
+import { getPreviewCustomization } from '../../helpers';
+import { useStartParam, useTelegramTextColor } from '../../hooks';
+import { CustomTask, Quests, Task } from '../../types';
 
 type ActiveQuestsProps = {
   setActiveTab: (tab: ActiveTab) => void;
 };
 
 export const ActiveQuests = ({ setActiveTab }: ActiveQuestsProps) => {
-  const { questsHtml, questData, updateData } = useData();
-
-  const lastHtml = useRef(questsHtml);
-  const [memoizedQuestsHtml, setMemoizedQuestsHtml] = useState(questsHtml);
-  const mountTimeRef = useRef<number>(performance.now());
-
-  useEffect(() => {
-    if (lastHtml.current !== questsHtml) {
-      lastHtml.current = questsHtml;
-      setMemoizedQuestsHtml(questsHtml);
-    }
-  }, [questsHtml]);
-
+  const {
+    questData: questsData,
+    isQuestsLoading,
+    error,
+    refetchQuestsForTab,
+    activeCampaignId,
+    activeOrganizationId,
+    campaignConfig,
+    disableQuests,
+    walletStatus,
+  } = useData();
+  const [hasMandatoryQuest, setHasMandatoryQuest] = useState(false);
+  const [isMandatoryCompleted, setIsMandatoryCompleted] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
-  const eventSource = useEvents();
-  const { campaignId } = useStartParam();
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0 });
+  const [mounted, setMounted] = useState(false);
+  const [fallbackAccountId, setFallbackAccountId] = useState<string | null>(null);
+
   const cereWallet = useCereWallet();
-  const [theme] = useThemeParams();
 
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  // Add refs to prevent unnecessary refetches
+  const hasInitiallyFetched = useRef(false);
+  const lastVisibilityRefetch = useRef(0);
 
-  const { isLoading } = useEngagementData({
-    eventSource,
-    eventType: 'GET_QUESTS',
-    campaignId,
-    theme,
-    updateData,
-    iframeRef,
-  });
+  const { organizationId, campaignId } = useStartParam();
 
-  const setSnackbarMessageIfChanged = useDebouncedCallback((newMessage: string) => {
-    setSnackbarMessage(newMessage);
-  }, 500);
-
-  const getReferralProgramMessage = useCallback(async () => {
-    if (!cereWallet) return;
-    const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
-    const invitationLink = `${TELEGRAM_APP_URL}?startapp=${campaignId}_${accountId}`;
-
-    const messageText: string = questData[0].quests.referralTask.message;
-    const decodedText = messageText.replace(/\\u[0-9A-Fa-f]{4,}/g, (match) =>
-      String.fromCodePoint(parseInt(match.replace('\\u', ''), 16)),
-    );
-    return decodedText.replace('{link}', invitationLink);
-  }, [campaignId, cereWallet, questData]);
-
-  const handleIframeClick = useCallback(
-    async (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-
-      if (event.data.type === 'VIDEO_QUEST_CLICK') {
-        setActiveTab({
-          index: 2,
-          props: {
-            videoUrl: event.data.videoUrl,
-          },
-        });
-      }
-
-      if (event.data.type === 'SOCIAL_QUEST_CLICKED') {
-        if (!eventSource) return;
-
-        const { event_type, timestamp, data } = {
-          event_type: 'X_REPOST_STARTED',
-          timestamp: new Date().toISOString(),
-          data: JSON.stringify({
-            campaignId: campaignId,
-            campaign_id: campaignId,
-            tweet_id_original: event.data.tweetId,
-            theme,
-          }),
-        };
-        const parsedData = JSON.parse(data);
-
-        const activityEvent = new ActivityEvent(event_type, {
-          ...parsedData,
-          timestamp,
-        });
-
-        void eventSource.dispatchEvent(activityEvent);
-        return;
-      }
-
-      if (event.data.type === 'QUESTION_ANSWERED') {
-        if (!eventSource) return;
-
-        const { event_type, timestamp, data } = {
-          event_type: 'QUESTION_ANSWERED',
-          timestamp: new Date().toISOString(),
-          data: JSON.stringify({
-            campaign_id: campaignId,
-            campaignId: campaignId,
-            quizId: event.data.quizId,
-            questionId: event.data.questionId,
-            answerId: event.data.answerId,
-          }),
-        };
-        const parsedData = JSON.parse(data);
-
-        const activityEvent = new ActivityEvent(event_type, {
-          ...parsedData,
-          timestamp,
-        });
-
-        setTimeout(() => void eventSource.dispatchEvent(activityEvent), 1000);
-        return;
-      }
-
-      if (event.data.type === 'REFERRAL_LINK_CLICK') {
-        const message = await getReferralProgramMessage();
-        if (!message) return;
-        const tempInput = document.createElement('textarea');
-        tempInput.value = message;
-        document.body.appendChild(tempInput);
-        tempInput.select();
-        if (document.execCommand('copy')) {
-          setSnackbarMessageIfChanged('Invitation copied to clipboard successfully!');
-        } else {
-          setSnackbarMessageIfChanged('Failed to copy the invitation.');
-        }
-        return;
-      }
-
-      if (event.data.type === 'REFERRAL_BUTTON_CLICK') {
-        const message = await getReferralProgramMessage();
-        if (!message) return;
-        window.open(`https://t.me/share/url?url=${encodeURIComponent(message)}`);
-        return;
-      }
-    },
-    [setActiveTab, eventSource, campaignId, theme, getReferralProgramMessage, setSnackbarMessageIfChanged],
-  );
+  // Get customization data
+  const previewCustomization = getPreviewCustomization();
+  const [bannerConfig, setBannerConfig] = useState<any>(null);
+  const color = useTelegramTextColor();
 
   useEffect(() => {
-    window.addEventListener('message', handleIframeClick);
+    if (mounted && questsData?.quests) {
+      const {
+        videoTasks = [],
+        socialTasks = [],
+        dexTasks = [],
+        quizTasks = [],
+        referralTask = undefined,
+        customTasks = [],
+      } = questsData.quests;
+
+      const allTasks: any[] = [...videoTasks, ...socialTasks, ...dexTasks, ...quizTasks, ...customTasks];
+
+      if (referralTask) {
+        allTasks.push(referralTask);
+      }
+
+      console.log('ActiveQuests: All tasks for mandatory check:', allTasks);
+
+      const mandatoryQuests = allTasks.filter((quest: any) => quest?.is_mandatory === true);
+
+      console.log('ActiveQuests: Found mandatory quests:', mandatoryQuests);
+
+      const hasMandatoryQuest = mandatoryQuests.length > 0;
+      const isMandatoryCompleted =
+        mandatoryQuests.length > 0 ? mandatoryQuests.every((q: any) => Boolean(q.completed)) : false;
+
+      console.log('ActiveQuests: Mandatory quest status:', {
+        hasMandatoryQuest,
+        isMandatoryCompleted,
+        mandatoryCount: mandatoryQuests.length,
+        completedCount: mandatoryQuests.filter((q: any) => Boolean(q.completed)).length,
+      });
+
+      setHasMandatoryQuest(hasMandatoryQuest);
+      setIsMandatoryCompleted(isMandatoryCompleted);
+    }
+  }, [mounted, questsData?.quests]);
+
+  // Load banner configuration from campaign config or preview
+  useEffect(() => {
+    let config = null;
+
+    if (previewCustomization?.activeQuests) {
+      config = previewCustomization.activeQuests;
+    } else if (campaignConfig) {
+      try {
+        const formData = JSON.parse((campaignConfig?.formData as unknown as string) || '{}');
+        config = formData.campaign?.configuration?.activeQuests;
+      } catch (error) {
+        console.error('Error parsing campaign config:', error);
+      }
+    }
+
+    setBannerConfig(config);
+  }, [previewCustomization, campaignConfig]);
+
+  // Mark component as mounted
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Get fallback accountId from wallet when wallet is connected
+  useEffect(() => {
+    if (walletStatus === 'connected' && cereWallet) {
+      const getFallbackAccountId = async () => {
+        try {
+          const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
+          setFallbackAccountId(accountId);
+          console.log('ActiveQuests: Got fallback accountId from wallet:', accountId);
+        } catch (error) {
+          console.error('ActiveQuests: Error getting fallback accountId:', error);
+          setFallbackAccountId(null);
+        }
+      };
+      getFallbackAccountId();
+    } else {
+      setFallbackAccountId(null);
+    }
+  }, [walletStatus, cereWallet]);
+
+  // Stable refetch function to prevent dependency changes
+  const stableRefetch = useCallback(() => {
+    if (refetchQuestsForTab && !isQuestsLoading) {
+      console.log('ActiveQuests: Performing refetch');
+      refetchQuestsForTab();
+    }
+  }, [refetchQuestsForTab, isQuestsLoading]);
+
+  // Only refetch once when component mounts and we don't have data
+  useEffect(() => {
+    if (mounted && !hasInitiallyFetched.current && !questsData && !isQuestsLoading) {
+      console.log('ActiveQuests: Initial fetch on mount');
+      hasInitiallyFetched.current = true;
+      stableRefetch();
+    }
+  }, [mounted, questsData, isQuestsLoading, stableRefetch]);
+
+  // Refetch data when page becomes visible (with throttling)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && mounted) {
+        const now = Date.now();
+        // Throttle visibility change refetches to once per 30 seconds
+        if (now - lastVisibilityRefetch.current > 30000) {
+          console.log('ActiveQuests: Refetch on visibility change');
+          lastVisibilityRefetch.current = now;
+          stableRefetch();
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      window.removeEventListener('message', handleIframeClick);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [campaignId, cereWallet, handleIframeClick, setActiveTab, eventSource]);
+  }, [mounted, stableRefetch]);
 
-  const handleIframeLoad = () => {
-    const renderTime = performance.now() - mountTimeRef.current;
-    console.log(`Active Quests Tab Loaded: ${renderTime.toFixed(2)}ms`);
-    Analytics.transaction('TAB_LOADED', renderTime, { tab: { name: 'ACTIVE_QUESTS' } });
-  };
+  // Reset initial fetch flag when campaign changes
+  useEffect(() => {
+    hasInitiallyFetched.current = false;
+  }, [activeCampaignId, campaignId]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      hasInitiallyFetched.current = false;
+    };
+  }, []);
+
+  const quests: Quests = useMemo(
+    () =>
+      questsData?.quests || {
+        videoTasks: [],
+        socialTasks: [],
+        dexTasks: [],
+        quizTasks: [],
+        referralTask: undefined,
+        customTasks: [],
+      },
+    [questsData?.quests],
+  );
+
+  const campaignName = questsData?.campaignName || '';
+  const campaignDescription = questsData?.campaignDescription || '';
+
+  const accountId = useMemo(() => {
+    const dataAccountId = questsData?.accountId;
+
+    if (dataAccountId && dataAccountId !== '') {
+      return dataAccountId;
+    }
+
+    if (walletStatus === 'connected' && fallbackAccountId) {
+      return fallbackAccountId;
+    }
+
+    return '';
+  }, [questsData?.accountId, fallbackAccountId, walletStatus]);
+
+  const remainingTime = useMemo(
+    () => questsData?.remainingTime || { days: 0, hours: 0, minutes: 0 },
+    [questsData?.remainingTime],
+  );
+
+  // Update countdown timer
+  useEffect(() => {
+    setTimeLeft(remainingTime);
+
+    const timer = setInterval(() => {
+      setTimeLeft((prevTime) => {
+        const totalMinutes = prevTime.days * 1440 + prevTime.hours * 60 + prevTime.minutes - 1;
+
+        if (totalMinutes <= 0) {
+          clearInterval(timer);
+          return { days: 0, hours: 0, minutes: 0 };
+        }
+
+        const days = Math.floor(totalMinutes / 1440);
+        const hours = Math.floor((totalMinutes % 1440) / 60);
+        const minutes = totalMinutes % 60;
+
+        return { days, hours, minutes };
+      });
+    }, 60000);
+
+    return () => clearInterval(timer);
+  }, [remainingTime]);
+
+  // Sort quests by completion status and order
+  const sortedQuests = useMemo(() => {
+    const {
+      videoTasks = [],
+      socialTasks = [],
+      dexTasks = [],
+      quizTasks = [],
+      referralTask = undefined,
+      customTasks = [],
+    } = quests;
+
+    const allTasks: Task[] = [
+      ...(videoTasks.map((task, index) => ({ ...task, type: 'video' as const, originalIndex: index })) || []),
+      ...(socialTasks.map((task, index) => ({ ...task, type: 'social' as const, originalIndex: index })) || []),
+      ...(dexTasks.map((task, index) => ({ ...task, type: 'dex' as const, originalIndex: index })) || []),
+      ...(quizTasks.map((task, index) => ({ ...task, type: 'quiz' as const, originalIndex: index })) || []),
+      ...(referralTask
+        ? [{ ...referralTask, type: 'referral' as const, originalIndex: 0, completed: referralTask.completed ?? false }]
+        : []),
+      ...(customTasks.map((task, index) => ({ ...task, type: 'custom' as const, originalIndex: index })) || []),
+    ];
+
+    const walletQuest = allTasks.find(
+      (task): task is CustomTask => task.type === 'custom' && task.subtype === 'wallet',
+    );
+
+    const connectXQuest = allTasks.find(
+      (task): task is CustomTask => task.type === 'custom' && task.subtype === 'x_connect',
+    );
+
+    const remainingTasks = allTasks.filter((task) => task !== walletQuest && task !== connectXQuest);
+
+    const hasOrder = remainingTasks.some((task) => task.order !== undefined);
+
+    const sorted = remainingTasks.sort((a, b) => {
+      if (Boolean(a.completed) !== Boolean(b.completed)) {
+        return a.completed ? 1 : -1;
+      }
+
+      if (hasOrder) {
+        const aOrder = a.order !== undefined ? a.order : Infinity;
+        const bOrder = b.order !== undefined ? b.order : Infinity;
+        return aOrder - bOrder;
+      } else {
+        const typeOrder = ['video', 'quiz', 'social', 'dex', 'referral', 'custom'];
+        return typeOrder.indexOf(a.type) - typeOrder.indexOf(b.type);
+      }
+    });
+
+    const result = [];
+    if (walletQuest) result.push(walletQuest);
+    if (connectXQuest) result.push(connectXQuest);
+    result.push(...sorted);
+    return result;
+  }, [quests]);
+
+  const campaignDuration = new Date(questsData?.endDate).getTime() - new Date(questsData?.startDate).getTime() || 0;
+  const timeElapsed = new Date().getTime() - new Date(questsData?.startDate).getTime();
+
+  const campaignProgress = useMemo(() => {
+    return Math.min(Math.max(campaignDuration > 0 ? (timeElapsed / campaignDuration) * 100 : 0, 0), 100);
+  }, [campaignDuration, timeElapsed]);
+
+  useEffect(() => {
+    if (questsData && mounted) {
+      const renderTime = performance.now();
+      Analytics.transaction('TAB_LOADED', renderTime, { tab: { name: 'ACTIVE_QUESTS' } });
+    }
+  }, [questsData, mounted]);
+
+  // Show loading state only if we're actually loading and don't have any cached data
+  const shouldShowLoader = isQuestsLoading && !questsData;
+
+  // Apply custom CSS variables
+  useEffect(() => {
+    if (bannerConfig) {
+      const root = document.documentElement;
+
+      if (bannerConfig.topBannerContent?.backgroundColor) {
+        root.style.setProperty('--campaign-banner-bg-color', bannerConfig.topBannerContent.backgroundColor);
+      }
+
+      if (bannerConfig.topBannerContent?.textColor) {
+        root.style.setProperty('--campaign-banner-text-color', bannerConfig.topBannerContent.textColor);
+      }
+
+      if (bannerConfig.colors?.primary) {
+        root.style.setProperty('--active-quests-primary-color', bannerConfig.colors.primary);
+      }
+    }
+  }, [bannerConfig]);
+
+  if (shouldShowLoader) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+        <Loader size="m" />
+      </div>
+    );
+  }
+
+  if (error && !questsData) {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+        <Text>Error loading quests: {error}</Text>
+      </div>
+    );
+  }
+
+  const showBanner = bannerConfig?.showTopBanner !== false;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {isLoading || memoizedQuestsHtml === '' ? (
-        <Loader size="m" />
-      ) : (
-        <IframeRenderer
-          iframeRef={iframeRef}
-          title="Active Quests"
-          html={memoizedQuestsHtml}
-          style={{
-            width: '100%',
-            height: 'calc(100vh - 74px)',
-            border: 'none',
-          }}
-          onLoad={handleIframeLoad}
-        />
-      )}
-      {snackbarMessage && (
-        <Snackbar onClose={() => setSnackbarMessage(null)} duration={5000}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <ClipboardCheck />
-            {snackbarMessage}
+    <>
+      {showBanner && (
+        <div className="banner">
+          <div className="banner-header">
+            <Text weight="1" className="banner-title">
+              {bannerConfig?.topBannerContent?.title || ''}
+            </Text>
           </div>
-        </Snackbar>
+
+          {bannerConfig?.topBannerContent?.description && (
+            <Text style={{ fontSize: '14px', marginBottom: '8px' }}>
+              {bannerConfig?.topBannerContent?.description || ''}
+            </Text>
+          )}
+
+          {bannerConfig?.topBannerContent?.linkText && bannerConfig?.topBannerContent?.linkUrl && (
+            <a
+              href={bannerConfig.topBannerContent.linkUrl}
+              className="banner-link"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Text>{bannerConfig.topBannerContent.linkText}</Text>
+            </a>
+          )}
+        </div>
       )}
-    </div>
+      <div className="active-quests-container">
+        <Title weight="1" level="1" className="active-quests-title" style={{ marginLeft: 16, marginTop: 16, color }}>
+          Complete Quests to Earn!
+        </Title>
+        {campaignDescription && (
+          <Title
+            level="2"
+            className="active-quests-subtitle"
+            style={{ marginLeft: 16, marginTop: 16, marginBottom: 32 }}
+          >
+            {campaignDescription}
+          </Title>
+        )}
+        <div className="campaign-info">
+          <div className="campaign-header">
+            <Text weight="1" className="campaign-title" style={{ color }}>
+              {campaignName}
+            </Text>
+            <Text className="campaign-time">
+              {timeLeft.days}d {timeLeft.hours}h {timeLeft.minutes}m
+            </Text>
+          </div>
+          <div className="progress-bar">
+            <div className="progress-fill" style={{ width: `${campaignProgress}%` }} />
+          </div>
+        </div>
+        <QuestsList>
+          {(() => {
+            console.log(
+              'ActiveQuests: Rendering quests with shouldLockOthers =',
+              hasMandatoryQuest && !isMandatoryCompleted,
+              {
+                hasMandatoryQuest,
+                isMandatoryCompleted,
+                accountId,
+                walletStatus,
+                sortedQuestsCount: sortedQuests.length,
+              },
+            );
+            return null;
+          })()}
+          {sortedQuests.length > 0 ? (
+            <FlipMove>
+              {sortedQuests.map((quest, idx) => (
+                <div key={`${idx}_${quest?.title}`} style={{ position: 'relative' }}>
+                  <QuestsListItem
+                    shouldLockOthers={hasMandatoryQuest && !isMandatoryCompleted}
+                    key={`${idx}_${quest?.title}`}
+                    quest={quest}
+                    campaignId={Number(campaignId || activeCampaignId)}
+                    organizationId={Number(organizationId || activeOrganizationId)}
+                    accountId={accountId}
+                    remainingDays={remainingTime.days}
+                    setActiveTab={setActiveTab}
+                  />
+                  {disableQuests && <QuestDisabledOverlay />}
+                </div>
+              ))}
+            </FlipMove>
+          ) : (
+            <Text className="no-quests">{isQuestsLoading ? 'Loading quests...' : 'There are no quests yet.'}</Text>
+          )}
+        </QuestsList>
+        {snackbarMessage && (
+          <Snackbar onClose={() => setSnackbarMessage(null)} duration={5000}>
+            <Title style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <ClipboardCheck />
+              {snackbarMessage}
+            </Title>
+          </Snackbar>
+        )}
+      </div>
+    </>
   );
 };

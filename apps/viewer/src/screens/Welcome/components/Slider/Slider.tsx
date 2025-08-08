@@ -1,9 +1,11 @@
+import './style.css';
+
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { ChevronRight, ChevronLeft } from 'lucide-react';
+
 import rewardsIcon from '../../icons/7265170.png';
 import expertInsights from '../../icons/Expert-Insights-Icon.webp';
 import nlp from '../../icons/nlp-natural-language-processing.png';
-import './style.css';
 
 const slides = [
   {

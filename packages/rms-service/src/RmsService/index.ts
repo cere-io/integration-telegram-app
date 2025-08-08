@@ -1,2 +1,2 @@
-export * from './types.ts';
 export * from './RmsService.ts';
+export * from './types.ts';

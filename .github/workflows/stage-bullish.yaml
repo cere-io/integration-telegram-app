@@ -1,4 +1,4 @@
-name: Release bullish to stage
+name: Release to stage
 on:
   workflow_dispatch:
 

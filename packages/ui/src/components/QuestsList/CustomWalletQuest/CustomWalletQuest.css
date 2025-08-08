@@ -1,0 +1,5 @@
+.section-header-text {
+    font-size: var(--tgui--caption1--font_size);
+    line-height: var(--tgui--caption1--line_height);
+    color: var(--tgui--section_header_text_color);
+}

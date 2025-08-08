@@ -1,18 +1,25 @@
-import { Campaign, Response, Template } from './types.ts';
+import { Campaign, Response } from './types.ts';
 
 type RequestOptions = RequestInit & {
   allowStatus?: number[];
 };
 
 export class RmsService {
-  readonly baseUrl: URL;
+  readonly baseUrl: string;
 
   constructor(baseUrl: string) {
-    this.baseUrl = new URL(baseUrl);
+    this.baseUrl = baseUrl.replace(/\/+$/, '');
   }
 
-  private async request(url: string, { allowStatus = [], ...options }: RequestOptions = {}) {
-    const response = await fetch(new URL(url, this.baseUrl), {
+  buildUrl(path: string) {
+    const normalizedPath = path.replace(/^\/+/, '');
+    return `${this.baseUrl}/${normalizedPath}`;
+  }
+
+  private async request(path: string, { allowStatus = [], ...options }: RequestOptions = {}) {
+    const url = this.buildUrl(path);
+
+    const response = await fetch(url, {
       ...options,
     });
 
@@ -22,16 +29,24 @@ export class RmsService {
     return response;
   }
 
-  async getCampaignById(campaignId: string): Promise<Campaign | undefined> {
-    const response = await this.request(`/api/campaign/${campaignId}`);
+  async getCampaignById(campaignId: number): Promise<Campaign | undefined> {
+    const response = await this.request(`/campaign/${campaignId}`);
 
     const responseBody: Response<Campaign> = await response.json();
 
     return responseBody.data;
   }
 
-  async getTemplateByCampaignIdAndEventType(campaignId: string, eventType: string): Promise<Template | undefined> {
-    const response = await this.request(`/api/template/${campaignId}/type/${eventType}`);
+  async getCampaignByOrganizationId(organizationId: number): Promise<Campaign | undefined> {
+    const response = await this.request(`/campaign/organization/${organizationId}`);
+
+    const responseBody: Response<Campaign> = await response.json();
+
+    return responseBody.data;
+  }
+
+  async getOrganizationAssociatedWithCampaign(campaignId: number): Promise<any> {
+    const response = await this.request(`/campaign/${campaignId}/organization`);
 
     return await response.json();
   }

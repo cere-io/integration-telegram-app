@@ -1,4 +1,4 @@
-import { test, expect, Page } from '@playwright/test';
+import { expect, Page, test } from '@playwright/test';
 import * as fs from 'fs';
 
 const userName = process.env.TEST_USER_EMAIL || 'veronika.filipenko@cere.io';

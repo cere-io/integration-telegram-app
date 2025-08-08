@@ -1,4 +1,4 @@
-name: Release bullish to dev
+name: Release to dev
 on:
   workflow_dispatch:
 

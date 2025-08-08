@@ -1,7 +1,7 @@
 import { UriSigner } from '@cere-activity-sdk/events';
 import { u8aToHex } from '@polkadot/util';
-import { v4 as uuid } from 'uuid';
 import { blake2bHex } from 'blakejs';
+import { v4 as uuid } from 'uuid';
 
 const signingProtocolVersion1 = 0x00;
 const signingSignerApp = 0x02;
@@ -62,8 +62,16 @@ export class CereAnalytics {
     });
   }
   transaction(name: string, duration: number, payload?: any) {
-    this.sendEvent('TRANSACTION', { name, duration, ...payload }).then(() => {
-      console.log(`Transaction ${name} (${duration} ms) has been successfully sent to Cere Analytics`);
+    const event = {
+      name,
+      duration,
+      ...(payload || {}),
+    };
+
+    this.sendEvent('TRANSACTION', event).then(() => {
+      const tabName = payload?.tab?.name ?? '';
+      const tabInfo = tabName ? ` [tab: ${tabName}]` : '';
+      console.log(`Transaction ${name}${tabInfo} (${duration} ms) has been successfully sent to Cere Analytics`);
     });
   }
 

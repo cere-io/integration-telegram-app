@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { useEvents } from '../hooks/useEvents.ts';
 import { ActivityEvent } from '@cere-activity-sdk/events';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
+import { useEvents } from '../hooks/useEvents.ts';
 
 const EVENT_THROTTLE_TIME = 30 * 1000;
 

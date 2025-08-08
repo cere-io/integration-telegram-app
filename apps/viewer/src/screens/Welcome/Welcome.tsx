@@ -1,18 +1,21 @@
-import { Checkbox, Text, Button } from '@tg-app/ui';
 import './style.css';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import { EffectCards, Pagination, Navigation } from 'swiper/modules';
-import EarnRewards from './icons/EarnRewards.svg';
-import ExpertInsights from './icons/ExpertInsights.svg';
-import AINLP from './icons/AINLP.svg';
-
 import 'swiper/css';
 import 'swiper/css/effect-cards';
 import 'swiper/css/pagination';
 import 'swiper/css/navigation';
+
 import { FormDataType } from '@tg-app/rms-service';
+import { Button, Checkbox, Text } from '@tg-app/ui';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { EffectCards, Navigation, Pagination } from 'swiper/modules';
+import { Swiper, SwiperSlide } from 'swiper/react';
+
 import { useData } from '~/providers';
+
+import { getPreviewCustomization } from '../../helpers';
+import AINLP from './icons/AINLP.svg';
+import EarnRewards from './icons/EarnRewards.svg';
+import ExpertInsights from './icons/ExpertInsights.svg';
 
 type WelcomeScreenProps = {
   onStart?: () => void;
@@ -24,6 +27,9 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
   const [config, setConfig] = useState<FormDataType['campaign']['configuration']['welcomeScreen'] | null>(null);
 
   const { campaignConfig, campaignConfigLoaded } = useData();
+
+  // Get preview customization if available
+  const previewCustomization = getPreviewCustomization();
 
   useEffect(() => {
     if (!campaignConfig) return;
@@ -37,12 +43,16 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
   }, [campaignConfig]);
 
   useEffect(() => {
-    if (config?.cssVariables) {
-      Object.entries(config?.cssVariables).forEach(([key, value]) => {
-        document.documentElement.style.setProperty(key, value);
+    // Apply CSS variables from preview customization or config
+    const cssVariables = previewCustomization?.welcomeScreen?.cssVariables || config?.cssVariables;
+    if (cssVariables) {
+      Object.entries(cssVariables).forEach(([key, value]) => {
+        if (value) {
+          document.documentElement.style.setProperty(key, value);
+        }
       });
     }
-  }, [config?.cssVariables]);
+  }, [config?.cssVariables, previewCustomization?.welcomeScreen?.cssVariables]);
 
   useEffect(() => {
     const savedPrivacyAccepted = localStorage.getItem('privacyAccepted') === 'true';
@@ -78,7 +88,7 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
         className="welcome-cta-button"
       >
         <Text className="welcom-cta-text">
-          <span>{config?.buttonText || 'Start Earning'}</span>
+          <span>{previewCustomization?.welcomeScreen?.buttonText || config?.buttonText || 'Start Earning'}</span>
           <svg width="15" height="14" viewBox="0 0 15 14" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path
               d="M14.1178 5.18713L8.93455 -6.10352e-05L7.55176 1.38567L12.735 6.57286L7.55176 11.7601L8.93847 13.1458L14.1178 7.9586C14.4853 7.59104 14.6917 7.09259 14.6917 6.57286C14.6917 6.05314 14.4853 5.55469 14.1178 5.18713Z"
@@ -92,7 +102,7 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
         </Text>
       </Button>
     );
-  }, [tempPrivacyAccepted, handleButtonClick, config?.buttonText]);
+  }, [tempPrivacyAccepted, handleButtonClick, config?.buttonText, previewCustomization?.welcomeScreen?.buttonText]);
 
   const slidesToRender = useMemo(() => {
     const defaultSlides = [
@@ -142,9 +152,12 @@ export const WelcomeScreen = ({ onStart }: WelcomeScreenProps) => {
           <div className="ellipse-top"></div>
           <div className="ellipse-bottom"></div>
           <div className="hero-wrapper">
-            <h1 className="hero-title">{config?.title || 'Sit back, Enjoy, and Earn!'}</h1>
+            <h1 className="hero-title">
+              {previewCustomization?.welcomeScreen?.title || config?.title || 'Sit back, Enjoy, and Earn!'}
+            </h1>
             <p className="hero-description">
-              {config?.description ||
+              {previewCustomization?.welcomeScreen?.description ||
+                config?.description ||
                 'Watch exclusive project explainers for unique insights and get rewarded in top-project tokens!'}
             </p>
           </div>

@@ -1,0 +1,13 @@
+/* ProgressBar.css */
+.progressBar {
+    width: 100%;
+    height: 4px; /* Default height */
+    background-color: #e5e7eb; /* Default background color */
+    border-radius: 2px; /* Default border radius */
+}
+
+.progressFill {
+    height: 100%;
+    background-color: #3b82f6; /* Default fill color */
+    border-radius: 2px; /* Default border radius */
+}

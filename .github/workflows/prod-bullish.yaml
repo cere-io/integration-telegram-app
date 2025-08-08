@@ -1,4 +1,4 @@
-name: Release bullish to prod
+name: Release to prod
 on:
   workflow_dispatch:
 

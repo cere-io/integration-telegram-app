@@ -1,21 +1,166 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { useRmsService, useStartParam } from '~/hooks';
-import { compileHtml, decodeHtml } from '~/helpers';
+import { WalletStatus } from '@cere/embed-wallet';
 import { Campaign } from '@tg-app/rms-service';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+
+import { useCereWallet } from '~/cere-wallet';
+import { MINI_APP_APP_ID, RULE_SERVICE_URL } from '~/constants';
+import { isPreviewMode } from '~/helpers';
+import { useRmsService, useStartParam } from '~/hooks';
+
+// Types from useDataServiceApi
+type DataServiceConfig = {
+  baseUrl: string;
+  dataServiceId: string;
+};
+
+type LeaderboardResponse = {
+  users: Array<{
+    user: string;
+    points: number;
+    rank: number;
+    username?: string;
+    external_wallet_address?: string;
+    quests?: any;
+  }>;
+};
+
+type QuestsResponse = {
+  quests: any;
+  accountId: string;
+  campaignId: number;
+  theme: string;
+  campaignName: string;
+  campaignDescription: string;
+  remainingTime: {
+    days: number;
+    hours: number;
+    minutes: number;
+  };
+};
+
+const DEFAULT_CONFIG: DataServiceConfig = {
+  baseUrl: RULE_SERVICE_URL,
+  dataServiceId: MINI_APP_APP_ID,
+};
+
+// Mock data for preview mode
+const MOCK_LEADERBOARD_DATA: LeaderboardResponse = {
+  users: [
+    { user: '0x1234567890abcdef1234567890abcdef12345678', points: 1250, rank: 1, username: 'Preview User' },
+    { user: '0x2234567890abcdef1234567890abcdef12345678', points: 950, rank: 2, username: 'Alice' },
+    { user: '0x3234567890abcdef1234567890abcdef12345678', points: 850, rank: 3, username: 'Bob' },
+    { user: '0x4234567890abcdef1234567890abcdef12345678', points: 720, rank: 4, username: 'Charlie' },
+    { user: '0x5234567890abcdef1234567890abcdef12345678', points: 680, rank: 5, username: 'Diana' },
+  ],
+};
+
+const MOCK_QUESTS_DATA: QuestsResponse = {
+  quests: {
+    videoTasks: [
+      {
+        id: 'video-1',
+        title: 'Watch Introduction Video',
+        description: 'Learn about the project basics',
+        videoUrl: 'https://example.com/video1.mp4',
+        thumbnailUrl: 'https://example.com/thumb1.jpg',
+        points: 100,
+        completed: false,
+        type: 'video',
+      },
+      {
+        id: 'video-2',
+        title: 'Advanced Features Overview',
+        description: 'Deep dive into advanced functionality',
+        videoUrl: 'https://example.com/video2.mp4',
+        thumbnailUrl: 'https://example.com/thumb2.jpg',
+        points: 150,
+        completed: true,
+        type: 'video',
+      },
+    ],
+    socialTasks: [
+      {
+        id: 'social-1',
+        title: 'Follow on Twitter',
+        description: 'Follow our official Twitter account',
+        tweetId: '1234567890',
+        points: 50,
+        completed: false,
+        type: 'social',
+      },
+    ],
+    dexTasks: [],
+    quizTasks: [
+      {
+        id: 'quiz-1',
+        title: 'Knowledge Quiz',
+        description: 'Test your understanding',
+        quizId: 'quiz-123',
+        points: 200,
+        completed: false,
+        type: 'quiz',
+      },
+    ],
+    referralTask: {
+      id: 'referral-1',
+      title: 'Invite Friends',
+      description: 'Invite friends to join the campaign',
+      message: 'Join this amazing campaign! Use my link: {link}',
+      points: 300,
+      completed: false,
+      type: 'referral',
+    },
+    customTasks: [
+      {
+        id: 'x_connect-1',
+        title: 'Connect your X account',
+        description: 'Connect your X (Twitter) account to unlock exclusive features and rewards',
+        startEvent: 'x_oauth_start',
+        completedEvent: 'x_oauth_success',
+        points: 100,
+        completed: false,
+        type: 'custom',
+        subtype: 'x_connect',
+        instructions:
+          'Click the button below to connect your X account. You will be redirected to X to authorize access.',
+        is_mandatory: true,
+      },
+    ],
+  },
+  accountId: '0x1234567890abcdef1234567890abcdef12345678',
+  campaignId: 115,
+  theme: 'dark',
+  campaignName: 'Preview Campaign',
+  campaignDescription: 'This is a preview of the campaign interface',
+  remainingTime: {
+    days: 15,
+    hours: 8,
+    minutes: 32,
+  },
+};
 
 type DataContextType = {
   questData: any;
-  questsHtml: string;
   leaderboardData: any;
-  leaderboardHtml: string;
+  activeCampaignId: number | null;
+  activeOrganizationId: number | null;
   campaignConfig: Campaign | null;
   campaignConfigLoaded: boolean;
   campaignExpired: boolean;
   campaignPaused: boolean;
-  updateData: (newData: any, originalHtml: string, newHtml: string, key: 'quests' | 'leaderboard') => void;
+  campaignCompleted: boolean;
+  isLeaderboardLoading: boolean;
+  isQuestsLoading: boolean;
+  error: string | null;
+  updateData: (newData: any, key: 'quests' | 'leaderboard') => void;
   loadCache: () => void;
   updateQuestStatus: (questId: string, taskType: string, newStatus: boolean, points: number) => void;
+  refetchQuestsForTab: () => void;
+  refetchLeaderboardForTab: () => void;
+  setQuestsData: (data: any) => void;
   debugMode: boolean;
+  disableQuests: boolean;
+  walletStatus: WalletStatus | null;
 };
 
 const DataContext = createContext<DataContextType | null>(null);
@@ -30,36 +175,340 @@ export const useData = () => {
 
 export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [campaignKey, setCampaignKey] = useState<string | null>(null);
+  const [organization, setOrganization] = useState<unknown>(undefined);
+  const [organizationLoaded, setOrganizationLoaded] = useState(false);
   const [campaignConfig, setCampaignConfig] = useState<Campaign | null>(null);
+  const [activeCampaignId, setActiveCampaignId] = useState<number | null>(null);
+  const [disableQuests, setDisableQuests] = useState<boolean>(true);
   const [isConfigLoaded, setIsConfigLoaded] = useState(false);
   const [questData, setQuestData] = useState<any | null>(null);
-  const [questsHtml, setQuestsHtml] = useState<string>('');
-  const [questsOriginalHtml, setQuestsOriginalHtml] = useState<string>('');
   const [leaderboardData, setLeaderboardData] = useState<any | null>(null);
-  const [leaderboardHtml, setLeaderboardHtml] = useState<string>('');
-  const [leaderboardOriginalHtml, setLeaderboardOriginalHtml] = useState<string>('');
   const [isCampaignExpired, setIsCampaignExpired] = useState(false);
   const [isCampaignPaused, setIsCampaignPaused] = useState(false);
+  const [isCampaignCompleted, setIsCampaignCompleted] = useState(false);
   const [isDebugMode, setDebugMode] = useState(false);
+  const [walletStatus, setWalletStatus] = useState(null);
+
+  const [isLeaderboardLoading, setIsLeaderboardLoading] = useState(false);
+  const [isQuestsLoading, setIsQuestsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const initialQuestsHtmlRef = useRef<string | null>(null);
   const initialLeaderboardHtmlRef = useRef<any | null>(null);
 
   const previousQuestData = useRef<any | null>(null);
-  const previousQuestsHtml = useRef<string>('');
-  const previousQuestsOriginalHtml = useRef<string>('');
   const previousLeaderboardData = useRef<any | null>(null);
-  const previousLeaderboardHtml = useRef<string>('');
-  const previousLeaderboardOriginalHtml = useRef<string>('');
 
-  const { campaignId } = useStartParam();
+  // Refs to track if we've already fetched data
+  const hasFetchedLeaderboard = useRef(false);
+  const hasFetchedQuests = useRef(false);
+
+  // Add refs to track the last parameters used for fetching to prevent duplicate requests
+  const lastQuestFetchParams = useRef<string | null>(null);
+  const lastLeaderboardFetchParams = useRef<string | null>(null);
+
+  const { organizationId, campaignId } = useStartParam();
   const rmsService = useRmsService();
+  const cereWallet = useCereWallet();
+
+  const currentCampaignId = campaignId || activeCampaignId;
+
+  const lastCampaignIdRef = useRef<number | null>(null);
+
+  const activeOrganizationId = organizationId || Number((organization as any)?.appId as string);
+
+  // Reset fetch flags only when campaign actually changes
+  useEffect(() => {
+    if (lastCampaignIdRef.current !== currentCampaignId && currentCampaignId) {
+      hasFetchedLeaderboard.current = false;
+      hasFetchedQuests.current = false;
+      lastQuestFetchParams.current = null;
+      lastLeaderboardFetchParams.current = null;
+      lastCampaignIdRef.current = currentCampaignId;
+    }
+  }, [currentCampaignId]);
+
+  useEffect(() => {
+    const unsubscribe = cereWallet.subscribe('status-update', setWalletStatus);
+
+    return () => unsubscribe();
+  }, [cereWallet]);
+
+  const saveCache = useCallback(async () => {
+    if (!campaignKey) return;
+
+    if (questData !== null && questData !== previousQuestData.current) {
+      localStorage.setItem(`${campaignKey}_quest_data`, JSON.stringify(questData));
+      previousQuestData.current = questData;
+    }
+    if (leaderboardData !== null && leaderboardData !== previousLeaderboardData.current) {
+      localStorage.setItem(`${campaignKey}_leaderboard`, JSON.stringify(leaderboardData));
+      previousLeaderboardData.current = leaderboardData;
+    }
+  }, [campaignKey, questData, leaderboardData]);
+
+  // Helper method to compare data and update only if changed
+  const updateQuestDataIfChanged = useCallback((newData: any) => {
+    setQuestData((prevData: any) => {
+      const hasChanged = JSON.stringify(prevData) !== JSON.stringify(newData);
+      if (hasChanged || !prevData) {
+        return newData;
+      }
+      return prevData;
+    });
+  }, []);
+
+  const updateLeaderboardDataIfChanged = useCallback((newData: any) => {
+    setLeaderboardData((prevData: any) => {
+      const hasChanged = JSON.stringify(prevData) !== JSON.stringify(newData);
+      if (hasChanged || !prevData) {
+        return newData;
+      }
+      return prevData;
+    });
+  }, []);
+
+  // Load organization with better dependency management
+  useEffect(() => {
+    if (organizationLoaded || organization || (!campaignId && !activeCampaignId)) return;
+
+    const loadOrganization = async () => {
+      const targetCampaignId = activeCampaignId || campaignId;
+      if (!targetCampaignId) return;
+
+      try {
+        const response = await rmsService.getOrganizationAssociatedWithCampaign(targetCampaignId);
+        if (response.code === 'SUCCESS') {
+          setOrganization(response.data);
+        }
+      } catch (error) {
+        console.error('Error loading organization:', error);
+      } finally {
+        setOrganizationLoaded(true);
+      }
+    };
+
+    loadOrganization();
+  }, [campaignId, activeCampaignId, organizationLoaded, organization, rmsService]);
+
+  // API methods from useDataServiceApi
+  const fetchLeaderboard = useCallback(
+    async (silent = false) => {
+      if (walletStatus !== 'connected') return;
+
+      try {
+        const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
+        if (!organizationId && !activeCampaignId && !accountId) return;
+
+        // Create a unique key for this fetch to prevent duplicates
+        const organizationIdForFetch = organizationId || (organization as any)?.appId;
+        const fetchKey = `${currentCampaignId}-${organizationIdForFetch}-${accountId}`;
+        if (lastLeaderboardFetchParams.current === fetchKey && !silent) {
+          console.log('Skipping duplicate leaderboard fetch with same parameters');
+          return; // Skip if same parameters and not a silent refetch
+        }
+
+        if (!silent) {
+          setIsLeaderboardLoading(true);
+        }
+        setError(null);
+
+        // Return mock data in preview mode
+        if (isPreviewMode()) {
+          console.log('Preview mode: returning mock leaderboard data');
+          setTimeout(() => {
+            updateLeaderboardDataIfChanged(MOCK_LEADERBOARD_DATA);
+            if (!silent) {
+              setIsLeaderboardLoading(false);
+            }
+            lastLeaderboardFetchParams.current = fetchKey;
+          }, 500);
+          return;
+        }
+
+        console.log('Fetching leaderboard with params:', {
+          campaign_id: currentCampaignId,
+          organization_id: organizationIdForFetch,
+          account_id: accountId,
+        });
+
+        const response = await fetch(
+          `${DEFAULT_CONFIG.baseUrl}/data-service/${DEFAULT_CONFIG.dataServiceId}/query/get_leaderboard`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              params: {
+                campaign_id: currentCampaignId,
+                organization_id: organizationIdForFetch,
+                account_id: accountId,
+              },
+            }),
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const resultData = data.result.data.data;
+
+        updateLeaderboardDataIfChanged(resultData);
+        lastLeaderboardFetchParams.current = fetchKey;
+        saveCache();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch leaderboard');
+        console.error('Error fetching leaderboard:', err);
+      } finally {
+        if (!silent) {
+          setIsLeaderboardLoading(false);
+        }
+      }
+    },
+    [
+      walletStatus,
+      cereWallet,
+      organizationId,
+      activeCampaignId,
+      organization,
+      currentCampaignId,
+      updateLeaderboardDataIfChanged,
+      saveCache,
+    ],
+  );
+
+  const fetchQuests = useCallback(
+    async (silent = false) => {
+      if (walletStatus !== 'connected') return;
+
+      try {
+        const accountId = await cereWallet.getSigner({ type: 'ed25519' }).getAddress();
+        if (!organizationId && !activeCampaignId && !accountId) return;
+
+        // Create a unique key for this fetch to prevent duplicates
+        const organizationIdForFetch = organizationId || (organization as any)?.appId;
+        const fetchKey = `${currentCampaignId}-${organizationIdForFetch}-${accountId}`;
+
+        if (lastQuestFetchParams.current === fetchKey && !silent) {
+          console.log('Skipping duplicate quest fetch with same parameters');
+          return; // Skip if same parameters and not a silent refetch
+        }
+
+        if (!silent) {
+          setIsQuestsLoading(true);
+        }
+        setError(null);
+
+        // Return mock data in preview mode
+        if (isPreviewMode()) {
+          console.log('Preview mode: returning mock quests data');
+          setTimeout(() => {
+            updateQuestDataIfChanged([MOCK_QUESTS_DATA]);
+            if (!silent) {
+              setIsQuestsLoading(false);
+            }
+            lastQuestFetchParams.current = fetchKey;
+          }, 300);
+          return;
+        }
+
+        console.log('Fetching quests with params:', {
+          campaign_id: currentCampaignId,
+          organization_id: organizationIdForFetch,
+          account_id: accountId,
+        });
+
+        const response = await fetch(
+          `${DEFAULT_CONFIG.baseUrl}/data-service/${DEFAULT_CONFIG.dataServiceId}/query/get_quests`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              params: {
+                campaign_id: currentCampaignId,
+                organization_id: organizationIdForFetch,
+                account_id: accountId,
+              },
+            }),
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const resultData = data.result.data.data;
+
+        // Update data only if changed
+        updateQuestDataIfChanged(resultData);
+        lastQuestFetchParams.current = fetchKey;
+        saveCache();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch quests');
+        console.error('Error fetching quests:', err);
+      } finally {
+        if (!silent) {
+          setIsQuestsLoading(false);
+        }
+      }
+    },
+    [
+      walletStatus,
+      cereWallet,
+      organizationId,
+      activeCampaignId,
+      organization,
+      currentCampaignId,
+      updateQuestDataIfChanged,
+      saveCache,
+    ],
+  );
+
+  // Methods for tab-specific refetch - create a stable version
+  const refetchQuestsForTab = useCallback(() => {
+    console.log('refetchQuestsForTab called');
+    fetchQuests(true); // Silent refetch
+  }, [fetchQuests]);
+
+  const refetchLeaderboardForTab = useCallback(() => {
+    console.log('refetchLeaderboardForTab called');
+    fetchLeaderboard(true); // Silent refetch
+  }, [fetchLeaderboard]);
+
+  // Auto-fetch when wallet becomes ready - improved logic
+  useEffect(() => {
+    if (cereWallet && walletStatus === 'connected' && currentCampaignId) {
+      // Only fetch if we haven't already tried for this campaign
+      if (!hasFetchedQuests.current) {
+        console.log('Auto-fetching quests for campaign:', currentCampaignId);
+        fetchQuests();
+        hasFetchedQuests.current = true;
+      }
+
+      if (!hasFetchedLeaderboard.current) {
+        console.log('Auto-fetching leaderboard for campaign:', currentCampaignId);
+        fetchLeaderboard();
+        hasFetchedLeaderboard.current = true;
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cereWallet, walletStatus, currentCampaignId]);
 
   useEffect(() => {
     let isMounted = true;
     const fetchCampaignKey = async () => {
       if (isMounted) {
-        setCampaignKey(`campaign_${campaignId}`);
+        setCampaignKey(
+          activeOrganizationId
+            ? `campaign_${campaignId || activeCampaignId}_organization_${activeOrganizationId}`
+            : `campaign_${campaignId}`,
+        );
       }
     };
 
@@ -68,7 +517,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       isMounted = false;
     };
-  }, [campaignId]);
+  }, [activeCampaignId, campaignId, activeOrganizationId]);
 
   useEffect(() => {
     fetchCampaignConfig();
@@ -79,50 +528,67 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     if (!campaignConfig) return;
     const campaignStatus = JSON.parse(campaignConfig?.formData as unknown as string)?.campaign?.status;
     const debugMode = JSON.parse(campaignConfig?.formData as unknown as string)?.campaign?.debug || false;
+    const disableQuests = JSON.parse(campaignConfig?.formData as unknown as string)?.campaign?.disableQuests || false;
     setDebugMode(debugMode);
-    if (campaignStatus !== 'paused') {
-      if (questData || questsHtml) return;
+    setDisableQuests(disableQuests);
+
+    // Check if campaign is completed
+    if (campaignStatus === 'completed') {
+      setIsCampaignCompleted(true);
     }
-    prepareDataFromConfig();
+
+    // Only prepare data from config if we don't have quest data yet or campaign was paused
+    if (campaignStatus === 'paused' || !questData) {
+      prepareDataFromConfig();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [campaignConfig, questData, questsHtml]);
+  }, [campaignConfig]);
 
   const fetchCampaignConfig = useCallback(async () => {
-    if (!campaignId) return;
+    if (!activeOrganizationId && !campaignId) return;
+
+    // Prevent duplicate config fetches
+    if (isConfigLoaded && campaignConfig) return;
 
     try {
-      const [campaignResponse, templateResponse] = await Promise.all([
-        rmsService.getCampaignById(campaignId),
-        rmsService.getTemplateByCampaignIdAndEventType(campaignId, 'GET_QUESTS'),
-      ]);
+      let campaignResponse: Campaign | undefined = undefined;
+      if (activeOrganizationId) {
+        campaignResponse = await rmsService.getCampaignByOrganizationId(activeOrganizationId);
+      } else if (campaignId) {
+        campaignResponse = await rmsService.getCampaignById(campaignId);
+      }
 
-      if (!campaignResponse) return;
+      if (campaignResponse) {
+        setActiveCampaignId(campaignResponse?.campaignId || null);
 
-      const response = {
-        ...campaignResponse,
-        templateHtml: templateResponse?.params || '',
-      };
+        const response = {
+          ...campaignResponse,
+        };
 
-      setCampaignConfig(response);
+        setCampaignConfig(response as Campaign);
+      }
       setIsConfigLoaded(true);
     } catch (error) {
       console.error('Error fetching campaign config:', error);
+      setIsConfigLoaded(true); // Set to true even on error to prevent infinite retries
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [questData]);
+  }, [activeOrganizationId, campaignId, isConfigLoaded, campaignConfig, rmsService]);
 
-  const prepareDataFromConfig = () => {
+  useEffect(() => {
+    if (!isConfigLoaded) {
+      fetchCampaignConfig();
+    }
+  }, [fetchCampaignConfig, isConfigLoaded]);
+
+  const prepareDataFromConfig = useCallback(() => {
     if (!campaignConfig) return;
     const parsedData = parseCampaignData(campaignConfig);
     if (!parsedData) return;
 
-    setQuestData([parsedData]);
-    const compiledHtml = compileHtml(campaignConfig.templateHtml || '', [parsedData]);
-    setQuestData([parsedData]);
-    setQuestsHtml(decodeHtml(compiledHtml));
-    setQuestsOriginalHtml(campaignConfig.templateHtml || '');
+    setQuestData(parsedData);
     saveCache();
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaignConfig, saveCache]);
 
   const parseCampaignData = (response: Campaign) => {
     try {
@@ -133,6 +599,17 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (formDataCampaign.status === 'paused') {
         setIsCampaignPaused(true);
+      }
+
+      // Check if campaign is completed by status or if end time has passed
+      if (
+        formDataCampaign.status === 'completed' ||
+        (remainingTime.days === 0 &&
+          remainingTime.hours === 0 &&
+          remainingTime.minutes === 0 &&
+          remainingTime.seconds === 0)
+      ) {
+        setIsCampaignCompleted(true);
       }
 
       return {
@@ -162,6 +639,8 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
     if (remainingMilliseconds <= 0) {
       setIsCampaignExpired(true);
+      // Also mark as completed if time has expired
+      setIsCampaignCompleted(true);
     }
 
     return {
@@ -176,74 +655,18 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     if (!campaignKey) return;
 
     const cachedQuestData = JSON.parse(localStorage.getItem(`${campaignKey}_quest_data`) || 'null');
-    const cachedQuestsHtml = localStorage.getItem(`${campaignKey}_quests_html_template`) || '';
-    const cachedQuestsOriginalHtml = localStorage.getItem(`${campaignKey}_quests_original_html`) || '';
     const cachedLeaderboardData = JSON.parse(localStorage.getItem(`${campaignKey}_leaderboard`) || 'null');
-    const cachedLeaderboardHtml = localStorage.getItem(`${campaignKey}_leaderboard_html_template`) || '';
-    const cachedLeaderboardOriginalHtml = localStorage.getItem(`${campaignKey}_leaderboard_original_html`) || '';
 
     setQuestData(cachedQuestData);
-    setQuestsHtml(cachedQuestsHtml);
-    setQuestsOriginalHtml(cachedQuestsOriginalHtml);
     setLeaderboardData(cachedLeaderboardData);
-    setLeaderboardHtml(cachedLeaderboardHtml);
-    setLeaderboardOriginalHtml(cachedLeaderboardOriginalHtml);
     setTimeout(() => {}, 0);
-
-    if (!initialQuestsHtmlRef.current) {
-      initialQuestsHtmlRef.current = cachedQuestsHtml;
-    }
-    if (!initialLeaderboardHtmlRef.current) {
-      initialLeaderboardHtmlRef.current = cachedLeaderboardHtml;
-    }
   }, [campaignKey]);
 
-  const saveCache = useCallback(async () => {
-    if (!campaignKey) return;
-
-    if (questData !== null && questData !== previousQuestData.current) {
-      localStorage.setItem(`${campaignKey}_quest_data`, JSON.stringify(questData));
-      previousQuestData.current = questData;
-    }
-    if (questsHtml !== '' && questsHtml !== previousQuestsHtml.current) {
-      localStorage.setItem(`${campaignKey}_quests_html_template`, questsHtml);
-      previousQuestsHtml.current = questsHtml;
-    }
-    if (questsOriginalHtml !== '' && questsOriginalHtml !== previousQuestsOriginalHtml.current) {
-      localStorage.setItem(`${campaignKey}_quests_original_html`, questsOriginalHtml);
-      previousQuestsOriginalHtml.current = questsOriginalHtml;
-    }
-    if (leaderboardData !== null && leaderboardData !== previousLeaderboardData.current) {
-      localStorage.setItem(`${campaignKey}_leaderboard`, JSON.stringify(leaderboardData));
-      previousLeaderboardData.current = leaderboardData;
-    }
-    if (leaderboardHtml !== '' && leaderboardHtml !== previousLeaderboardHtml.current) {
-      localStorage.setItem(`${campaignKey}_leaderboard_html_template`, leaderboardHtml);
-      previousLeaderboardHtml.current = leaderboardHtml;
-    }
-    if (leaderboardOriginalHtml !== previousLeaderboardOriginalHtml.current) {
-      localStorage.setItem(`${campaignKey}_leaderboard_original_html`, leaderboardOriginalHtml);
-      previousLeaderboardOriginalHtml.current = leaderboardOriginalHtml;
-    }
-  }, [
-    questData,
-    questsHtml,
-    questsOriginalHtml,
-    leaderboardData,
-    leaderboardHtml,
-    leaderboardOriginalHtml,
-    campaignKey,
-  ]);
-
-  const updateData = (newData: any, originalHtml: string, newHtml: string, key: 'quests' | 'leaderboard') => {
+  const updateData = (newData: any, key: 'quests' | 'leaderboard') => {
     if (key === 'quests') {
       setQuestData(newData);
-      setQuestsHtml(newHtml);
-      setQuestsOriginalHtml(originalHtml);
     } else {
       setLeaderboardData(newData);
-      setLeaderboardHtml(newHtml);
-      setLeaderboardOriginalHtml(originalHtml);
     }
   };
 
@@ -256,58 +679,47 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     async (questId: string, taskType: string, newStatus: boolean, points: number) => {
       if (!questData || !leaderboardData) return;
 
-      const updatedQuestData = [
-        {
-          ...questData[0],
-          quests: {
-            ...questData[0].quests,
-            videoTasks: questData[0].quests?.[taskType].map((quest: any) => {
-              if (quest.videoUrl === questId) {
-                return { ...quest, completed: newStatus };
-              }
-              return quest;
-            }),
-          },
+      const updatedQuestData = {
+        ...questData,
+        quests: {
+          ...questData.quests,
+          videoTasks: questData.quests?.[taskType].map((quest: any) => {
+            if (quest.videoUrl === questId) {
+              return { ...quest, completed: newStatus };
+            }
+            return quest;
+          }),
         },
-      ];
+      };
 
-      const updatedLeaderboardData = [
-        {
-          ...leaderboardData[0],
-          users: [
-            ...leaderboardData[0].users.map((user: any) => {
-              if (Object.prototype.hasOwnProperty.call(user, 'quests')) {
-                return {
-                  ...user,
-                  points: points ? user.points + points : user.points,
-                  quests: {
-                    ...user.quests,
-                    [taskType]: user.quests[taskType].map((quest: any) =>
-                      quest.videoUrl === questId ? { ...quest, completed: newStatus } : quest,
-                    ),
-                  },
-                };
-              }
-              return user;
-            }),
-          ],
-        },
-      ];
-
-      const updatedQuestsHtml = compileHtml(questsOriginalHtml, updatedQuestData);
-
-      const updatedLeaderboardHtml = compileHtml(leaderboardOriginalHtml, updatedLeaderboardData);
+      const updatedLeaderboardData = {
+        ...leaderboardData,
+        users: [
+          ...leaderboardData.users.map((user: any) => {
+            if (Object.prototype.hasOwnProperty.call(user, 'quests')) {
+              return {
+                ...user,
+                points: points ? user.points + points : user.points,
+                quests: {
+                  ...user.quests,
+                  [taskType]: user.quests[taskType].map((quest: any) =>
+                    quest.videoUrl === questId ? { ...quest, completed: newStatus } : quest,
+                  ),
+                },
+              };
+            }
+            return user;
+          }),
+        ],
+      };
 
       setQuestData(updatedQuestData);
-      setQuestsHtml(updatedQuestsHtml);
-
       setLeaderboardData(updatedLeaderboardData);
-      setLeaderboardHtml(updatedLeaderboardHtml);
 
       await saveCache();
       resetInitialHtmlRefs();
     },
-    [leaderboardData, leaderboardOriginalHtml, questData, questsOriginalHtml, resetInitialHtmlRefs, saveCache],
+    [leaderboardData, questData, resetInitialHtmlRefs, saveCache],
   );
 
   useEffect(() => {
@@ -323,21 +735,34 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [campaignKey, saveCache]);
 
+  const setQuestsData = useCallback((data: any) => {
+    setQuestData(data);
+  }, []);
+
   return (
     <DataContext.Provider
       value={{
         questData,
-        questsHtml,
         leaderboardData,
-        leaderboardHtml,
+        activeCampaignId,
+        activeOrganizationId,
         campaignConfig,
         campaignConfigLoaded: isConfigLoaded,
         campaignExpired: isCampaignExpired,
         campaignPaused: isCampaignPaused,
+        campaignCompleted: isCampaignCompleted,
         updateData,
         loadCache,
         updateQuestStatus,
         debugMode: isDebugMode,
+        disableQuests,
+        isLeaderboardLoading,
+        isQuestsLoading,
+        error,
+        refetchQuestsForTab,
+        refetchLeaderboardForTab,
+        setQuestsData,
+        walletStatus,
       }}
     >
       {children}

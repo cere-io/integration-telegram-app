@@ -16,5 +16,10 @@ export const ENGAGEMENT_TIMEOUT_DURATION = 3000;
 
 export const AGENT_SERVICE_REGISTRY_URL = import.meta.env.VITE_AGENT_SERVICE_REGISTRY_URL;
 export const RMS_URL = import.meta.env.VITE_RMS_URL;
+export const RULE_SERVICE_URL = import.meta.env.VITE_RULE_SERVICE_URL;
 
 export const VIDEO_SEGMENT_LENGTH = import.meta.env.VITE_APP_VIDEO_SEGMENT_LENGTH || 10;
+
+export const X_CLIENT_ID = import.meta.env.VITE_X_CLIENT_ID;
+export const X_REDIRECT_URI = import.meta.env.VITE_X_REDIRECT_URI;
+export const WALLET_API_URL = import.meta.env.VITE_WALLET_API_URL;

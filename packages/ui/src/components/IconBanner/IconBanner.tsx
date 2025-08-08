@@ -1,7 +1,7 @@
-import { ReactNode } from 'react';
-import { Banner, Caption } from '@telegram-apps/telegram-ui';
-
 import './IconBanner.css';
+
+import { Banner, Caption } from '@telegram-apps/telegram-ui';
+import { ReactNode } from 'react';
 
 export type IconBannerProps = {
   icon: ReactNode;
