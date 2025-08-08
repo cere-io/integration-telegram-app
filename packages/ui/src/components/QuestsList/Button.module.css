@@ -1,6 +1,6 @@
 .button {
     display: block;
-    width: auto;
+    width: 100%;
     padding: 12px;
     background: #111827;
     color: white;

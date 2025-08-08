@@ -233,7 +233,7 @@ export const XConnectQuest: React.FC<XConnectQuestProps> = ({
         response_type: 'code',
         client_id: X_CLIENT_ID,
         redirect_uri: X_REDIRECT_URI, // Use staging redirect URI
-        scope: 'tweet.read users.read offline.access',
+        scope: 'tweet.read users.read like.read offline.access',
         state: jwtToken,
         code_challenge: codeChallenge,
         code_challenge_method: 'S256',

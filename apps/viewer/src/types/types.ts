@@ -48,18 +48,23 @@ export type VideoTask = BaseTask & {
 };
 
 export type SocialTask = BaseTask & {
+  id?: string;
   platform: string;
-  tweetLink: string;
+  tweetLink?: string;
   hashtags: string[];
   type: 'social';
   requirements: {
     platform: string;
-    action: string;
+    action: 'retweet' | 'follow' | 'like' | 'tweet_and_share';
     tags: string[];
   };
   questImage?: string;
   instructions?: string;
   tweetText?: string;
+  followAccount?: string; // For follow quests - X username without @
+  targetTweetId?: string; // For like quests - tweet ID from URL
+  keywords?: string[]; // For tweet & share quests - keywords to check
+  requiredUrls?: string[]; // For tweet & share quests - URLs that must be mentioned
 };
 
 export type DexTask = BaseTask & {

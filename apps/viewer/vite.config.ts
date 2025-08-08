@@ -38,6 +38,26 @@ export default defineConfig(({ mode }) => {
     plugins,
     server: {
       port: 5174,
+      proxy: {
+        '/auth/x/data': {
+          target: 'http://localhost:3002',
+          // target: 'https://api.wallet.stage.cere.io',
+          changeOrigin: true,
+          secure: true,
+        },
+        '/auth/x/refresh': {
+          target: 'http://localhost:3002',
+          // target: 'https://api.wallet.stage.cere.io',
+          changeOrigin: true,
+          secure: true,
+        },
+        '/auth/x/proxy/twitter': {
+          target: 'https://api.twitter.com',
+          changeOrigin: true,
+          secure: true,
+          rewrite: (path) => path.replace(/^\/auth\/x\/proxy\/twitter/, ''),
+        },
+      },
     },
   };
 });
