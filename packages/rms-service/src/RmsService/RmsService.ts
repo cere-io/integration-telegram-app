@@ -29,7 +29,7 @@ export class RmsService {
     return response;
   }
 
-  async getCampaignById(campaignId: string): Promise<Campaign | undefined> {
+  async getCampaignById(campaignId: number): Promise<Campaign | undefined> {
     const response = await this.request(`/campaign/${campaignId}`);
 
     const responseBody: Response<Campaign> = await response.json();
@@ -37,7 +37,7 @@ export class RmsService {
     return responseBody.data;
   }
 
-  async getCampaignByOrganizationId(organizationId: string): Promise<Campaign | undefined> {
+  async getCampaignByOrganizationId(organizationId: number): Promise<Campaign | undefined> {
     const response = await this.request(`/campaign/organization/${organizationId}`);
 
     const responseBody: Response<Campaign> = await response.json();
@@ -45,7 +45,7 @@ export class RmsService {
     return responseBody.data;
   }
 
-  async getOrganizationAssociatedWithCampaign(campaignId: string): Promise<any> {
+  async getOrganizationAssociatedWithCampaign(campaignId: number): Promise<any> {
     const response = await this.request(`/campaign/${campaignId}/organization`);
 
     return await response.json();
