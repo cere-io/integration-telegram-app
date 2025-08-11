@@ -27,7 +27,7 @@ type LeaderboardResponse = {
 type QuestsResponse = {
   quests: any;
   accountId: string;
-  campaignId: string;
+  campaignId: number;
   theme: string;
   campaignName: string;
   campaignDescription: string;
@@ -128,7 +128,7 @@ const MOCK_QUESTS_DATA: QuestsResponse = {
     ],
   },
   accountId: '0x1234567890abcdef1234567890abcdef12345678',
-  campaignId: '115',
+  campaignId: 115,
   theme: 'dark',
   campaignName: 'Preview Campaign',
   campaignDescription: 'This is a preview of the campaign interface',
@@ -142,8 +142,8 @@ const MOCK_QUESTS_DATA: QuestsResponse = {
 type DataContextType = {
   questData: any;
   leaderboardData: any;
-  activeCampaignId: string | null;
-  activeOrganizationId: string | null;
+  activeCampaignId: number | null;
+  activeOrganizationId: number | null;
   campaignConfig: Campaign | null;
   campaignConfigLoaded: boolean;
   campaignExpired: boolean;
@@ -178,7 +178,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [organization, setOrganization] = useState<unknown>(undefined);
   const [organizationLoaded, setOrganizationLoaded] = useState(false);
   const [campaignConfig, setCampaignConfig] = useState<Campaign | null>(null);
-  const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null);
+  const [activeCampaignId, setActiveCampaignId] = useState<number | null>(null);
   const [disableQuests, setDisableQuests] = useState<boolean>(true);
   const [isConfigLoaded, setIsConfigLoaded] = useState(false);
   const [questData, setQuestData] = useState<any | null>(null);
@@ -213,9 +213,9 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
   const currentCampaignId = campaignId || activeCampaignId;
 
-  const lastCampaignIdRef = useRef<string | null>(null);
+  const lastCampaignIdRef = useRef<number | null>(null);
 
-  const activeOrganizationId = organizationId || ((organization as any)?.appId as string);
+  const activeOrganizationId = organizationId || Number((organization as any)?.appId as string);
 
   // Reset fetch flags only when campaign actually changes
   useEffect(() => {
@@ -559,7 +559,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       if (campaignResponse) {
-        setActiveCampaignId(campaignResponse?.campaignId.toString() || null);
+        setActiveCampaignId(campaignResponse?.campaignId || null);
 
         const response = {
           ...campaignResponse,
