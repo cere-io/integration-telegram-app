@@ -441,7 +441,7 @@ export const Leaderboard = ({ setActiveTab, isResultsMode = false }: Leaderboard
     if (!isResultsMode) return null;
 
     // Default URLs if not configured
-    const defaultProjectChannelUrl = 'https://t.me/cereofficial';
+    const defaultProjectChannelUrl = 'https://t.me/thisiscere';
 
     return (
       <div className="results-actions">
