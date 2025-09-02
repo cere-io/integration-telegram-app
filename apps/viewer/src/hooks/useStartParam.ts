@@ -8,7 +8,7 @@ export const useStartParam = () => {
     const params = new URLSearchParams(startParam);
     const campaignId = Number(params.get('campaignId'));
     const organizationId = Number(params.get('organizationId'));
-    const referrerId = Number(params.get('referrerId'));
+    const referrerId = params.get('referrerId');
 
     if (campaignId || organizationId || referrerId) {
       return { campaignId, organizationId, referrerId };
@@ -22,7 +22,7 @@ export const useStartParam = () => {
       } else if (key === 'campaign' || key === 'campaignId') {
         return { campaignId: Number(value) };
       } else if (key === 'ref') {
-        return { referrerId: Number(value) };
+        return { referrerId: value };
       }
     }
 
@@ -30,7 +30,7 @@ export const useStartParam = () => {
     if (parts.length === 1) {
       return { campaignId: Number(startParam) };
     } else {
-      return { campaignId: Number(parts[0]), referrerId: Number(parts[1]) };
+      return { campaignId: Number(parts[0]), referrerId: parts[1] };
     }
   }
 
@@ -38,6 +38,6 @@ export const useStartParam = () => {
   return {
     campaignId: Number(urlParams.get('campaignId')),
     organizationId: Number(urlParams.get('organizationId')),
-    referrerId: Number(urlParams.get('referrerId')),
+    referrerId: urlParams.get('referrerId'),
   };
 };
