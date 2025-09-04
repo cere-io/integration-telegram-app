@@ -30,6 +30,7 @@ const addressPatterns = {
   kusama: /^[1-9A-HJ-NP-Za-km-z]{46,48}$/,
   near: /^[a-z0-9_-]{2,64}\.[a-z0-9_-]{2,64}$|^[a-f0-9]{64}$/,
   bitcoin: /^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,62}$/,
+  minima: /^M[Xx][a-zA-Z0-9]{61}$/,
 };
 
 const addressTypePatterns: Record<string, RegExp> = {
@@ -38,6 +39,7 @@ const addressTypePatterns: Record<string, RegExp> = {
   Solana: /^[1-9A-HJ-NP-Za-km-z]{32,44}$/,
   Near: /^[a-z0-9_-]{2,64}\.[a-z0-9_-]{2,64}$|^[a-f0-9]{64}$/,
   Bitcoin: /^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,62}$/,
+  Minima: /^M[Xx][a-zA-Z0-9]{61}$/,
   Other: /^[a-zA-Z0-9]{26,128}$/,
 };
 
@@ -54,6 +56,7 @@ const networkToPatternKey = {
   Solana: 'solana',
   Near: 'near',
   Bitcoin: 'bitcoin',
+  Minima: 'minima',
 };
 
 const resolveTypeFromPatternKey = (key: string): string => {
@@ -63,6 +66,7 @@ const resolveTypeFromPatternKey = (key: string): string => {
   if (key === 'solana') return 'Solana';
   if (key === 'near') return 'Near';
   if (key === 'bitcoin') return 'Bitcoin';
+  if (key === 'minima') return 'Minima';
   return 'Other';
 };
 
@@ -71,74 +75,45 @@ const validateWalletAddress = (
   addressType?: string,
   network?: string,
 ): { valid: boolean; type?: string; network?: string; error?: string } => {
-  if (!address) {
-    return { valid: false, error: 'Address is empty' };
+  console.log('Validating address:', address);
+  console.log('Address length:', address.length);
+  if (!address) return { valid: false, error: 'Address is empty' };
+
+  if (/^M[Xx][a-zA-Z0-9]{61}$/.test(address)) {
+    return { valid: true, type: 'Minima', network: 'Minima' };
   }
 
-  if (network && (networkToPatternKey as any)[network]) {
-    const patternKey = (networkToPatternKey as any)[network];
-    const pattern = (addressPatterns as any)[patternKey];
+  if (network && networkToPatternKey[network as keyof typeof networkToPatternKey]) {
+    const patternKey = networkToPatternKey[network as keyof typeof networkToPatternKey];
+    const pattern = addressPatterns[patternKey as keyof typeof addressPatterns];
     if (!pattern.test(address)) {
-      return {
-        valid: false,
-        error: `Address is invalid for required network: ${network}`,
-      };
+      return { valid: false, error: `Address is invalid for network: ${network}` };
     }
-
     const resolvedType = resolveTypeFromPatternKey(patternKey);
-
-    if (addressType && resolvedType !== addressType) {
-      return {
-        valid: false,
-        error: `Expected address type "${addressType}", but got "${resolvedType}"`,
-      };
-    }
-
-    return {
-      valid: true,
-      type: resolvedType,
-      network,
-    };
+    return { valid: true, type: resolvedType, network };
   }
 
   if (addressType && addressTypePatterns[addressType]) {
     const pattern = addressTypePatterns[addressType];
     if (!pattern.test(address)) {
-      return {
-        valid: false,
-        error: `Address is not valid for address type: ${addressType}`,
-      };
+      return { valid: false, error: `Address is not valid for address type: ${addressType}` };
     }
-
-    return {
-      valid: true,
-      type: addressType,
-      network: network || addressType,
-    };
+    return { valid: true, type: addressType, network: network || undefined };
   }
 
   for (const [net, pattern] of Object.entries(addressPatterns)) {
     if (pattern.test(address)) {
-      return {
-        valid: true,
-        type: resolveTypeFromPatternKey(net),
-        network: net,
-      };
+      const resolvedType = resolveTypeFromPatternKey(net);
+      const resolvedNetwork = net === 'minima' ? 'Minima' : net;
+      return { valid: true, type: resolvedType, network: resolvedNetwork };
     }
   }
 
-  if (/^[a-zA-Z0-9]{26,128}$/.test(address)) {
-    return {
-      valid: true,
-      type: 'Other',
-      network: 'unknown',
-    };
+  if (/^[a-zA-Z0-9]{26,128}$/.test(address) && !/^M[Xx][a-zA-Z0-9]{61}$/.test(address)) {
+    return { valid: true, type: 'Other', network: 'unknown' };
   }
 
-  return {
-    valid: false,
-    error: 'Invalid wallet address',
-  };
+  return { valid: false, error: 'Invalid wallet address' };
 };
 
 function isWalletTask(task: any): task is WalletCustomTask {
@@ -156,7 +131,7 @@ export const CustomWalletQuest = ({
   const [completed, setCompleted] = useState(false);
   const [walletType, setWalletType] = useState<string | null>(null);
   const [network, setNetwork] = useState<string | null>(null);
-  const [selectedBlockchain, setSelectedBlockchain] = useState('EVM');
+  const [selectedBlockchain, setSelectedBlockchain] = useState('');
 
   const eventSource = useEvents();
   const { campaignId } = useStartParam();
@@ -191,10 +166,25 @@ export const CustomWalletQuest = ({
     setError(result.error || null);
 
     if (result.valid && result.type) {
-      const newSelected = result.type === 'Substrate' ? 'Cere SVM' : result.type;
-      if (newSelected !== selectedBlockchain) {
-        setSelectedBlockchain(newSelected);
+      let newSelected: string;
+      switch (result.type) {
+        case 'EVM-compatible':
+          newSelected = 'EVM';
+          break;
+        case 'Substrate':
+          newSelected = 'Cere SVM';
+          break;
+        case 'Solana':
+          newSelected = 'Solana';
+          break;
+        case 'Minima':
+          newSelected = 'Minima';
+          break;
+        default:
+          newSelected = result.type;
       }
+
+      if (newSelected !== selectedBlockchain) setSelectedBlockchain(newSelected);
     }
   }, [wallet, quest, selectedBlockchain]);
 
@@ -208,6 +198,25 @@ export const CustomWalletQuest = ({
       );
       setWalletType(result.type || null);
       setNetwork(result.network || null);
+
+      let newSelected: string;
+      switch (result.type) {
+        case 'EVM-compatible':
+          newSelected = 'EVM';
+          break;
+        case 'Substrate':
+          newSelected = 'Cere SVM';
+          break;
+        case 'Solana':
+          newSelected = 'Solana';
+          break;
+        case 'Minima':
+          newSelected = 'Minima';
+          break;
+        default:
+          newSelected = result.type || 'EVM';
+      }
+      setSelectedBlockchain(newSelected);
     }
   }, [initialWallet, quest]);
 
@@ -354,7 +363,9 @@ export const CustomWalletQuest = ({
                       ? '0x1234567890abcdef1234567890abcdef'
                       : selectedBlockchain === 'Solana'
                         ? 'Enter Solana wallet address'
-                        : 'Enter wallet address'
+                        : selectedBlockchain === 'Minima'
+                          ? 'Enter Minima wallet address (MX...)'
+                          : 'Enter wallet address'
                   }
                   value={wallet}
                   onChange={(e) => setWallet(e.target.value)}
@@ -426,7 +437,13 @@ export const CustomWalletQuest = ({
               >
                 <CheckCircle style={{ width: '16px', height: '16px', color: '#10b981' }} />
                 <Text style={{ color: '#10b981' }}>
-                  The address is correct | Type: <strong>{walletType}</strong> | Network: <strong>{network}</strong>
+                  The address is correct | Type: <strong>{walletType}</strong>
+                  {network && network !== 'unknown' && (
+                    <>
+                      {' '}
+                      | Network: <strong>{network}</strong>
+                    </>
+                  )}
                 </Text>
               </div>
             )}
