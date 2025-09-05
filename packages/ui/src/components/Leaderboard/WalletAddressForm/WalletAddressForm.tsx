@@ -69,6 +69,8 @@ const addressPatterns = {
   aptos: /^0x[a-fA-F0-9]{1,64}$/,
   sui: /^0x[a-fA-F0-9]{1,64}$/,
   ton: /^[UEQ][a-zA-Z0-9_-]{46}$/,
+
+  minima: /^M[Xx][a-zA-Z0-9]{61}$/,
 };
 
 // Map of address types to their validation patterns
@@ -78,6 +80,7 @@ const addressTypePatterns: Record<string, RegExp> = {
   Solana: /^[1-9A-HJ-NP-Za-km-z]{32,44}$/,
   Near: /^[a-z0-9_-]{2,64}\.[a-z0-9_-]{2,64}$|^[a-f0-9]{64}$/,
   Bitcoin: /^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,62}$/,
+  Minima: /^M[Xx][a-zA-Z0-9]{61}$/,
   Other: /^[a-zA-Z0-9]{26,128}$/,
 };
 
@@ -110,6 +113,7 @@ const networkToPatternKey: Record<string, keyof typeof addressPatterns> = {
   Interlay: 'polkadot',
   Phala: 'polkadot',
   Bifrost: 'polkadot',
+  Minima: 'minima',
 };
 
 const validateWalletAddress = (
@@ -118,6 +122,10 @@ const validateWalletAddress = (
   network?: string,
 ): { isValid: boolean; network?: string } => {
   if (!address) return { isValid: false };
+
+  if (/^M[Xx][a-zA-Z0-9]{61}$/.test(address)) {
+    return { isValid: true, network: 'Minima' };
+  }
 
   // If we have a specific address type and/or network, prioritize that validation
   if (addressType) {
@@ -194,6 +202,8 @@ export const WalletAddressForm: React.FC<WalletFormProps> = ({
         return 'example.near';
       case 'Bitcoin':
         return 'bc1... or 1... or 3...';
+      case 'Minima':
+        return 'Mx...';
       default:
         return 'Your wallet address';
     }
